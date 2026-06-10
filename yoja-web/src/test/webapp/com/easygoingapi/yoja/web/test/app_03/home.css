@@ -1,0 +1,39 @@
+:host(body) {
+    margin: 10px;
+    max-width: 600px;
+    
+    overscroll-behavior: none;
+    overflow-x: hidden;
+}
+
+:host(.home-section) {
+    display: flex;
+    flex-flow: row nowrap;
+}
+
+:host(.user-section) {
+    display: flex;
+    flex-flow: row nowrap;
+}
+
+:host(.address-section) fieldset {
+    display: flex;
+    flex-flow: column nowrap;
+}
+
+:host(.address-section) fieldset > label {
+    margin-top: 4px;
+    background-color: orange;
+}
+
+.id-section {
+    display: flex;
+    flex-flow: column nowrap;
+    margin-top: 12px;
+}
+
+label {
+    margin-top: 4px;
+    background-color: lime;
+}
+

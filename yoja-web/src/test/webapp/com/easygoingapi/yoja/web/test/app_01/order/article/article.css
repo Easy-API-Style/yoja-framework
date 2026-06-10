@@ -1,0 +1,18 @@
+@import url("/main.css");
+
+:host(div) {
+    display: flex;
+    flex-flow: row nowrap;
+    
+    align-items: center;
+    justify-content: space-between;
+}
+
+input {
+    width: 70px;
+    text-align: center;
+} 
+
+label {
+    background-color: var(--theme-color);
+}

@@ -1,0 +1,6 @@
+@import url("./../css_2/file_4.css");
+@import url("/css_2/file_5.css");
+
+h2 {
+    background-color: blue;
+}

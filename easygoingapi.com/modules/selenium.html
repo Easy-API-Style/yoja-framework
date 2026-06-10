@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>yoja-selenium — Yoja Framework</title>
+  <script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('yoja-theme')||'dark')}catch(e){document.documentElement.setAttribute('data-theme','dark')}</script>
+  <link rel="stylesheet" href="../assets/css/styles.css">
+</head>
+<body>
+
+<nav class="top-nav">
+  <a class="top-nav__brand" href="../index.html">
+    <span class="brand-yoja">Yoja</span>
+  </a>
+  <div class="top-nav__links">
+    <a href="../index.html" class="nav-home">Home</a>
+    <a href="../getting-started.html">Get started</a>
+    <a href="index.html" class="is-active">Modules</a>
+    <a href="https://github.com/Easy-API-Style/yoja-framework">GitHub</a>
+    <button class="theme-toggle-button" aria-label="Toggle dark mode"><svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg></button>
+  </div>
+</nav>
+
+<div class="layout">
+  <aside class="sidebar">
+    <h4>Modules</h4>
+    <ul>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="core.html">yoja-core</a></li>
+      <li><a href="http-server.html">yoja-http-server</a></li>
+      <li><a href="http-client.html">yoja-http-client</a></li>
+      <li><a href="reverse-proxy.html">yoja-reverse-proxy</a></li>
+      <li><a href="selenium.html" class="is-active">yoja-selenium</a></li>
+      <li><a href="web.html">yoja-web</a></li>
+    </ul>
+    <h4>On this page</h4>
+    <ul>
+      <li><a href="#install">Installation</a></li>
+      <li><a href="#quickstart">Quick start</a></li>
+      <li><a href="#browser">Browser</a></li>
+      <li><a href="#service">SeleniumService</a></li>
+      <li><a href="#testbuilder">TestBuilder</a></li>
+      <li><a href="#context">Test context</a></li>
+      <li><a href="#logs">Logs</a></li>
+    </ul>
+  </aside>
+
+  <main class="main">
+   <div class="main__inner">
+    <p class="crumb">
+      <a href="../index.html" class="nav-home">Home</a> <span>/</span>
+      <a href="index.html">Modules</a> <span>/</span> yoja-selenium
+    </p>
+    <h1>yoja-selenium</h1>
+    <p class="lead">
+      Browser-driven tests with a fluent <code>TestBuilder</code>: pick a
+      browser, start an embedded server, run named JS exports as test steps,
+      capture browser logs, integrate as JUnit 6 dynamic tests.
+    </p>
+
+    <h2 id="install">Installation</h2>
+<pre><code>testImplementation <span class="s">'com.easygoingapi:yoja-selenium:VERSION'</span></code></pre>
+    <p>
+      Requires a matching Selenium WebDriver on the test classpath
+      (<code>chromedriver</code>, <code>geckodriver</code>, <code>msedgedriver</code>),
+      either on <code>PATH</code> or via Selenium Manager.
+    </p>
+
+    <h2 id="quickstart">Quick start</h2>
+<pre><code><span class="k">import</span> com.easygoingapi.yoja.selenium.*;
+<span class="k">import</span> org.junit.jupiter.api.*;
+<span class="k">import</span> java.util.stream.Stream;
+
+<span class="k">class</span> TaskBoardTest {
+
+    <span class="k">@TestFactory</span>
+    Stream&lt;DynamicNode&gt; scenarios() {
+        <span class="k">return</span> TestBuilder.builder()
+            .browser(Browser.builder(Browser.CHROME)
+                            .mode(Browser.Mode.HEADLESS)
+                            .build())
+            .startYojaWeb()
+            .loadYwAssert()
+            .testJsUnit(<span class="s">"/jsUnitSyncTest.js"</span>,
+                        List.of(<span class="s">"titleIsTaskManager"</span>, <span class="s">"loginFormIsPresent"</span>))
+            .testAsyncModule(<span class="s">"/jsUnitAsyncTest.js"</span>)
+            .stream();
+    }
+}</code></pre>
+
+    <h2 id="browser">Browser</h2>
+
+    <div class="api-class">
+      <h3><code>Browser</code> <span class="kind">enum</span></h3>
+      <p>Supported browsers. Each value maps to a Selenium WebDriver implementation.</p>
+
+      <span class="api-table-group">Values</span>
+      <table class="api-table">
+        <thead><tr><th>Value</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>CHROME</code> · <code>FIREFOX</code> · <code>EDGE</code></td><td class="desc">Supported browsers; require the matching WebDriver on <code>PATH</code> or via Selenium Manager</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">API</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>getWebDriverClass()</code></td><td class="ret"><code>Class&lt;WebDriver&gt;</code></td><td class="desc">Selenium driver class for this browser</td></tr>
+          <tr><td><code>static builder(Browser)</code></td><td class="ret"><code>Browser.Builder</code></td><td class="desc">Start a <code>Config</code> builder</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Browser.Mode</span>
+      <table class="api-table">
+        <thead><tr><th>Value</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>HEADLESS</code></td><td class="desc">No visible window</td></tr>
+          <tr><td><code>HEADFUL</code></td><td class="desc">Visible window</td></tr>
+          <tr><td><code>DEBUGGER</code></td><td class="desc">Pins all timeouts to 1 hour and opens devtools</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Browser.Config (Builder)</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>Builder.mode(Mode)</code></td><td class="ret"><code>Builder</code></td><td class="desc"></td></tr>
+          <tr><td><code>Builder.timeout(Duration)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Default wait timeout for element lookups</td></tr>
+          <tr><td><code>Builder.build()</code></td><td class="ret"><code>Browser.Config</code></td><td class="desc"></td></tr>
+          <tr><td><code>getBrowser()</code></td><td class="ret"><code>Browser</code></td><td class="desc"></td></tr>
+          <tr><td><code>getMode()</code></td><td class="ret"><code>Mode</code></td><td class="desc"></td></tr>
+          <tr><td><code>getTimeout()</code></td><td class="ret"><code>Duration</code></td><td class="desc"></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="service">SeleniumService</h2>
+
+    <div class="api-class">
+      <h3><code>SeleniumService</code> <span class="kind">class (AutoCloseable)</span></h3>
+      <p>High-level wrapper around a <code>WebDriver</code>, tailored to driving Yoja-Web pages.</p>
+
+      <span class="api-table-group">Factory</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>static newInstance(Browser.Config)</code></td><td class="ret"><code>SeleniumService</code></td><td class="desc">Launch the browser with the right options</td></tr>
+          <tr><td><code>webDriver()</code></td><td class="ret"><code>WebDriver</code></td><td class="desc">Underlying Selenium driver</td></tr>
+          <tr><td><code>javascriptExecutor()</code></td><td class="ret"><code>JavascriptExecutor</code></td><td class="desc"></td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Navigation</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>getHttpPage(HttpUrl | String)</code></td><td class="ret"><code>void</code></td><td class="desc">Navigate the browser to the given URL</td></tr>
+          <tr><td><code>getHttpPage(Duration, HttpUrl | String)</code></td><td class="ret"><code>void</code></td><td class="desc">Navigate with an explicit wait timeout</td></tr>
+          <tr><td><code>reload()</code></td><td class="ret"><code>void</code></td><td class="desc">Reload the current page</td></tr>
+          <tr><td><code>reload(ScriptOption)</code></td><td class="ret"><code>void</code></td><td class="desc">Reload and re-inject helpers</td></tr>
+          <tr><td><code>await(Duration)</code></td><td class="ret"><code>void</code></td><td class="desc">Pause execution for the given duration</td></tr>
+          <tr><td><code>resizeWindow(int w, int h)</code></td><td class="ret"><code>void</code></td><td class="desc">Set the browser window dimensions</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Script execution</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>executeScript(String | Path [, args])</code></td><td class="ret"><code>Object</code></td><td class="desc">Execute synchronous JS</td></tr>
+          <tr><td><code>executeScript(Duration, String | Path, args)</code></td><td class="ret"><code>Object</code></td><td class="desc">With an explicit timeout</td></tr>
+          <tr><td><code>executeAsyncScript(String | Path [, args])</code></td><td class="ret"><code>Object</code></td><td class="desc">Execute async JS (must call the injected <code>done</code> callback)</td></tr>
+          <tr><td><code>repeatScript(Duration until, String, args)</code></td><td class="ret"><code>Object</code></td><td class="desc">Re-execute until a truthy value is returned or the timeout elapses</td></tr>
+          <tr><td><code>repeatAsyncScript(Duration, String, args)</code></td><td class="ret"><code>Object</code></td><td class="desc">Async variant of <code>repeatScript</code></td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">DOM queries</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>firstTag(css)</code></td><td class="ret"><code>WebElement</code></td><td class="desc">First matching element (waits for presence)</td></tr>
+          <tr><td><code>firstTag(Duration, css)</code></td><td class="ret"><code>WebElement</code></td><td class="desc">With an explicit wait timeout</td></tr>
+          <tr><td><code>firstTagFrom(WebElement, css)</code></td><td class="ret"><code>WebElement</code></td><td class="desc">Scoped to a given element</td></tr>
+          <tr><td><code>findTags(css)</code></td><td class="ret"><code>List&lt;WebElement&gt;</code></td><td class="desc">All matching elements</td></tr>
+          <tr><td><code>findTagsFrom(WebElement, css)</code></td><td class="ret"><code>List&lt;WebElement&gt;</code></td><td class="desc">Scoped to a given element</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Storage accessors</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>localStorage(key)</code></td><td class="ret"><code>String</code></td><td class="desc">Raw value from <code>window.localStorage</code></td></tr>
+          <tr><td><code>localStorage(key, Storage)</code></td><td class="ret"><code>String</code></td><td class="desc"><code>Storage.date</code> / <code>type</code> / <code>value</code> — extract a specific field from the stored JSON</td></tr>
+          <tr><td><code>sessionStorage(key [, Storage])</code></td><td class="ret"><code>String</code></td><td class="desc">Same for <code>window.sessionStorage</code></td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Logs &amp; helpers</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>logs()</code></td><td class="ret"><code>List&lt;Log&gt;</code></td><td class="desc">All browser-side log entries collected so far</td></tr>
+          <tr><td><code>clearLogs()</code></td><td class="ret"><code>void</code></td><td class="desc">Discard captured log entries</td></tr>
+          <tr><td><code>saveLogs()</code></td><td class="ret"><code>void</code></td><td class="desc">Persist logs to disk</td></tr>
+          <tr><td><code>printLogs()</code></td><td class="ret"><code>void</code></td><td class="desc">Print logs to stdout</td></tr>
+          <tr><td><code>loadJavascript(String)</code></td><td class="ret"><code>void</code></td><td class="desc">Inject a JS snippet into the current page</td></tr>
+          <tr><td><code>loadYwAssert()</code></td><td class="ret"><code>void</code></td><td class="desc">Inject the <code>ywAssert.js</code> assertion helper</td></tr>
+          <tr><td><code>debugger()</code></td><td class="ret"><code>void</code></td><td class="desc">IDE breakpoint hook</td></tr>
+          <tr><td><code>close()</code></td><td class="ret"><code>void</code></td><td class="desc">Quit the WebDriver</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="testbuilder">TestBuilder</h2>
+
+    <div class="api-class">
+      <h3><code>TestBuilder</code> <span class="kind">class</span></h3>
+      <p>Fluent orchestrator. Builds a list of test steps, then runs them via <code>execute()</code> or exposes them as JUnit dynamic nodes via <code>stream()</code>.</p>
+
+      <span class="api-table-group">Factory</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>static builder()</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc"></td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Configuration</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>browser(Browser.Config)</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Select browser and mode</td></tr>
+          <tr><td><code>host(String)</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Override embedded server host</td></tr>
+          <tr><td><code>contentType(String ext, String mime)</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Extension → MIME mapping for static serving</td></tr>
+          <tr><td><code>webResource(String packageName [, contextPath [, url]])</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Serve resources from a classpath package</td></tr>
+          <tr><td><code>webResource(WebApp, String url)</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Serve resources from a <code>WebApp</code></td></tr>
+          <tr><td><code>webResource(WebResource)</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Serve a pre-built <code>WebResource</code></td></tr>
+          <tr><td><code>webService(WebService)</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Add a service endpoint to the embedded server</td></tr>
+          <tr><td><code>webSocket(WebSocket)</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Add a WebSocket endpoint to the embedded server</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Bootstrap steps</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>startJavascript([ScriptOption])</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Step: serve a minimal HTML fixture and navigate to it</td></tr>
+          <tr><td><code>startYojaWeb([ScriptOption])</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Step: serve a full Yoja-Web fixture page and navigate to it</td></tr>
+          <tr><td><code>getPage(String path)</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Step: navigate to the given path on the embedded server</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Test steps</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>test(String name, Consumer&lt;TestContext&gt;)</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Add a custom named step</td></tr>
+          <tr><td><code>testJsUnit(String path, List&lt;String&gt; functions, args...)</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Run named JS exports as individual test steps</td></tr>
+          <tr><td><code>testModule(String path, args...)</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Run a synchronous JS module as a test step</td></tr>
+          <tr><td><code>testAsyncModule([Duration,] String path, args...)</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Run an async JS module; optional timeout</td></tr>
+          <tr><td><code>loadModule(String path)</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Step: load a JS module without asserting on its result</td></tr>
+          <tr><td><code>repeatTestModuleUntil(Duration, String path, args...)</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Step: retry the module until it returns truthy or the timeout elapses</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Utility steps</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>reload([ScriptOption])</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Step: reload the current page</td></tr>
+          <tr><td><code>resizeWindow(int w, int h)</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Step: resize the browser window</td></tr>
+          <tr><td><code>await(Duration)</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Step: pause execution</td></tr>
+          <tr><td><code>loadYwAssert()</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Step: inject <code>ywAssert.js</code></td></tr>
+          <tr><td><code>saveLogs()</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Step: persist browser logs to disk</td></tr>
+          <tr><td><code>printLogs()</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Step: print browser logs to stdout</td></tr>
+          <tr><td><code>debugger()</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Step: IDE breakpoint hook</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Run</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>execute([boolean keepRunning])</code></td><td class="ret"><code>void</code></td><td class="desc">Run all steps sequentially; optionally keep the browser open after completion</td></tr>
+          <tr><td><code>stream()</code></td><td class="ret"><code>Stream&lt;DynamicNode&gt;</code></td><td class="desc">Expose steps as JUnit 6 <code>@TestFactory</code> dynamic nodes</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="api-class">
+      <h3><code>ScriptOption</code> <span class="kind">class</span></h3>
+      <p>Controls which helpers are injected after page navigation.</p>
+
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>static apply()</code></td><td class="ret"><code>ScriptOption</code></td><td class="desc">Fresh option with all flags off</td></tr>
+          <tr><td><code>saveLogs()</code></td><td class="ret"><code>ScriptOption</code></td><td class="desc">Install the <code>ywLogger.js</code> log capture helper</td></tr>
+          <tr><td><code>loadYwAssert()</code></td><td class="ret"><code>ScriptOption</code></td><td class="desc">Install the <code>ywAssert.js</code> assertion helper</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="context">Test context</h2>
+
+    <div class="api-class">
+      <h3><code>TestContext</code> <span class="kind">class (AutoCloseable)</span></h3>
+      <p>Per-test handle injected into every <code>Consumer&lt;TestContext&gt;</code> step. Closing it shuts down both the embedded server and the WebDriver.</p>
+
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>browser()</code></td><td class="ret"><code>Browser</code></td><td class="desc">Active browser enum value</td></tr>
+          <tr><td><code>seleniumService()</code></td><td class="ret"><code>SeleniumService</code></td><td class="desc">The wrapped WebDriver instance</td></tr>
+          <tr><td><code>httpServerContext()</code></td><td class="ret"><code>HttpServerContext</code></td><td class="desc">Embedded HTTP server details</td></tr>
+          <tr><td><code>httpUrlBuilder()</code></td><td class="ret"><code>HttpUrlBuilder</code></td><td class="desc">URL builder pre-configured for the embedded server</td></tr>
+          <tr><td><code>logs()</code></td><td class="ret"><code>List&lt;Log&gt;</code></td><td class="desc">Browser-side log entries</td></tr>
+          <tr><td><code>getHttpPage(HttpUrl | String [, Duration])</code></td><td class="ret"><code>void</code></td><td class="desc">Navigate the browser; optional explicit timeout</td></tr>
+          <tr><td><code>close()</code></td><td class="ret"><code>void</code></td><td class="desc">Stop the embedded server and quit the WebDriver</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="api-class">
+      <h3><code>HttpServerContext</code> · <code>HttpUrlBuilder</code> <span class="kind">classes</span></h3>
+      <p>Embedded Yoja HTTP server serving test fixtures. Port auto-assigned from a monotonically-increasing sequence starting at 8888.</p>
+
+      <span class="api-table-group">HttpServerContext</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>host()</code></td><td class="ret"><code>String</code></td><td class="desc">Embedded server hostname</td></tr>
+          <tr><td><code>port()</code></td><td class="ret"><code>int</code></td><td class="desc">Auto-assigned port</td></tr>
+          <tr><td><code>httpServerState()</code></td><td class="ret"><code>State</code></td><td class="desc">Server lifecycle state</td></tr>
+          <tr><td><code>httpUrlBuilder()</code></td><td class="ret"><code>HttpUrlBuilder</code></td><td class="desc">URL builder pre-wired for this server</td></tr>
+          <tr><td><code>close()</code></td><td class="ret"><code>void</code></td><td class="desc">Stop the embedded server</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">HttpUrlBuilder</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>path(String | Path)</code></td><td class="ret"><code>HttpUrlBuilder</code></td><td class="desc"></td></tr>
+          <tr><td><code>query(String | HttpParameter)</code></td><td class="ret"><code>HttpUrlBuilder</code></td><td class="desc">Query string</td></tr>
+          <tr><td><code>fragment(String)</code></td><td class="ret"><code>HttpUrlBuilder</code></td><td class="desc">URL hash fragment</td></tr>
+          <tr><td><code>build()</code></td><td class="ret"><code>HttpUrl</code></td><td class="desc">Build the full URL pointing at the embedded server</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="logs">Logs</h2>
+
+    <div class="api-class">
+      <h3><code>Log</code> · <code>Log.Level</code> <span class="kind">classes</span></h3>
+      <p>Browser-side log entry collected by <code>ywLogger.js</code> and surfaced via <code>SeleniumService.logs()</code>.</p>
+
+      <span class="api-table-group">Log accessors</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>date()</code></td><td class="ret"><code>Instant</code></td><td class="desc">Time the log entry was captured</td></tr>
+          <tr><td><code>level()</code></td><td class="ret"><code>Level</code></td><td class="desc"></td></tr>
+          <tr><td><code>message()</code></td><td class="ret"><code>String</code></td><td class="desc"></td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Log.Level values</span>
+      <table class="api-table">
+        <thead><tr><th>Value</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>LOG · TRACE · DEBUG · INFO · WRAN · ERROR</code></td><td class="desc">Mirror the browser-side console levels; <code>WRAN</code> is intentional (matches the JS side)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="api-class">
+      <h3><code>DateUtil</code> · <code>Debugger</code> · <code>SeleniumException</code> <span class="kind">helpers</span></h3>
+
+      <table class="api-table">
+        <thead><tr><th>Class</th><th>Key API</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>DateUtil</code></td><td class="ret"><code>formatTimestamp(Long | Instant)</code></td><td class="desc">Format a timestamp as <code>yyyy-MM-dd HH:mm:ss</code> in the JVM timezone</td></tr>
+          <tr><td><code>Debugger</code></td><td class="ret"><code>debugger()</code></td><td class="desc">IDE breakpoint hook — throws and immediately catches a <code>Debugger</code> exception</td></tr>
+          <tr><td><code>SeleniumException</code></td><td class="ret"></td><td class="desc">Runtime exception for WebDriver, script and embedded-server failures</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note">
+      <p>
+        Module README:
+        <a href="https://github.com/Easy-API-Style/yoja-framework/blob/main/yoja-selenium/README.md">yoja-selenium/README.md</a>.
+      </p>
+    </div>
+   </div>
+
+   <footer class="footer">
+     <p>
+       Yoja Framework · Apache License 2.0 ·
+       <a href="https://github.com/Easy-API-Style/yoja-framework">GitHub</a>
+     </p>
+   </footer>
+  </main>
+</div>
+
+
+<script src="../assets/js/theme.js"></script>
+</body>
+</html>

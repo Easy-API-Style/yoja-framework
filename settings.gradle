@@ -1,0 +1,12 @@
+plugins {
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
+rootProject.name = 'yoja-framework'
+
+include 'yoja-core'
+include 'yoja-web'
+include 'yoja-http-client'
+include 'yoja-http-server'
+include 'yoja-reverse-proxy'
+include 'yoja-selenium'

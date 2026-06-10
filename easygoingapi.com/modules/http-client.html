@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>yoja-http-client — Yoja Framework</title>
+  <script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('yoja-theme')||'dark')}catch(e){document.documentElement.setAttribute('data-theme','dark')}</script>
+  <link rel="stylesheet" href="../assets/css/styles.css">
+</head>
+<body>
+
+<nav class="top-nav">
+  <a class="top-nav__brand" href="../index.html">
+    <span class="brand-yoja">Yoja</span>
+  </a>
+  <div class="top-nav__links">
+    <a href="../index.html" class="nav-home">Home</a>
+    <a href="../getting-started.html">Get started</a>
+    <a href="index.html" class="is-active">Modules</a>
+    <a href="https://github.com/Easy-API-Style/yoja-framework">GitHub</a>
+    <button class="theme-toggle-button" aria-label="Toggle dark mode"><svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg></button>
+  </div>
+</nav>
+
+<div class="layout">
+  <aside class="sidebar">
+    <h4>Modules</h4>
+    <ul>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="core.html">yoja-core</a></li>
+      <li><a href="http-server.html">yoja-http-server</a></li>
+      <li><a href="http-client.html" class="is-active">yoja-http-client</a></li>
+      <li><a href="reverse-proxy.html">yoja-reverse-proxy</a></li>
+      <li><a href="selenium.html">yoja-selenium</a></li>
+      <li><a href="web.html">yoja-web</a></li>
+    </ul>
+    <h4>On this page</h4>
+    <ul>
+      <li><a href="#install">Installation</a></li>
+      <li><a href="#quickstart">Quick start</a></li>
+      <li><a href="#engine">Engines</a></li>
+      <li><a href="#client">HttpClient</a></li>
+      <li><a href="#request">Requests &amp; response</a></li>
+      <li><a href="#websocket">WebSocket client</a></li>
+    </ul>
+  </aside>
+
+  <main class="main">
+   <div class="main__inner">
+    <p class="crumb">
+      <a href="../index.html" class="nav-home">Home</a> <span>/</span>
+      <a href="index.html">Modules</a> <span>/</span> yoja-http-client
+    </p>
+    <h1>yoja-http-client</h1>
+    <p class="lead">
+      Fluent GET/POST builders, automatic <code>Content-Type</code> from the
+      body's runtime type, a WebSocket dialer, and a shared engine that owns
+      the connection pool — built on Vert.x Web Client.
+    </p>
+
+    <h2 id="install">Installation</h2>
+<pre><code>implementation <span class="s">'com.easygoingapi:yoja-http-client:VERSION'</span></code></pre>
+
+    <h2 id="quickstart">Quick start</h2>
+<pre><code>HttpEngine engine = <span class="k">new</span> HttpEngine();
+HttpClient client = HttpClient.builder(engine)
+                              .host(<span class="s">"api.example.com"</span>)
+                              .port(<span class="n">443</span>)
+                              .ssl(<span class="k">true</span>)
+                              .build();
+
+<span class="c">// GET with a query string</span>
+client.send(HttpGet.builder(<span class="s">"/users"</span>)
+                   .addParameter(<span class="s">"q"</span>, <span class="s">"alice"</span>)
+                   .build())
+      .onSuccess(res -&gt; System.out.println(res.bodyAsJsonObject()));
+
+<span class="c">// POST a JSON body — Content-Type is set automatically</span>
+client.send(HttpPost.of(<span class="s">"/users"</span>,
+                        <span class="k">new</span> JsonObject().put(<span class="s">"name"</span>, <span class="s">"alice"</span>)))
+      .onSuccess(res -&gt; System.out.println(res.statusCode()));</code></pre>
+
+    <h2 id="engine">Engines</h2>
+
+    <div class="api-class">
+      <h3><code>HttpEngine</code> <span class="kind">class (AutoCloseable)</span></h3>
+      <p>Shared engine that owns the connection pool. One engine is typically shared by every <code>HttpClient</code> of a given configuration.</p>
+
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>HttpEngine()</code></td><td class="ret"></td><td class="desc">Defaults from <code>defaultOptions()</code> — HTTP/2 + ALPN, TLS on, trust-all</td></tr>
+          <tr><td><code>HttpEngine(WebClientOptions)</code></td><td class="ret"></td><td class="desc">Custom Vert.x options</td></tr>
+          <tr><td><code>static defaultOptions()</code></td><td class="ret"><code>WebClientOptions</code></td><td class="desc">Opinionated defaults (HTTP/2 with HTTP/1.1 ALPN fallback, TLS on, trust-all)</td></tr>
+          <tr><td><code>webClient()</code></td><td class="ret"><code>WebClient</code></td><td class="desc">The underlying Vert.x web client</td></tr>
+          <tr><td><code>options()</code></td><td class="ret"><code>WebClientOptions</code></td><td class="desc"></td></tr>
+          <tr><td><code>defaultHost()</code></td><td class="ret"><code>String</code></td><td class="desc"></td></tr>
+          <tr><td><code>defaultPort()</code></td><td class="ret"><code>int</code></td><td class="desc"></td></tr>
+          <tr><td><code>logOptions()</code></td><td class="ret"><code>void</code></td><td class="desc">Dump effective options to the log</td></tr>
+          <tr><td><code>close()</code></td><td class="ret"><code>void</code></td><td class="desc">Release the connection pool</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="api-class">
+      <h3><code>WebSocketEngine</code> <span class="kind">class</span></h3>
+      <p>WebSocket counterpart of <code>HttpEngine</code>.</p>
+
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>WebSocketEngine()</code></td><td class="ret"></td><td class="desc">Defaults from <code>defaultOptions()</code></td></tr>
+          <tr><td><code>WebSocketEngine(WebSocketClientOptions)</code></td><td class="ret"></td><td class="desc">Custom Vert.x options</td></tr>
+          <tr><td><code>static defaultOptions()</code></td><td class="ret"><code>WebSocketClientOptions</code></td><td class="desc">Opinionated defaults</td></tr>
+          <tr><td><code>webSocketClient()</code></td><td class="ret"><code>io.vertx.core.http.WebSocketClient</code></td><td class="desc">Underlying Vert.x client</td></tr>
+          <tr><td><code>options()</code></td><td class="ret"><code>WebSocketClientOptions</code></td><td class="desc"></td></tr>
+          <tr><td><code>defaultHost()</code></td><td class="ret"><code>String</code></td><td class="desc"></td></tr>
+          <tr><td><code>defaultPort()</code></td><td class="ret"><code>int</code></td><td class="desc"></td></tr>
+          <tr><td><code>logOptions()</code></td><td class="ret"><code>void</code></td><td class="desc"></td></tr>
+          <tr><td><code>close()</code></td><td class="ret"><code>Future&lt;Void&gt;</code></td><td class="desc">Async close</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="client">HttpClient</h2>
+
+    <div class="api-class">
+      <h3><code>HttpClient</code> <span class="kind">class</span></h3>
+      <p>Per-endpoint façade dialing a single <code>host:port</code> through an <code>HttpEngine</code>.</p>
+
+      <span class="api-table-group">Factory</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>static builder(HttpEngine)</code></td><td class="ret"><code>Builder</code></td><td class="desc"></td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Requests</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>send(HttpGet)</code></td><td class="ret"><code>Future&lt;HttpResponse&gt;</code></td><td class="desc">Execute a GET request</td></tr>
+          <tr><td><code>send(HttpPost)</code></td><td class="ret"><code>Future&lt;HttpResponse&gt;</code></td><td class="desc">Execute a POST; Content-Type auto-picked from the body type</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Accessors</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>host()</code></td><td class="ret"><code>String</code></td><td class="desc"></td></tr>
+          <tr><td><code>port()</code></td><td class="ret"><code>Integer</code></td><td class="desc"><code>null</code> when the engine default is used</td></tr>
+          <tr><td><code>isSsl()</code></td><td class="ret"><code>boolean</code></td><td class="desc"></td></tr>
+          <tr><td><code>timeout()</code></td><td class="ret"><code>Duration</code></td><td class="desc"></td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Builder</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>host(String)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Falls back to engine default when omitted</td></tr>
+          <tr><td><code>port(int)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Falls back to engine default when omitted</td></tr>
+          <tr><td><code>ssl(boolean)</code></td><td class="ret"><code>Builder</code></td><td class="desc"></td></tr>
+          <tr><td><code>timeout(Duration)</code></td><td class="ret"><code>Builder</code></td><td class="desc"></td></tr>
+          <tr><td><code>build()</code></td><td class="ret"><code>HttpClient</code></td><td class="desc"></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="api-class">
+      <h3><code>HttpOption</code> <span class="kind">class</span></h3>
+      <p>Two-knob option bundle (TLS flag + optional timeout). Defaults: SSL on, no timeout.</p>
+
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>static builder()</code></td><td class="ret"><code>Builder</code></td><td class="desc"></td></tr>
+          <tr><td><code>isSsl()</code></td><td class="ret"><code>boolean</code></td><td class="desc"></td></tr>
+          <tr><td><code>timeout()</code></td><td class="ret"><code>Duration</code></td><td class="desc"><code>null</code> = no timeout</td></tr>
+          <tr><td><code>Builder.ssl(boolean)</code></td><td class="ret"><code>Builder</code></td><td class="desc"></td></tr>
+          <tr><td><code>Builder.timeout(Duration)</code></td><td class="ret"><code>Builder</code></td><td class="desc"></td></tr>
+          <tr><td><code>Builder.noTimeout()</code></td><td class="ret"><code>Builder</code></td><td class="desc">Explicitly clear any timeout</td></tr>
+          <tr><td><code>Builder.build()</code></td><td class="ret"><code>HttpOption</code></td><td class="desc"></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="request">Requests &amp; response</h2>
+
+    <div class="api-class">
+      <h3><code>HttpGet</code> <span class="kind">class (extends HttpRequest)</span></h3>
+      <p>GET request with optional query parameters.</p>
+
+      <span class="api-table-group">Factory</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>static of(String path)</code></td><td class="ret"><code>HttpGet</code></td><td class="desc"></td></tr>
+          <tr><td><code>static of(String path, String queryString)</code></td><td class="ret"><code>HttpGet</code></td><td class="desc">With a pre-built raw query string</td></tr>
+          <tr><td><code>static builder(String path)</code></td><td class="ret"><code>Builder</code></td><td class="desc"></td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Builder</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>addParameter(name)</code> · <code>addParameter(name, value)</code> · <code>addParameter(name, List)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Append parameter (keeps duplicates)</td></tr>
+          <tr><td><code>putParameter(name)</code> · <code>putParameter(name, value)</code> · <code>putParameters(name, List)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Set parameter (replaces existing)</td></tr>
+          <tr><td><code>putHeader(name, value)</code></td><td class="ret"><code>Builder</code></td><td class="desc"></td></tr>
+          <tr><td><code>putCookie(name, value)</code></td><td class="ret"><code>Builder</code></td><td class="desc"></td></tr>
+          <tr><td><code>build()</code></td><td class="ret"><code>HttpGet</code></td><td class="desc"></td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Accessors</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>parameters()</code></td><td class="ret"><code>HttpParameter</code></td><td class="desc">All parameters as a multimap</td></tr>
+          <tr><td><code>parameters(name)</code></td><td class="ret"><code>List&lt;String&gt;</code></td><td class="desc">All values for a given name</td></tr>
+          <tr><td><code>firstParameter(name)</code></td><td class="ret"><code>String</code></td><td class="desc">First value, or <code>null</code></td></tr>
+          <tr><td><code>hasParameter(name)</code></td><td class="ret"><code>boolean</code></td><td class="desc"></td></tr>
+          <tr><td><code>parameterNames()</code></td><td class="ret"><code>Set&lt;String&gt;</code></td><td class="desc"></td></tr>
+          <tr><td><code>parameterSize()</code></td><td class="ret"><code>int</code></td><td class="desc">Total entry count (with duplicates)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="api-class">
+      <h3><code>HttpPost</code> <span class="kind">class (extends HttpRequest)</span></h3>
+      <p>POST request. The body's runtime type drives the Content-Type header automatically.</p>
+
+      <span class="api-table-group">Factory &amp; Builder</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>static of(String path)</code></td><td class="ret"><code>HttpPost</code></td><td class="desc">No body</td></tr>
+          <tr><td><code>static of(String path, JsonObject | JsonArray | String | byte[])</code></td><td class="ret"><code>HttpPost</code></td><td class="desc">With body; Content-Type auto-detected</td></tr>
+          <tr><td><code>static builder(String path)</code></td><td class="ret"><code>Builder</code></td><td class="desc"></td></tr>
+          <tr><td><code>Builder.body(JsonObject | JsonArray | String | byte[])</code></td><td class="ret"><code>Builder</code></td><td class="desc">Set the request body</td></tr>
+          <tr><td><code>Builder.putHeader(name, value)</code> · <code>putCookie(name, value)</code> · <code>build()</code></td><td class="ret"><code>Builder / HttpPost</code></td><td class="desc">Inherited from <code>HttpRequest</code></td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Body accessors</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>bodyAsJsonObject()</code></td><td class="ret"><code>JsonObject</code></td><td class="desc"></td></tr>
+          <tr><td><code>bodyAsJsonArray()</code></td><td class="ret"><code>JsonArray</code></td><td class="desc"></td></tr>
+          <tr><td><code>bodyAsText()</code></td><td class="ret"><code>String</code></td><td class="desc"></td></tr>
+          <tr><td><code>bodyAsBinary()</code></td><td class="ret"><code>byte[]</code></td><td class="desc"></td></tr>
+          <tr><td><code>&lt;C&gt; body(Class&lt;C&gt;)</code></td><td class="ret"><code>C</code></td><td class="desc">Deserialise the body to the given type</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="api-class">
+      <h3><code>HttpRequest</code> <span class="kind">abstract class</span></h3>
+      <p>Common base of <code>HttpGet</code> and <code>HttpPost</code> — path, headers, cookies.</p>
+
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>path()</code></td><td class="ret"><code>String</code></td><td class="desc"></td></tr>
+          <tr><td><code>headers()</code></td><td class="ret"><code>HttpHeader</code></td><td class="desc">All request headers</td></tr>
+          <tr><td><code>headerNames()</code></td><td class="ret"><code>Set&lt;String&gt;</code></td><td class="desc"></td></tr>
+          <tr><td><code>headerSize()</code></td><td class="ret"><code>int</code></td><td class="desc"></td></tr>
+          <tr><td><code>hasHeader()</code></td><td class="ret"><code>boolean</code></td><td class="desc"><code>true</code> if any header is present</td></tr>
+          <tr><td><code>hasHeader(name)</code></td><td class="ret"><code>boolean</code></td><td class="desc"></td></tr>
+          <tr><td><code>cookies()</code></td><td class="ret"><code>Set&lt;HttpCookie&gt;</code></td><td class="desc"></td></tr>
+          <tr><td><code>cookie(name)</code></td><td class="ret"><code>HttpCookie</code></td><td class="desc">First cookie with that name, or <code>null</code></td></tr>
+          <tr><td><code>hasCookie()</code></td><td class="ret"><code>boolean</code></td><td class="desc"><code>true</code> if any cookie is present</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="api-class">
+      <h3><code>HttpResponse</code> <span class="kind">class</span></h3>
+      <p>Read-only view of the upstream response. Cookies are eagerly decoded.</p>
+
+      <span class="api-table-group">Status</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>statusCode()</code></td><td class="ret"><code>int</code></td><td class="desc">HTTP status code</td></tr>
+          <tr><td><code>statusMessage()</code></td><td class="ret"><code>String</code></td><td class="desc">Reason phrase</td></tr>
+          <tr><td><code>version()</code></td><td class="ret"><code>HttpVersion</code></td><td class="desc">HTTP/1.1 or HTTP/2</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Headers &amp; cookies</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>hasHeader()</code></td><td class="ret"><code>boolean</code></td><td class="desc"><code>true</code> if any header is present</td></tr>
+          <tr><td><code>hasHeader(name)</code></td><td class="ret"><code>boolean</code></td><td class="desc"></td></tr>
+          <tr><td><code>headerNames()</code></td><td class="ret"><code>Set&lt;String&gt;</code></td><td class="desc"></td></tr>
+          <tr><td><code>header(name)</code></td><td class="ret"><code>String</code></td><td class="desc">First value, or <code>null</code></td></tr>
+          <tr><td><code>cookies()</code></td><td class="ret"><code>Set&lt;HttpCookie&gt;</code></td><td class="desc">All response cookies</td></tr>
+          <tr><td><code>cookies(name)</code></td><td class="ret"><code>Set&lt;HttpCookie&gt;</code></td><td class="desc">Cookies matching the given name</td></tr>
+          <tr><td><code>cookie(name, domain, path)</code></td><td class="ret"><code>HttpCookie</code></td><td class="desc">Exact cookie lookup</td></tr>
+          <tr><td><code>hasCookie()</code></td><td class="ret"><code>boolean</code></td><td class="desc"></td></tr>
+          <tr><td><code>hasCookie(name)</code></td><td class="ret"><code>boolean</code></td><td class="desc"></td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Body</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>bodyAsJsonObject()</code></td><td class="ret"><code>JsonObject</code></td><td class="desc"></td></tr>
+          <tr><td><code>bodyAsJsonArray()</code></td><td class="ret"><code>JsonArray</code></td><td class="desc"></td></tr>
+          <tr><td><code>bodyAsText()</code></td><td class="ret"><code>String</code></td><td class="desc"></td></tr>
+          <tr><td><code>bodyAsBinary()</code></td><td class="ret"><code>byte[]</code></td><td class="desc"></td></tr>
+          <tr><td><code>&lt;C&gt; body(Class&lt;C&gt;)</code></td><td class="ret"><code>C</code></td><td class="desc">Deserialise to the given type</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="websocket">WebSocket client</h2>
+
+    <div class="api-class">
+      <h3><code>WebSocketClient</code> <span class="kind">class</span></h3>
+      <p>Connected client wrapping a Vert.x WebSocket. Built and connected through its nested builder.</p>
+
+      <span class="api-table-group">Factory (Builder)</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>static builder(WebSocketEngine, String path)</code></td><td class="ret"><code>Builder</code></td><td class="desc"></td></tr>
+          <tr><td><code>Builder.host(String)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Falls back to engine default</td></tr>
+          <tr><td><code>Builder.port(int)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Falls back to engine default</td></tr>
+          <tr><td><code>Builder.ssl(boolean)</code></td><td class="ret"><code>Builder</code></td><td class="desc"></td></tr>
+          <tr><td><code>Builder.timeout(Duration)</code></td><td class="ret"><code>Builder</code></td><td class="desc"></td></tr>
+          <tr><td><code>Builder.connect()</code></td><td class="ret"><code>Future&lt;WebSocketClient&gt;</code></td><td class="desc">Dial and resolve when the socket is open</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Outgoing</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>send(String)</code></td><td class="ret"><code>Future&lt;Void&gt;</code></td><td class="desc">Send a text frame</td></tr>
+          <tr><td><code>send(byte[])</code></td><td class="ret"><code>Future&lt;Void&gt;</code></td><td class="desc">Send a binary frame</td></tr>
+          <tr><td><code>close()</code></td><td class="ret"><code>Future&lt;Void&gt;</code></td><td class="desc">Close the WebSocket connection</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Handlers</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>onTextMessage(Handler&lt;TextMessageEvent&gt;)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires on each incoming text frame; event holds <code>message()</code></td></tr>
+          <tr><td><code>onBinaryMessage(Handler&lt;BinaryMessageEvent&gt;)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires on each incoming binary frame; event holds <code>message()</code></td></tr>
+          <tr><td><code>onClose(Handler&lt;CloseEvent&gt;)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires when the socket is closed; event holds <code>code()</code> and <code>reason()</code></td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Accessors</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>getPath()</code></td><td class="ret"><code>String</code></td><td class="desc">The path this socket was opened on</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="api-class">
+      <h3><code>HttpException</code> <span class="kind">runtime exception</span></h3>
+      <p>Wraps any I/O or build failure on a request. Extends <code>YojaAppException</code>.</p>
+    </div>
+
+    <div class="note">
+      <p>
+        Module README:
+        <a href="https://github.com/Easy-API-Style/yoja-framework/blob/main/yoja-http-client/README.md">yoja-http-client/README.md</a>.
+      </p>
+    </div>
+   </div>
+
+   <footer class="footer">
+     <p>
+       Yoja Framework · Apache License 2.0 ·
+       <a href="https://github.com/Easy-API-Style/yoja-framework">GitHub</a>
+     </p>
+   </footer>
+  </main>
+</div>
+
+
+<script src="../assets/js/theme.js"></script>
+</body>
+</html>

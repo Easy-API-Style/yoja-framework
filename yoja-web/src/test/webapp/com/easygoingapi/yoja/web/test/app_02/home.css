@@ -1,0 +1,7 @@
+:host(body) {
+    margin: 10px;
+    max-width: 600px;
+    
+    overscroll-behavior: none;
+    overflow-x: hidden;
+}

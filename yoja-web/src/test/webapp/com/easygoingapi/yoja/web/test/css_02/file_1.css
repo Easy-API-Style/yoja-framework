@@ -1,0 +1,7 @@
+@import url("/file_3.css");
+@import url("/file_2.css") print;
+
+
+label {
+    background-color: gray;
+}

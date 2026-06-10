@@ -1,0 +1,60 @@
+/*
+ * Copyright 2026 easy api <easy.api.contact@gmail.com>
+ * https://easygoingapi.com
+ * https://github.com/Easy-API-Style/yoja-framework
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+'use strict'
+
+const urlParameterUtil = await import(yojaWeb.path('../util/urlParameterUtil.js'));
+
+export function load(url, parameters) {
+    window.location.assign(urlParameterUtil.toUrl(url, parameters));
+}
+
+export function reload() {
+    window.location.reload();
+}
+
+export function back() {
+    window.history.back();
+}
+
+export function forward() {
+    window.history.forward();
+}
+
+export function go(delta) {
+    window.history.go(delta);
+}
+
+export function path() {
+    return window.location.pathname;
+}
+
+export function fragment() {
+    return window.location.hash;
+}
+
+export function host() {
+    return window.location.host;
+}
+
+export function port() {
+    return window.location.port;
+}
+
+export function urlParameter() {
+    return urlParameterUtil.parseUrlParameter(window.location.search);
+}

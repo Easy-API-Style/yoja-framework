@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Yoja Framework — Full-stack Java + JavaScript on Vert.x</title>
+  <meta name="description" content="Yoja is a full-stack framework — backend in pure Java, frontend in JavaScript/CSS/HTML. Follows the React component pattern. Built on Vert.x. No build toolchain, no node_modules, no virtual DOM.">
+  <script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('yoja-theme')||'dark')}catch(e){document.documentElement.setAttribute('data-theme','dark')}</script>
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <style>
+    .card p { text-align: justify; hyphens: auto; }
+    .prose  { text-align: justify; hyphens: auto; max-width: 760px; margin-left: auto; margin-right: auto; }
+  </style>
+
+</head>
+<body>
+
+<nav class="top-nav">
+  <a class="top-nav__brand" href="index.html">
+    <span class="brand-yoja">Yoja</span>
+  </a>
+  <div class="top-nav__links">
+    <a href="index.html" class="nav-home is-active">Home</a>
+    <a href="getting-started.html">Get started</a>
+    <a href="modules/index.html">Modules</a>
+    <a href="https://github.com/Easy-API-Style/yoja-framework">GitHub</a>
+    <button class="theme-toggle-button" aria-label="Toggle dark mode"><svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg></button>
+  </div>
+</nav>
+
+<header class="hero">
+  <h1>The full-stack framework<br>backend Java · frontend JavaScript / CSS / HTML</h1>
+  <p class="prose" style="margin-bottom: 2rem; font-size: 1.25rem; color: var(--fg-muted); line-height: 1.5;">
+    Backend in <strong>pure Java</strong> on Vert.x — HTTP, WebSocket, sessions.
+    Frontend in <strong>JavaScript / CSS / HTML</strong> — native ES6 modules, no build step, no <code>node_modules</code>, no virtual DOM.
+    Follows the <strong>React component pattern</strong>: each section of the page is driven by an ES6 controller class, without the VDOM or the transpiler.
+    Full test coverage from Java unit tests to browser end-to-end.
+    Designed for AI-assisted development with plain Flex CSS.
+  </p>
+  <div class="hero__buttons">
+    <a class="btn btn--primary" href="getting-started.html">Get started →</a>
+    <a class="btn btn--secondary" href="modules/index.html">Browse modules</a>
+  </div>
+</header>
+
+<section class="section">
+  <h2>Built for AI-assisted development — without losing control</h2>
+  <p class="prose" style="margin-bottom: 1rem; color: var(--fg-muted); font-size: 1.05rem; line-height: 1.75;">
+    AI coding assistants are most useful when they can read the entire stack in one pass and generate code that a human can immediately understand and modify.
+    Yoja is designed around that constraint: plain Java on the backend, native ES6 on the frontend, strict file separation, no hidden conventions.
+    An AI can reason about the full application from source alone — no annotation processors to reverse-engineer, no build output to interpret, no framework magic to guess.
+  </p>
+  <p class="prose" style="margin-bottom: 1rem; color: var(--fg-muted); font-size: 1.05rem; line-height: 1.75;">
+    The real payoff is in the critical moments. When a CSS layout breaks, when a JavaScript interaction misbehaves, when an AI gets stuck and keeps regenerating the same wrong answer — you can step in, read the code directly, fix it in one file, and move on.
+    No transpiler output to untangle, no generated class names to trace, no component framework layered on top.
+    The code an AI writes is the code that runs, and it stays readable enough that a human can always take back the wheel.
+  </p>
+</section>
+
+<section class="section">
+  <h2>A philosophy of restraint</h2>
+  <p class="prose" style="margin-bottom: 1rem; color: var(--fg-muted); font-size: 1.05rem; line-height: 1.75;">
+    Yoja was born from an obsession: build the smallest possible framework that still covers everything a real web application needs.
+    No transpilation, no browser extensions to debug, no intermediate layers — only what browsers already speak natively.
+    The frontend dynamises and structures pages; the backend calculates; CSS with Flexbox handles presentation simply and efficiently.
+    Each concern stays in its own language, its own file, its own layer.
+  </p>
+  <p class="prose" style="margin-bottom: 1rem; color: var(--fg-muted); font-size: 1.05rem; line-height: 1.75;">
+    This framework is also a craft project — somewhere between a functional piece of software and something made with care.
+    Clean object paradigms in both Java and JavaScript, strict separation of languages, HTML for structure, CSS for presentation, simple but effective principles.
+    An anti-framework, in a sense: its ambition is not to grow, but to stabilise.
+    The older it gets, the simpler and more reliable it becomes — because it only ever answered the primary, recurring needs of a web application.
+    Built to help a developer and an AI understand each other, now and in the future.
+  </p>
+</section>
+
+<section class="section">
+  <h2>Why Yoja</h2>
+  <p class="section__lead">
+    A small set of opinionated modules that compose into a real application
+    without forcing you to learn a build system.
+  </p>
+  <div class="grid">
+    <article class="card">
+      <h3>React pattern, without VDOM</h3>
+      <p>
+        Same component-driven pattern as React — each section has its own controller class — but on native browser APIs.
+        <code>yw-controler</code>, <code>yw-css</code>, <code>yw-language</code> declared in HTML, hydrated from ES6 classes.
+        Direct DOM, no diffing overhead.
+      </p>
+    </article>
+    <article class="card">
+      <h3>Lightweight, fast &amp; maintainable</h3>
+      <p>
+        A small set of focused modules with no hidden magic. Each module does
+        one thing, has a minimal surface, and composes cleanly with the others.
+        Fast to start, easy to reason about, straightforward to upgrade.
+      </p>
+    </article>
+    <article class="card">
+      <h3>Tests: back to front</h3>
+      <p>
+        One test framework from Java unit tests to full browser end-to-end.
+        <code>yoja-selenium</code> boots the real server, drives a browser,
+        runs JS modules as steps — all from a JUnit 6 <code>@TestFactory</code>.
+      </p>
+    </article>
+    <article class="card">
+      <h3>Designed for AI</h3>
+      <p>
+        Plain Java and native ES6 — no transpiler output, no generated
+        boilerplate. Code produced by an AI assistant runs as-is; the
+        framework's explicit conventions give models a consistent surface to
+        read, generate and modify.
+      </p>
+    </article>
+    <article class="card">
+      <h3>Built on Vert.x</h3>
+      <p>
+        Non-blocking I/O, native HTTP/2, and a tested event-loop runtime.
+        Yoja wraps the parts you need with a small, fluent surface.
+      </p>
+    </article>
+    <article class="card">
+      <h3>No build toolchain</h3>
+      <p>
+        Gradle on the JVM, native ES modules in the browser. Drop a JS file,
+        reload the page. No bundler, no transpiler, no source maps to chase.
+      </p>
+    </article>
+    <article class="card">
+      <h3>Sessions &amp; sockets</h3>
+      <p>
+        Cookie-bound sessions, broadcast-ready WebSocket endpoints, jar-served
+        or folder-served resources — all from the same router.
+      </p>
+    </article>
+    <article class="card">
+      <h3>Flex CSS</h3>
+      <p>
+        Each section carries its own scoped stylesheet via <code>yw-css</code>,
+        isolated in a Shadow DOM. Write plain CSS with Flexbox — no CSS framework
+        required, no class-name collisions, no specificity wars between sections.
+      </p>
+    </article>
+    <article class="card">
+      <h3>Reverse-proxy included</h3>
+      <p>
+        Route by host + path to one or many upstreams, with load-balancing,
+        SSL termination, and a live admin API to swap rules at runtime.
+      </p>
+    </article>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Hello, Yoja</h2>
+  <p class="section__lead">
+    <a href="https://github.com/Easy-API-Style/yoja-blueprint-hello" target="_blank" rel="noopener">Source code on GitHub →</a>
+  </p>
+
+  <div class="hello-file">
+    <span class="code-label">Hello.java</span>
+<pre><code><span class="k">import</span> com.easygoingapi.yoja.core.http.HttpMethod;
+<span class="k">import</span> com.easygoingapi.yoja.http.server.HttpRouter;
+<span class="k">import</span> com.easygoingapi.yoja.http.server.HttpServer;
+<span class="k">import</span> com.easygoingapi.yoja.http.server.WebApp;
+
+<span class="k">public class</span> Hello {
+    <span class="k">public static void</span> main(String[] args) {
+        HttpRouter router = HttpRouter.builder()
+            .contentType(<span class="s">"js"</span>, <span class="s">"application/javascript"</span>)
+            .contentType(<span class="s">"html"</span>, <span class="s">"text/html"</span>)
+            .webResource(WebApp.of(<span class="s">WebApp.Type.jar</span>, <span class="s">"com.easygoingapi.yoja.web"</span>, <span class="s">"/yoja"</span>), <span class="s">"/*"</span>)
+            .webResource(WebApp.jar(<span class="s">"blueprint"</span>), <span class="s">"/*"</span>)
+            .webService(HttpMethod.GET, <span class="s">"/hello"</span>, r ->
+                r.response().send(<span class="s">"hello, yoja"</span>))
+            .build();
+        HttpServer.builder(router, <span class="n">9090</span>)
+                  .start()
+                  .onSuccess(server -> System.out.println(<span class="s">"http://localhost:"</span> + server.port()));
+    }
+}</code></pre>
+  </div>
+
+  <div class="hello-files">
+    <div class="hello-file">
+      <span class="code-label">index.html</span>
+<pre><code>&lt;!doctype html&gt;
+&lt;html&gt;
+&lt;head&gt;
+  &lt;script type=<span class="s">"module"</span>
+          src=<span class="s">"/yoja/YojaWeb-1.0.0.js"</span>&gt;&lt;/script&gt;
+&lt;/head&gt;
+&lt;body <span class="a">yw-controler</span>=<span class="s">"./HelloControler.js"</span>&gt;
+  &lt;p class=<span class="s">"message"</span>&gt;&lt;/p&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+    </div>
+
+    <div class="hello-file">
+      <span class="code-label">HelloControler.js</span>
+<pre><code><span class="k">export default class</span> HelloControler {
+
+    constructor(section) {
+        section.pageReady(() => {
+            yojaWebApi.httpClient
+                .get({ url: <span class="s">'/hello'</span> })
+                .then(res => {
+                    section.firstTag(<span class="s">'.message'</span>)
+                           .textContent = res.body;
+                });
+        });
+    }
+
+}</code></pre>
+    </div>
+  </div>
+
+  <div style="max-width: 760px; margin: 1.75rem auto 0; border-top: 1px solid var(--border-soft); padding-top: 1.25rem;">
+    <p style="margin: 0 0 .35rem; font-weight: 600; color: var(--fg);">
+      Without the frontend in the JAR —
+      <a href="https://github.com/Easy-API-Style/yoja-blueprint-hello-only-server" target="_blank" rel="noopener">yoja-blueprint-hello-only-server</a>
+    </p>
+    <p class="prose" style="margin: 0 0 .75rem; color: var(--fg-muted); font-size: .95rem; line-height: 1.65;">
+      Same server, same route — but the frontend files live in a local <code>webapp/</code> folder served from disk via <code>WebApp.folder(path)</code>.
+      The yoja-web library is included directly in that folder, not loaded from a JAR.
+      Use this when you want to edit HTML, CSS, or JavaScript and see the change on the next page reload, without rebuilding anything.
+      The first variant (<a href="https://github.com/Easy-API-Style/yoja-blueprint-hello" target="_blank" rel="noopener">yoja-blueprint-hello</a>) packages everything into the JAR — one artifact, deploy anywhere.
+    </p>
+    <p class="prose" style="margin: 0 0 .4rem; color: var(--fg-muted); font-size: .9rem;">
+      Copy the yoja-web library files into your local folder with:
+    </p>
+<pre><code>./gradlew :yoja-web:exportYojaWeb -PfolderDestination=&lt;path/to/your/webapp&gt;</code></pre>
+  </div>
+
+</section>
+
+<section class="section">
+  <h2>The modules</h2>
+  <p class="section__lead">
+    Pick the modules you need. Each one is documented page-by-page with its
+    full API.
+  </p>
+  <div class="grid">
+    <a class="card card--link" href="modules/core.html">
+      <span class="card__tag">yoja-core</span>
+      <h3>Core</h3>
+      <p>App lifecycle, worker threads, scheduling, HTTP primitives shared by every module.</p>
+    </a>
+    <a class="card card--link" href="modules/http-server.html">
+      <span class="card__tag">yoja-http-server</span>
+      <h3>HTTP Server</h3>
+      <p>Declarative routing, sessions, WebSocket, request/response hooks.</p>
+    </a>
+    <a class="card card--link" href="modules/http-client.html">
+      <span class="card__tag">yoja-http-client</span>
+      <h3>HTTP Client</h3>
+      <p>Fluent GET/POST builder, JSON-aware bodies, WebSocket dialer.</p>
+    </a>
+    <a class="card card--link" href="modules/reverse-proxy.html">
+      <span class="card__tag">yoja-reverse-proxy</span>
+      <h3>Reverse Proxy</h3>
+      <p>Host/path-based routing, load balancing, SSL termination, live admin API.</p>
+    </a>
+    <a class="card card--link" href="modules/selenium.html">
+      <span class="card__tag">yoja-selenium</span>
+      <h3>Selenium</h3>
+      <p>Embedded server + browser driver + JUnit 6 dynamic tests + JS-module test runners.</p>
+    </a>
+    <a class="card card--link" href="modules/web.html">
+      <span class="card__tag">yoja-web</span>
+      <h3>Web (frontend)</h3>
+      <p>Section-based components, routing, i18n, HTTP client, WebSocket, storage — in native ES6.</p>
+    </a>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Why choose Yoja</h2>
+  <p class="section__lead">What the framework brings, compared to conventional approaches.</p>
+  <div class="summary-table-wrap">
+    <table class="summary-table">
+      <thead>
+        <tr>
+          <th>Aspect</th>
+          <th>Conventional approach</th>
+          <th>With Yoja</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Frontend tooling</td>
+          <td>Webpack / Vite / npm + transpilation</td>
+          <td>Native ES6 — drop a JS file, reload the page</td>
+        </tr>
+        <tr>
+          <td>UI components</td>
+          <td>VDOM framework (React, Vue…) + JSX</td>
+          <td>Standard ES6 classes, HTML directives, direct DOM</td>
+        </tr>
+        <tr>
+          <td>Scoped CSS</td>
+          <td>CSS Modules, CSS-in-JS, specificity conflicts</td>
+          <td><code>yw-css</code> — stylesheet scoped per section via Shadow DOM, zero collision</td>
+        </tr>
+        <tr>
+          <td>HTTP server</td>
+          <td>Separate framework (Spring, Quarkus…) + configuration</td>
+          <td>Fluent Java router — sessions, WebSocket in one chain</td>
+        </tr>
+        <tr>
+          <td>HTTP client</td>
+          <td>External library + manual Content-Type handling</td>
+          <td>Content-Type auto-detected from the body's runtime type</td>
+        </tr>
+        <tr>
+          <td>End-to-end tests</td>
+          <td>Separate tools (Cypress, Playwright) not integrated with the backend</td>
+          <td>Real server + browser + JS modules — from a JUnit 6 <code>@TestFactory</code></td>
+        </tr>
+        <tr>
+          <td>Internationalisation</td>
+          <td>External i18n library + build step</td>
+          <td><code>yw-language</code> + <code>yw-i18n</code> — XML per section, zero dependency</td>
+        </tr>
+        <tr>
+          <td>Reverse proxy</td>
+          <td>Nginx / HAProxy configured separately</td>
+          <td><code>yoja-reverse-proxy</code> — rules in Java, live admin API</td>
+        </tr>
+        <tr>
+          <td>AI compatibility</td>
+          <td>Opaque abstractions, unreadable transpiled output</td>
+          <td>Standard Java + pure ES6 — AI-generated code runs as-is</td>
+        </tr>
+        <tr>
+          <td>Dependencies</td>
+          <td><code>node_modules</code>, bundler, transpiler, source maps</td>
+          <td>Gradle + one jar per module — nothing else</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer class="footer">
+  <p>
+    Yoja Framework · Apache License 2.0 ·
+    <a href="https://github.com/Easy-API-Style/yoja-framework">GitHub</a> ·
+    <a href="https://github.com/Easy-API-Style/yoja-blueprint-hello">yoja-blueprint-hello</a> ·
+    <a href="https://github.com/Easy-API-Style/yoja-blueprint-kanban">yoja-blueprint-kanban</a> ·
+    <a href="https://easygoingapi.com">easygoingapi.com</a>
+  </p>
+</footer>
+
+
+
+<script src="assets/js/theme.js"></script>
+</body>
+</html>

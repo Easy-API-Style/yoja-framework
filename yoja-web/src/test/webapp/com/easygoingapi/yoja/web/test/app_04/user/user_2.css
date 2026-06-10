@@ -1,0 +1,23 @@
+@import url("/main.css");
+
+:host(.user-section) {
+    margin: 5px;
+     
+    display: flex;
+    flex-flow: column nowrap;
+}
+
+.id-section {
+    display: flex;
+    flex-flow: column nowrap;
+}
+
+fieldset {
+    display: flex;
+    flex-flow: column-reverse nowrap;
+}
+
+label {
+    margin-top: 2px;
+    background-color: pink;
+}

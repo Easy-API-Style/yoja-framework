@@ -1,0 +1,9 @@
+<yw-language>
+    <yw-import path="/lang_02.xml"/>
+    <yw-import path="./lang_03.xml"/>
+    
+   <yw-text key="city">
+        <en>City</en>
+        <fr>Ville</fr>
+    </yw-text>
+</yw-language>

@@ -1,0 +1,5 @@
+dependencies {
+	api project(':yoja-core')
+	api project(':yoja-http-server')
+	api project(':yoja-http-client')
+}

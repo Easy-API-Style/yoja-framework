@@ -1,0 +1,17 @@
+<yw-language>
+    <yw-import path="/lang_05.xml"/>
+    <yw-import path="./lang_06.xml"/>
+    <yw-text key="address">
+        <en>Address</en>
+        <fr>Adresse</fr>
+    </yw-text>
+    <yw-text key="street">
+        <en>Street</en>
+        <fr>Rue</fr>
+    </yw-text>
+    
+     <yw-text key="firstName">
+        <en>???</en>
+        <fr>???</fr>
+    </yw-text>
+</yw-language>

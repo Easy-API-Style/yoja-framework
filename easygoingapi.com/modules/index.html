@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Modules — Yoja Framework</title>
+  <script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('yoja-theme')||'dark')}catch(e){document.documentElement.setAttribute('data-theme','dark')}</script>
+  <link rel="stylesheet" href="../assets/css/styles.css">
+</head>
+<body>
+
+<nav class="top-nav">
+  <a class="top-nav__brand" href="../index.html">
+    <span class="brand-yoja">Yoja</span>
+  </a>
+  <div class="top-nav__links">
+    <a href="../index.html" class="nav-home">Home</a>
+    <a href="../getting-started.html">Get started</a>
+    <a href="index.html" class="is-active">Modules</a>
+    <a href="https://github.com/Easy-API-Style/yoja-framework">GitHub</a>
+    <button class="theme-toggle-button" aria-label="Toggle dark mode"><svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg></button>
+  </div>
+</nav>
+
+<div class="layout">
+  <aside class="sidebar">
+    <h4>Modules</h4>
+    <ul>
+      <li><a href="index.html" class="is-active">Overview</a></li>
+      <li><a href="core.html">yoja-core</a></li>
+      <li><a href="http-server.html">yoja-http-server</a></li>
+      <li><a href="http-client.html">yoja-http-client</a></li>
+      <li><a href="reverse-proxy.html">yoja-reverse-proxy</a></li>
+      <li><a href="selenium.html">yoja-selenium</a></li>
+      <li><a href="web.html">yoja-web</a></li>
+    </ul>
+    <h4>Documentation</h4>
+    <ul>
+      <li><a href="../index.html" class="nav-home">Home</a></li>
+      <li><a href="../getting-started.html">Get started</a></li>
+    </ul>
+  </aside>
+
+  <main class="main">
+   <div class="main__inner">
+    <p class="crumb">
+      <a href="../index.html" class="nav-home">Home</a> <span>/</span> Modules
+    </p>
+    <h1>Modules</h1>
+    <p class="lead">
+      Yoja ships as a set of independent Gradle modules under
+      <code>com.easygoingapi</code>. Every module is documented on its own
+      page, with installation, quick-start, and the full public API.
+    </p>
+
+    <h2>Server-side</h2>
+    <div class="grid grid--2col">
+      <a class="card card--link" href="core.html">
+        <span class="card__tag">yoja-core</span>
+        <h3>yoja-core</h3>
+        <p>
+          The runtime foundation: <code>YojaApp</code> (Vert.x bootstrap),
+          <code>Worker</code> (thread pools), <code>Timer</code> (scheduling),
+          HTTP primitives shared by every other module.
+        </p>
+      </a>
+      <a class="card card--link" href="http-server.html">
+        <span class="card__tag">yoja-http-server</span>
+        <h3>yoja-http-server</h3>
+        <p>
+          Declarative router with sessions, WebSocket dispatching, static
+          resource serving (from jars or folders), request/response hooks,
+          and TLS hot-reload.
+        </p>
+      </a>
+      <a class="card card--link" href="http-client.html">
+        <span class="card__tag">yoja-http-client</span>
+        <h3>yoja-http-client</h3>
+        <p>
+          Fluent GET/POST builders, automatic <code>Content-Type</code>
+          selection from the body's runtime type, a WebSocket dialer, and a
+          shared engine that owns the connection pool.
+        </p>
+      </a>
+      <a class="card card--link" href="reverse-proxy.html">
+        <span class="card__tag">yoja-reverse-proxy</span>
+        <h3>yoja-reverse-proxy</h3>
+        <p>
+          Host- and path-based routing to one or many upstreams, with
+          least-loaded port selection, path rewriting, SSL termination, and a
+          token-protected admin API to swap rules at runtime.
+        </p>
+      </a>
+    </div>
+
+    <h2>Frontend</h2>
+    <div class="grid">
+      <a class="card card--link" href="web.html">
+        <span class="card__tag">yoja-web</span>
+        <h3>yoja-web</h3>
+        <p>
+          Section-based components in plain ES6 modules. HTML attributes
+          (<code>yw-controler</code>, <code>yw-css</code>,
+          <code>yw-language</code>, <code>yw-slot</code>,
+          <code>yw-include</code>) declare component boundaries and pull in
+          external HTML fragments; JS classes hydrate them.
+          No virtual DOM, no build step.
+        </p>
+      </a>
+    </div>
+
+    <h2>Testing</h2>
+    <div class="grid">
+      <a class="card card--link" href="selenium.html">
+        <span class="card__tag">yoja-selenium</span>
+        <h3>yoja-selenium</h3>
+        <p>
+          Browser-driven tests with a fluent <code>TestBuilder</code>: pick a
+          browser, start an embedded server, run named JS exports as test
+          steps, capture browser logs, integrate as JUnit 6 dynamic tests.
+        </p>
+      </a>
+    </div>
+
+   </div>
+
+   <footer class="footer">
+     <p>
+       Yoja Framework · Apache License 2.0 ·
+       <a href="https://github.com/Easy-API-Style/yoja-framework">GitHub</a>
+     </p>
+   </footer>
+  </main>
+</div>
+
+
+<script src="../assets/js/theme.js"></script>
+</body>
+</html>

@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>yoja-reverse-proxy — Yoja Framework</title>
+  <script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('yoja-theme')||'dark')}catch(e){document.documentElement.setAttribute('data-theme','dark')}</script>
+  <link rel="stylesheet" href="../assets/css/styles.css">
+</head>
+<body>
+
+<nav class="top-nav">
+  <a class="top-nav__brand" href="../index.html">
+    <span class="brand-yoja">Yoja</span>
+  </a>
+  <div class="top-nav__links">
+    <a href="../index.html" class="nav-home">Home</a>
+    <a href="../getting-started.html">Get started</a>
+    <a href="index.html" class="is-active">Modules</a>
+    <a href="https://github.com/Easy-API-Style/yoja-framework">GitHub</a>
+    <button class="theme-toggle-button" aria-label="Toggle dark mode"><svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg></button>
+  </div>
+</nav>
+
+<div class="layout">
+  <aside class="sidebar">
+    <h4>Modules</h4>
+    <ul>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="core.html">yoja-core</a></li>
+      <li><a href="http-server.html">yoja-http-server</a></li>
+      <li><a href="http-client.html">yoja-http-client</a></li>
+      <li><a href="reverse-proxy.html" class="is-active">yoja-reverse-proxy</a></li>
+      <li><a href="selenium.html">yoja-selenium</a></li>
+      <li><a href="web.html">yoja-web</a></li>
+    </ul>
+    <h4>On this page</h4>
+    <ul>
+      <li><a href="#install">Installation</a></li>
+      <li><a href="#quickstart">Quick start</a></li>
+      <li><a href="#server">ReverseProxyServer</a></li>
+      <li><a href="#rule">ReverseProxyRule</a></li>
+      <li><a href="#result">Resolution results</a></li>
+      <li><a href="#admin">Admin API</a></li>
+    </ul>
+  </aside>
+
+  <main class="main">
+   <div class="main__inner">
+    <p class="crumb">
+      <a href="../index.html" class="nav-home">Home</a> <span>/</span>
+      <a href="index.html">Modules</a> <span>/</span> yoja-reverse-proxy
+    </p>
+    <h1>yoja-reverse-proxy</h1>
+    <p class="lead">
+      Host- and path-based routing to one or many upstreams, with least-loaded
+      port selection, path rewriting, SSL termination and a token-protected
+      admin API to swap rules at runtime.
+    </p>
+
+    <h2 id="install">Installation</h2>
+<pre><code>implementation <span class="s">'com.easygoingapi:yoja-reverse-proxy:VERSION'</span></code></pre>
+
+    <h2 id="quickstart">Quick start</h2>
+<pre><code><span class="k">import</span> com.easygoingapi.yoja.reverse.proxy.*;
+<span class="k">import</span> com.easygoingapi.yoja.reverse.proxy.ReverseProxyRule.Url;
+
+YojaApp.start();
+
+ReverseProxyServer.builder(<span class="n">8080</span>)
+    .silent(<span class="k">false</span>)
+    .admin(<span class="n">9090</span>, <span class="s">"secret-token"</span>)
+    .rule(<span class="k">new</span> ReverseProxyRule(
+        Url.from(<span class="s">"app.example.com"</span>, <span class="s">"/api"</span>),
+        Url.to(<span class="k">false</span>, <span class="s">"backend.internal"</span>)
+           .port(<span class="n">8081</span>, <span class="n">8082</span>)        <span class="c">// least-loaded wins</span>
+           .cutsPathWith(<span class="s">"/api"</span>)
+           .startsPathWith(<span class="s">"/v1"</span>)
+           .build()))
+    .start();</code></pre>
+
+    <h2 id="server">ReverseProxyServer</h2>
+
+    <div class="api-class">
+      <h3><code>ReverseProxyServer</code> <span class="kind">class (Certificatable)</span></h3>
+      <p>Owns two Vert.x HTTP servers: the public proxy and an optional admin server.</p>
+
+      <span class="api-table-group">Factory (Builder)</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>static builder(int proxyPort)</code></td><td class="ret"><code>Builder</code></td><td class="desc"></td></tr>
+          <tr><td><code>Builder.admin(int port, String token)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Enable the admin server on the given port, protected by token</td></tr>
+          <tr><td><code>Builder.ssl(Path key, Path cert)</code></td><td class="ret"><code>Builder</code></td><td class="desc">TLS with PEM files</td></tr>
+          <tr><td><code>Builder.sslSelfSigned()</code></td><td class="ret"><code>Builder</code></td><td class="desc">TLS with an auto-generated self-signed certificate</td></tr>
+          <tr><td><code>Builder.options(HttpServerOptions)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Override Vert.x options</td></tr>
+          <tr><td><code>Builder.sslProxy(boolean)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Whether upstream-facing HTTP engines dial over TLS</td></tr>
+          <tr><td><code>Builder.silent(boolean)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Drop unresolved requests silently instead of returning 404</td></tr>
+          <tr><td><code>Builder.rule(ReverseProxyRule)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Register a routing rule</td></tr>
+          <tr><td><code>Builder.rules(Set&lt;ReverseProxyRule&gt;)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Register multiple rules at once</td></tr>
+          <tr><td><code>Builder.elseRule(Function&lt;HttpUrl, HttpUrl&gt;)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Fallback resolver when no rule matches</td></tr>
+          <tr><td><code>Builder.onResolve(Handler&lt;ReverseProxyResult&gt;)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Listener invoked on every resolution</td></tr>
+          <tr><td><code>Builder.start()</code></td><td class="ret"><code>Future&lt;ReverseProxyServer&gt;</code></td><td class="desc">Bind both servers</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Lifecycle</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>start()</code></td><td class="ret"><code>Future&lt;Void&gt;</code></td><td class="desc">Start both servers</td></tr>
+          <tr><td><code>stop()</code></td><td class="ret"><code>Future&lt;Void&gt;</code></td><td class="desc">Stop both servers</td></tr>
+          <tr><td><code>startAdmin()</code></td><td class="ret"><code>Future&lt;Void&gt;</code></td><td class="desc">Start the admin server independently</td></tr>
+          <tr><td><code>stopAdmin()</code></td><td class="ret"><code>Future&lt;Void&gt;</code></td><td class="desc">Stop the admin server independently</td></tr>
+          <tr><td><code>proxyState()</code></td><td class="ret"><code>State</code></td><td class="desc"><code>stopping | stopped | starting | started</code></td></tr>
+          <tr><td><code>adminState()</code></td><td class="ret"><code>State</code></td><td class="desc"></td></tr>
+          <tr><td><code>updateCertificate(Path key, Path cert)</code></td><td class="ret"><code>Future&lt;Boolean&gt;</code></td><td class="desc">Hot-swap TLS material on both servers</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Accessors</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>proxyPort()</code></td><td class="ret"><code>int</code></td><td class="desc"></td></tr>
+          <tr><td><code>adminPort()</code></td><td class="ret"><code>Integer</code></td><td class="desc"><code>null</code> when the admin server is not enabled</td></tr>
+          <tr><td><code>certificate()</code></td><td class="ret"><code>HttpCertificate</code></td><td class="desc"></td></tr>
+          <tr><td><code>static adminTokenHeaderKey()</code></td><td class="ret"><code>String</code></td><td class="desc">Header name carrying the current admin token (<code>Reserve-Proxy-Token</code>)</td></tr>
+          <tr><td><code>static adminNewTokenHeaderKey()</code></td><td class="ret"><code>String</code></td><td class="desc">Header name carrying the new token on rotation (<code>New-Reserve-Proxy-Token</code>)</td></tr>
+          <tr><td><code>static defaultOptions(HttpCertificate)</code></td><td class="ret"><code>HttpServerOptions</code></td><td class="desc">HTTP/2 with ALPN fallback</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="rule">ReverseProxyRule</h2>
+
+    <div class="api-class">
+      <h3><code>ReverseProxyRule</code> <span class="kind">class</span></h3>
+      <p>Mapping from an inbound URL pattern to an upstream target. JSON-serialisable for admin API exchange. Identified by its <code>from</code> (host + path).</p>
+
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>ReverseProxyRule(Url.From, Url.To)</code></td><td class="ret"></td><td class="desc"></td></tr>
+          <tr><td><code>from()</code></td><td class="ret"><code>Url.From</code></td><td class="desc">Inbound host + path pattern</td></tr>
+          <tr><td><code>to()</code></td><td class="ret"><code>Url.To</code></td><td class="desc">Upstream target description</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="api-class">
+      <h3><code>ReverseProxyRule.Url</code> · <code>Url.From</code> · <code>Url.To</code> <span class="kind">nested classes</span></h3>
+
+      <span class="api-table-group">Url.From — inbound pattern factory</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>Url.from(String host)</code></td><td class="ret"><code>Url.From</code></td><td class="desc">Match any path on this host</td></tr>
+          <tr><td><code>Url.from(String host, String path)</code></td><td class="ret"><code>Url.From</code></td><td class="desc">Match a specific path prefix on this host</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Url.To.Builder — upstream target</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>Url.to(boolean ssl, String host)</code></td><td class="ret"><code>Url.To.Builder</code></td><td class="desc">Start building an upstream target</td></tr>
+          <tr><td><code>port(int [, int...])</code></td><td class="ret"><code>Url.To.Builder</code></td><td class="desc">Load-balanced port set; least-loaded port wins</td></tr>
+          <tr><td><code>ports(Set&lt;Integer&gt;)</code></td><td class="ret"><code>Url.To.Builder</code></td><td class="desc">Bulk-set load-balanced ports</td></tr>
+          <tr><td><code>cutsPathWith(String)</code></td><td class="ret"><code>Url.To.Builder</code></td><td class="desc">Strip this prefix from the inbound path before forwarding</td></tr>
+          <tr><td><code>startsPathWith(String)</code></td><td class="ret"><code>Url.To.Builder</code></td><td class="desc">Prepend this prefix to the path after stripping</td></tr>
+          <tr><td><code>build()</code></td><td class="ret"><code>Url.To</code></td><td class="desc"></td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Url.To — accessors</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>ssl()</code></td><td class="ret"><code>boolean</code></td><td class="desc">Whether the upstream connection uses TLS</td></tr>
+          <tr><td><code>host()</code></td><td class="ret"><code>String</code></td><td class="desc">Upstream hostname</td></tr>
+          <tr><td><code>ports()</code></td><td class="ret"><code>Set&lt;Integer&gt;</code></td><td class="desc">Load-balanced port pool</td></tr>
+          <tr><td><code>cutsPathWith()</code></td><td class="ret"><code>String</code></td><td class="desc"></td></tr>
+          <tr><td><code>startsPathWith()</code></td><td class="ret"><code>String</code></td><td class="desc"></td></tr>
+          <tr><td><code>apply(String path)</code></td><td class="ret"><code>String</code></td><td class="desc">Apply the configured rewriting to an inbound path</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="result">Resolution results</h2>
+
+    <div class="api-class">
+      <h3><code>ReverseProxyResult</code> · <code>ReverseProxyRuleResult</code> <span class="kind">classes</span></h3>
+      <p>Outcome of resolving an inbound URL. <code>ReverseProxyRuleResult</code> extends <code>ReverseProxyResult</code> and is emitted when a registered rule matched.</p>
+
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>fromUrl()</code></td><td class="ret"><code>HttpUrl</code></td><td class="desc">The original inbound URL</td></tr>
+          <tr><td><code>toUrl()</code></td><td class="ret"><code>HttpUrl</code></td><td class="desc">The resolved upstream URL; <code>null</code> on a miss</td></tr>
+          <tr><td><code>isResolved()</code></td><td class="ret"><code>boolean</code></td><td class="desc"><code>true</code> when a target URL was produced</td></tr>
+          <tr><td><code>reverseProxyRule()</code> <em>(RuleResult only)</em></td><td class="ret"><code>ReverseProxyRule</code></td><td class="desc">The rule that produced this resolution</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="admin">Admin API</h2>
+
+    <p>
+      When admin is enabled, six endpoints are exposed on the admin port:
+    </p>
+    <ul>
+      <li><code>POST /update/token</code> — rotate the admin token. New value in the
+        <code>New-Reserve-Proxy-Token</code> header.</li>
+      <li><code>POST /put/rule</code> — add or replace a single rule (JSON body).</li>
+      <li><code>POST /put/rules</code> — batch upsert (JSON array).</li>
+      <li><code>POST /remove/rule</code> — drop a rule by its <code>Url.From</code> (JSON body).</li>
+      <li><code>POST /remove/rules</code> — batch drop (JSON array).</li>
+      <li><code>GET /load/rules</code> — list every active rule.</li>
+    </ul>
+    <p>
+      Every request must carry the current admin token in the
+      <code>Reserve-Proxy-Token</code> header. Operations are serialised
+      through a single worker keyed by the proxy port so concurrent updates
+      and lookups never race.
+    </p>
+
+    <div class="api-class">
+      <h3><code>ReverseProxySwitcher</code> · <code>ReverseProxySwitcherWebClient</code> <span class="kind">internal classes</span></h3>
+      <p>Dispatch engine wired by <code>ReverseProxyServer.start()</code>. Documented for completeness; not normally instantiated directly.</p>
+
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>resolve(HttpServerRequest)</code></td><td class="ret"><code>ReverseProxyResult</code></td><td class="desc">Resolve an inbound request to an upstream URL</td></tr>
+          <tr><td><code>adminRouter()</code></td><td class="ret"><code>Router</code></td><td class="desc">Vert.x router carrying the admin endpoints</td></tr>
+          <tr><td><code>proxyRouter()</code> <em>(subclass)</em></td><td class="ret"><code>Router</code></td><td class="desc">Vert.x router that forwards requests upstream</td></tr>
+          <tr><td><code>isSilent()</code></td><td class="ret"><code>boolean</code></td><td class="desc"></td></tr>
+          <tr><td><code>getProxyPort()</code></td><td class="ret"><code>int</code></td><td class="desc"></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="api-class">
+      <h3><code>ReverseProxyException</code> <span class="kind">runtime exception</span></h3>
+      <p>Raised for invalid rules and malformed URIs. Extends <code>YojaAppException</code>.</p>
+    </div>
+
+    <div class="note">
+      <p>
+        Module README:
+        <a href="https://github.com/Easy-API-Style/yoja-framework/blob/main/yoja-reverse-proxy/README.md">yoja-reverse-proxy/README.md</a>.
+      </p>
+    </div>
+   </div>
+
+   <footer class="footer">
+     <p>
+       Yoja Framework · Apache License 2.0 ·
+       <a href="https://github.com/Easy-API-Style/yoja-framework">GitHub</a>
+     </p>
+   </footer>
+  </main>
+</div>
+
+
+<script src="../assets/js/theme.js"></script>
+</body>
+</html>

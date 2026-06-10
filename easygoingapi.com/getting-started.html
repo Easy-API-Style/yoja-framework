@@ -1,0 +1,1267 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Get started — Yoja Framework</title>
+  <script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('yoja-theme')||'dark')}catch(e){document.documentElement.setAttribute('data-theme','dark')}</script>
+  <link rel="stylesheet" href="assets/css/styles.css">
+
+</head>
+<body>
+
+<nav class="top-nav">
+  <a class="top-nav__brand" href="index.html">
+    <span class="brand-yoja">Yoja</span>
+  </a>
+  <div class="top-nav__links">
+    <a href="index.html" class="nav-home">Home</a>
+    <a href="getting-started.html" class="is-active">Get started</a>
+    <a href="modules/index.html">Modules</a>
+    <a href="https://github.com/Easy-API-Style/yoja-framework">GitHub</a>
+    <button class="theme-toggle-button" aria-label="Toggle dark mode"><svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg></button>
+  </div>
+</nav>
+
+<div class="layout">
+  <aside class="sidebar">
+    <h4>Get started</h4>
+    <ul>
+      <li><a href="#prereqs">Prerequisites</a></li>
+      <li><a href="#what">What it shows</a></li>
+      <li><a href="#layout">Project layout</a></li>
+      <li><a href="#install">Dependencies</a></li>
+    </ul>
+
+    <div class="nav-group">
+      <span class="nav-group-label">Backend</span>
+      <ul class="nav-sub">
+        <li><a href="#model">1 — The model</a></li>
+        <li><a href="#service">2 — The service</a></li>
+        <li><a href="#quote">3 — External HTTP call</a></li>
+        <li><a href="#auth">4 — Auth endpoints</a></li>
+        <li><a href="#api">5 — Task endpoints</a></li>
+        <li><a href="#main">6 — Wiring it all</a></li>
+      </ul>
+    </div>
+
+    <div class="nav-group">
+      <span class="nav-group-label">Frontend</span>
+      <ul class="nav-sub">
+        <li><a href="#frontend">7 — Entry point</a></li>
+        <li><a href="#step8">8 — Header</a></li>
+        <li><a href="#step9">9 — Login form</a></li>
+        <li><a href="#step10">10 — Task board</a></li>
+        <li><a href="#step11">11 — Task detail</a></li>
+        <li><a href="#step12">12 — Task form</a></li>
+      </ul>
+    </div>
+
+    <div class="nav-group">
+      <span class="nav-group-label">Tests</span>
+      <ul class="nav-sub">
+        <li><a href="#step13">13 — Selenium suite</a></li>
+        <li><a href="#step14">14 — JS-unit tests</a></li>
+        <li><a href="#step15">15 — JS-module tests</a></li>
+      </ul>
+    </div>
+
+    <ul style="margin-top:.75rem">
+      <li><a href="#run">Run it</a></li>
+      <li><a href="#next">Where to go next</a></li>
+    </ul>
+    <h4>Modules</h4>
+    <ul>
+      <li><a href="modules/core.html">yoja-core</a></li>
+      <li><a href="modules/http-server.html">yoja-http-server</a></li>
+      <li><a href="modules/http-client.html">yoja-http-client</a></li>
+      <li><a href="modules/reverse-proxy.html">yoja-reverse-proxy</a></li>
+      <li><a href="modules/selenium.html">yoja-selenium</a></li>
+      <li><a href="modules/web.html">yoja-web</a></li>
+    </ul>
+  </aside>
+
+  <main class="main">
+   <div class="main__inner">
+
+    <h1>Get started</h1>
+    <p class="lead">
+      Yoja is a full-stack framework — <strong>backend in pure Java</strong>, <strong>frontend in JavaScript / CSS / HTML</strong>,
+      following the <strong>React component pattern</strong> without the virtual DOM or the build step.
+      We walk through the <strong><a href="https://github.com/Easy-API-Style/yoja-blueprint-kanban" target="_blank" rel="noopener">yoja-blueprint-kanban</a></strong> app — a real task-manager
+      with a REST API, WebSocket fan-out, session-cookie auth, a background
+      worker and an external HTTP call — file by file, from the model to the
+      server.
+    </p>
+
+    <!-- ================================================================== -->
+    <h2 id="prereqs">Prerequisites</h2>
+    <ul>
+      <li><strong>Java 25</strong> — the Gradle toolchain is pinned to Java 25; Yoja uses records, sealed types and modern language features introduced up to Java 25.</li>
+      <li><strong>Gradle 9+</strong> — the project ships a <code>gradlew</code> wrapper, so you don't need Gradle installed globally.</li>
+      <li>A browser when using <code>yoja-web</code> or <code>yoja-selenium</code>.</li>
+    </ul>
+
+    <!-- ================================================================== -->
+    <h2 id="what">What it shows</h2>
+    <ul>
+      <li><strong>HTTP REST</strong> — task CRUD endpoints, JSON in / JSON out.</li>
+      <li><strong>WebSocket fan-out</strong> — every mutation echoes a <code>{event, task | id}</code> payload on <code>/ws/tasks</code>.</li>
+      <li><strong>Session-cookie auth</strong> — a single auth handler gating every task endpoint.</li>
+      <li><strong>HttpClient against an external API</strong> — fetches a "quote of the moment" from <code>zenquotes.io</code>.</li>
+      <li><strong>Worker thread offload</strong> — CSV export runs on a single-thread worker, not the event loop.</li>
+      <li><strong>Recurring task</strong> — a <code>Timer</code> logs board stats every 30 seconds.</li>
+      <li><strong>yoja-web frontend</strong> — kanban board with section controllers, WebSocket updates, language switch, responsive layout.</li>
+      <li><strong>Two test families</strong> — pure Selenium suite and JS-module / jsUnit demos.</li>
+    </ul>
+
+    <!-- ================================================================== -->
+    <h2 id="layout">Project layout</h2>
+<pre><code>yoja-blueprint-kanban/
+├── src/main/java/yoja/blueprint/kanban/
+│   ├── Main.java                  <span class="c"># router, server, session, WebSocket, timer</span>
+│   ├── api/
+│   │   ├── AuthApi.java           <span class="c"># /api/login, /api/logout, /api/me</span>
+│   │   └── TaskApi.java           <span class="c"># /api/tasks/* — gated by auth handler</span>
+│   ├── model/Task.java            <span class="c"># immutable record</span>
+│   └── service/
+│       ├── TaskService.java       <span class="c"># in-memory store + Timer + Worker</span>
+│       └── QuoteService.java      <span class="c"># calls zenquotes.io via HttpClient</span>
+└── src/main/webapp/yoja/blueprint/kanban/webapp/
+    ├── index.html                 <span class="c"># page entry — yw-controler on &lt;body&gt;, sections inline</span>
+    ├── index.css                  <span class="c"># page-level styles</span>
+    ├── indexControler.js          <span class="c"># prepends header, wires storageService hook</span>
+    ├── common.css
+    ├── YojaWeb.conf.js            <span class="c"># version, defaultLanguage, mediaDescriptions</span>
+    └── sections/
+        ├── header/
+        │   ├── header.html        <span class="c"># fragment prepended by indexControler</span>
+        │   ├── header.css
+        │   ├── header.xml         <span class="c"># i18n translations</span>
+        │   └── HeaderControler.js
+        ├── login/
+        │   ├── login.css
+        │   ├── login.xml          <span class="c"># i18n translations</span>
+        │   └── LoginControler.js
+        ├── taskboard/
+        │   ├── taskboard.css
+        │   ├── taskboard.xml      <span class="c"># i18n translations</span>
+        │   └── TaskBoardControler.js
+        ├── taskdetail/
+        │   ├── taskdetail.html    <span class="c"># detail view markup</span>
+        │   ├── taskdetail.css
+        │   ├── taskdetail.xml     <span class="c"># i18n translations</span>
+        │   └── TaskDetailControler.js
+        └── taskform/
+            ├── taskform.html      <span class="c"># form markup</span>
+            ├── taskform.css
+            ├── taskform.xml       <span class="c"># i18n translations</span>
+            └── TaskFormControler.js</code></pre>
+
+    <!-- ================================================================== -->
+    <h2 id="install">Dependencies</h2>
+    <p>
+      All modules are published under group <code>com.easygoingapi</code>.
+      The example app declares:
+    </p>
+<pre><code><span class="c">// build.gradle</span>
+plugins {
+    id <span class="s">'application'</span>
+}
+
+application {
+    mainClass = <span class="s">'com.easygoingapi.yoja.example.Main'</span>
+}
+
+dependencies {
+    implementation <span class="s">'com.easygoingapi:yoja-core:VERSION'</span>
+    implementation <span class="s">'com.easygoingapi:yoja-http-server:VERSION'</span>
+    implementation <span class="s">'com.easygoingapi:yoja-http-client:VERSION'</span>
+    runtimeOnly    <span class="s">'com.easygoingapi:yoja-web:VERSION'</span>      <span class="c">// JS/CSS/HTML assets only — no Java classes to compile against</span>
+    testImplementation <span class="s">'com.easygoingapi:yoja-selenium:VERSION'</span>
+}</code></pre>
+
+    <div class="note">
+      <p>
+        <strong>Why <code>runtimeOnly</code> for <code>yoja-web</code>?</strong><br>
+        <code>yoja-web</code> contains no Java classes — it is a jar of static
+        JS/CSS/HTML files served by the router at runtime via the classloader.
+        Because the Java compiler never sees any import from it,
+        <code>runtimeOnly</code> is correct: the jar lands on the runtime
+        classpath (so <code>Class.getClassLoader().getResource(...)</code> can
+        find its contents) but not on the compile classpath.
+      </p>
+      <p>
+        <code>yoja-core</code> is pulled transitively by the other modules.
+        You only need to add it explicitly if you want to control its version
+        independently.
+      </p>
+    </div>
+
+    <!-- ================================================================== -->
+    <h2 id="model">Step 1 — The model: <code>Task.java</code></h2>
+    <p>
+      The domain model is a Java <strong>record</strong> — immutable, with a
+      factory and a JSON serialiser used by the REST API and WebSocket events.
+    </p>
+<pre><code><span class="k">package</span> com.easygoingapi.yoja.example.model;
+
+<span class="k">import</span> java.util.UUID;
+<span class="k">import</span> io.vertx.core.json.JsonObject;
+
+<span class="k">public record</span> Task(String id, String title, String status, String assignee) {
+
+    <span class="c">// Factory: fresh UUID + initial status "todo"</span>
+    <span class="k">public static</span> Task of(String title, String assignee) {
+        <span class="k">return new</span> Task(UUID.randomUUID().toString(), title, <span class="s">"todo"</span>, assignee);
+    }
+
+    <span class="c">// Returns a copy with a different status — immutability preserved</span>
+    <span class="k">public</span> Task withStatus(String status) {
+        <span class="k">return new</span> Task(id, title, status, assignee);
+    }
+
+    <span class="c">// Serialises to the JSON shape the REST API and WebSocket events carry</span>
+    <span class="k">public</span> JsonObject toJson() {
+        <span class="k">return new</span> JsonObject().put(<span class="s">"id"</span>, id)
+                               .put(<span class="s">"title"</span>, title)
+                               .put(<span class="s">"status"</span>, status)
+                               .put(<span class="s">"assignee"</span>, assignee);
+    }
+}</code></pre>
+
+    <!-- ================================================================== -->
+    <h2 id="service">Step 2 — In-memory store: <code>TaskService.java</code></h2>
+    <p>
+      The service keeps tasks in a <code>CopyOnWriteArrayList</code> so the
+      event loop can iterate safely while WebSocket handlers mutate from other
+      threads. Two patterns from the framework are visible here:
+    </p>
+    <ul>
+      <li>
+        <strong><code>logStats()</code></strong> is called from a recurring
+        <code>Timer</code> — it only emits logs so it's safe to run on the
+        event loop.
+      </li>
+      <li>
+        <strong><code>exportCsv()</code></strong> does disk I/O, so it is
+        dispatched to <code>Worker.singleThread</code>. The call is keyed by
+        <code>"csv-export"</code> to deduplicate concurrent triggers.
+      </li>
+    </ul>
+<pre><code><span class="k">package</span> com.easygoingapi.yoja.example.service;
+
+<span class="k">import</span> java.util.concurrent.CopyOnWriteArrayList;
+<span class="k">import</span> com.easygoingapi.yoja.core.worker.Worker;
+<span class="k">import</span> com.easygoingapi.yoja.example.model.Task;
+
+<span class="k">public class</span> TaskService {
+
+    <span class="k">private final</span> List&lt;Task&gt; tasks = <span class="k">new</span> CopyOnWriteArrayList&lt;&gt;();
+
+    <span class="k">public</span> TaskService() {
+        <span class="c">// seed with three sample tasks so the UI has something to show</span>
+        tasks.add(Task.of(<span class="s">"Setup project structure"</span>, <span class="s">"Alice"</span>));
+        tasks.add(<span class="k">new</span> Task(UUID.randomUUID().toString(), <span class="s">"Write REST API"</span>,    <span class="s">"in-progress"</span>, <span class="s">"Bob"</span>));
+        tasks.add(<span class="k">new</span> Task(UUID.randomUUID().toString(), <span class="s">"Deploy to server"</span>, <span class="s">"done"</span>,        <span class="s">"Alice"</span>));
+    }
+
+    <span class="k">public</span> Task findById(String id) {
+        <span class="k">return</span> tasks.stream()
+                    .filter(t -&gt; t.id().equals(id))
+                    .findFirst().orElse(<span class="k">null</span>);
+    }
+
+    <span class="k">public</span> Task add(String title, String assignee) {
+        Task task = Task.of(title, assignee.isBlank() ? <span class="s">"unassigned"</span> : assignee);
+        tasks.add(task);
+        <span class="k">return</span> task;
+    }
+
+    <span class="k">public</span> Task updateStatus(String id, String status) {
+        <span class="k">for</span> (<span class="k">int</span> i = <span class="n">0</span>; i &lt; tasks.size(); i++) {
+            <span class="k">if</span> (tasks.get(i).id().equals(id)) {
+                Task updated = tasks.get(i).withStatus(status);
+                tasks.set(i, updated);
+                <span class="k">return</span> updated;
+            }
+        }
+        <span class="k">return null</span>;
+    }
+
+    <span class="k">public boolean</span> delete(String id) {
+        <span class="k">return</span> tasks.removeIf(t -&gt; t.id().equals(id));
+    }
+
+    <span class="k">public</span> JsonArray toJsonArray() {
+        JsonArray arr = <span class="k">new</span> JsonArray();
+        tasks.forEach(t -&gt; arr.add(t.toJson()));
+        <span class="k">return</span> arr;
+    }
+
+    <span class="c">// Called by Timer every 30 s — runs on the event loop, logs only</span>
+    <span class="k">public void</span> logStats() {
+        <span class="k">long</span> todo       = tasks.stream().filter(t -&gt; <span class="s">"todo"</span>       .equals(t.status())).count();
+        <span class="k">long</span> inProgress = tasks.stream().filter(t -&gt; <span class="s">"in-progress"</span>.equals(t.status())).count();
+        <span class="k">long</span> done       = tasks.stream().filter(t -&gt; <span class="s">"done"</span>       .equals(t.status())).count();
+        LOGGER.info(<span class="s">"Tasks — todo: {}, in-progress: {}, done: {}"</span>, todo, inProgress, done);
+    }
+
+    <span class="c">// Offloads CSV file I/O to a worker thread — never blocks the event loop</span>
+    <span class="k">public void</span> exportCsv() {
+        Worker.singleThread.once(<span class="s">"csv-export"</span>, () -&gt; {
+            StringBuilder sb = <span class="k">new</span> StringBuilder(<span class="s">"id,title,status,assignee\n"</span>);
+            tasks.forEach(t -&gt; sb.append(t.id()).append(<span class="s">","</span>)
+                                 .append(t.title()).append(<span class="s">","</span>)
+                                 .append(t.status()).append(<span class="s">","</span>)
+                                 .append(t.assignee()).append(<span class="s">"\n"</span>));
+            Path csvFile = Path.of(<span class="s">"build/tasks-export.csv"</span>);
+            Files.createDirectories(csvFile.getParent());
+            Files.writeString(csvFile, sb.toString());
+        });
+    }
+}</code></pre>
+
+    <!-- ================================================================== -->
+    <h2 id="quote">Step 3 — External HTTP call: <code>QuoteService.java</code></h2>
+    <p>
+      <code>QuoteService</code> shows how to call an external REST API from the
+      backend using <code>yoja-http-client</code>. One shared
+      <code>HttpEngine</code> owns the connection pool; a fluent
+      <code>HttpClient</code> is built from it and pinned to the upstream host
+      and port. If the upstream is unavailable a built-in
+      <code>FALLBACK</code> quote is returned so the UI never has an empty
+      slot.
+    </p>
+<pre><code><span class="k">package</span> com.easygoingapi.yoja.example.service;
+
+<span class="k">import</span> com.easygoingapi.yoja.http.client.*;
+<span class="k">import</span> io.vertx.core.Future;
+<span class="k">import</span> io.vertx.core.json.*;
+
+<span class="k">public class</span> QuoteService {
+
+    <span class="k">public static final</span> JsonObject FALLBACK = <span class="k">new</span> JsonObject()
+            .put(<span class="s">"quote"</span>,  <span class="s">"The best way to predict the future is to invent it."</span>)
+            .put(<span class="s">"author"</span>, <span class="s">"Alan Kay"</span>);
+
+    <span class="k">private final</span> HttpClient client;
+
+    <span class="k">public</span> QuoteService() {
+        HttpEngine engine = <span class="k">new</span> HttpEngine();          <span class="c">// owns the connection pool</span>
+        <span class="k">this</span>.client = HttpClient.builder(engine)
+                                .host(<span class="s">"zenquotes.io"</span>)
+                                .port(<span class="n">443</span>)
+                                .ssl(<span class="k">true</span>)
+                                .build();
+    }
+
+    <span class="c">// Returns a { quote, author } JSON object; falls back silently on error</span>
+    <span class="k">public</span> Future&lt;JsonObject&gt; fetch() {
+        <span class="k">return</span> client.send(HttpGet.of(<span class="s">"/api/random"</span>))
+                     .map(res -&gt; {
+                         <span class="k">if</span> (res.statusCode() == <span class="n">200</span>) {
+                             JsonObject item = res.bodyAsJsonArray().getJsonObject(<span class="n">0</span>);
+                             <span class="k">return new</span> JsonObject()
+                                     .put(<span class="s">"quote"</span>,  item.getString(<span class="s">"q"</span>))
+                                     .put(<span class="s">"author"</span>, item.getString(<span class="s">"a"</span>));
+                         }
+                         <span class="k">return</span> FALLBACK;
+                     })
+                     .onFailure(e -&gt; LOGGER.error(<span class="s">"Quote API failed"</span>, e));
+    }
+}</code></pre>
+
+    <!-- ================================================================== -->
+    <h2 id="auth">Step 4 — Auth endpoints: <code>AuthApi.java</code></h2>
+    <p>
+      Three static factories each return a <code>WebService</code>. The login
+      endpoint reads the body, validates the credentials, writes the user name
+      into the <strong>session</strong>, and replies with JSON. The
+      <code>unauthorized</code> helper is shared with the auth handler in
+      <code>Main</code>.
+    </p>
+<pre><code><span class="k">package</span> com.easygoingapi.yoja.example.api;
+
+<span class="k">import</span> com.easygoingapi.yoja.core.http.HttpMethod;
+<span class="k">import</span> com.easygoingapi.yoja.http.server.*;
+<span class="k">import</span> io.vertx.core.json.JsonObject;
+
+<span class="k">public class</span> AuthApi {
+
+    <span class="k">private static final</span> String USERNAME = <span class="s">"demo"</span>;
+    <span class="k">private static final</span> String PASSWORD = <span class="s">"demo"</span>;
+
+    <span class="c">// POST /api/login  — { username, password } → { user } or 401</span>
+    <span class="k">public static</span> WebService login() {
+        <span class="k">return new</span> WebService(HttpMethod.POST, <span class="s">"/api/login"</span>, routing -&gt; {
+            JsonObject body = routing.request().bodyAsJsonObject();
+            <span class="k">if</span> (USERNAME.equals(body.getString(<span class="s">"username"</span>))
+                    &amp;&amp; PASSWORD.equals(body.getString(<span class="s">"password"</span>))) {
+                routing.session().put(<span class="s">"user"</span>, USERNAME);       <span class="c">// store in session cookie</span>
+                routing.response().send(<span class="k">new</span> JsonObject().put(<span class="s">"user"</span>, USERNAME));
+            } <span class="k">else</span> {
+                unauthorized(routing);
+            }
+        });
+    }
+
+    <span class="c">// GET /api/logout  — destroys the session</span>
+    <span class="k">public static</span> WebService logout() {
+        <span class="k">return new</span> WebService(HttpMethod.GET, <span class="s">"/api/logout"</span>, routing -&gt; {
+            HttpSession session = routing.session();
+            <span class="k">if</span> (session != <span class="k">null</span>) session.destroy();
+            routing.response().send(<span class="k">new</span> JsonObject().put(<span class="s">"ok"</span>, <span class="k">true</span>));
+        });
+    }
+
+    <span class="c">// GET /api/me  — returns { user } or 401</span>
+    <span class="k">public static</span> WebService me() {
+        <span class="k">return new</span> WebService(HttpMethod.GET, <span class="s">"/api/me"</span>, routing -&gt; {
+            HttpSession session = routing.session();
+            <span class="k">if</span> (session != <span class="k">null</span> &amp;&amp; session.get(<span class="s">"user"</span>) != <span class="k">null</span>) {
+                routing.response().send(<span class="k">new</span> JsonObject().put(<span class="s">"user"</span>, session.get(<span class="s">"user"</span>).toString()));
+            } <span class="k">else</span> {
+                unauthorized(routing);
+            }
+        });
+    }
+
+    <span class="c">// Shared by login(), me() and the auth handler in Main</span>
+    <span class="k">public static void</span> unauthorized(HttpRouting r) {
+        r.response().statusCode(<span class="n">401</span>);
+        r.response().send(<span class="s">"unauthorized"</span>);
+    }
+}</code></pre>
+
+    <!-- ================================================================== -->
+    <h2 id="api">Step 5 — Task endpoints: <code>TaskApi.java</code></h2>
+    <p>
+      Six static factories, each returning a <code>WebService</code>. The
+      mutating endpoints (create, update, delete) broadcast a
+      <code>{event, task}</code> JSON payload over the <code>/ws/tasks</code>
+      WebSocket immediately after writing to the store, so every connected
+      browser refreshes in real time without polling.
+    </p>
+<pre><code><span class="k">package</span> com.easygoingapi.yoja.example.api;
+
+<span class="k">import</span> com.easygoingapi.yoja.core.http.HttpMethod;
+<span class="k">import</span> com.easygoingapi.yoja.http.server.*;
+<span class="k">import</span> io.vertx.core.Handler;
+<span class="k">import</span> io.vertx.core.json.JsonObject;
+
+<span class="k">public class</span> TaskApi {
+
+    <span class="c">// GET /api/tasks  — full list</span>
+    <span class="k">public static</span> WebService getAll(TaskService svc, Handler&lt;HttpRouting&gt; auth) {
+        <span class="k">return new</span> WebService(HttpMethod.GET, <span class="s">"/api/tasks"</span>, auth, r -&gt;
+            r.response().send(svc.toJsonArray()));
+    }
+
+    <span class="c">// POST /api/tasks  — { title, assignee } → 201 + new task + WS broadcast</span>
+    <span class="k">public static</span> WebService create(TaskService svc, WebSocket ws, Handler&lt;HttpRouting&gt; auth) {
+        <span class="k">return new</span> WebService(HttpMethod.POST, <span class="s">"/api/tasks"</span>, auth, r -&gt; {
+            JsonObject body = r.request().bodyAsJsonObject();
+            Task task = svc.add(body.getString(<span class="s">"title"</span>, <span class="s">""</span>),
+                                body.getString(<span class="s">"assignee"</span>, <span class="s">""</span>));
+            ws.send(<span class="k">new</span> JsonObject().put(<span class="s">"event"</span>, <span class="s">"created"</span>).put(<span class="s">"task"</span>, task.toJson()).encode());
+            r.response().statusCode(<span class="n">201</span>);
+            r.response().send(task.toJson());
+        });
+    }
+
+    <span class="c">// POST /api/tasks/:id/status  — { status } → updated task + WS broadcast</span>
+    <span class="k">public static</span> WebService update(TaskService svc, WebSocket ws, Handler&lt;HttpRouting&gt; auth) {
+        <span class="k">return new</span> WebService(HttpMethod.POST, <span class="s">"/api/tasks/:id/status"</span>, auth, r -&gt; {
+            Task updated = svc.updateStatus(r.request().firstParameter(<span class="s">"id"</span>),
+                                            r.request().bodyAsJsonObject().getString(<span class="s">"status"</span>));
+            <span class="k">if</span> (updated == <span class="k">null</span>) { r.fail(<span class="n">404</span>); <span class="k">return</span>; }
+            ws.send(<span class="k">new</span> JsonObject().put(<span class="s">"event"</span>, <span class="s">"updated"</span>).put(<span class="s">"task"</span>, updated.toJson()).encode());
+            r.response().send(updated.toJson());
+        });
+    }
+
+    <span class="c">// GET /api/tasks/:id/delete  — removes task + WS broadcast</span>
+    <span class="k">public static</span> WebService delete(TaskService svc, WebSocket ws, Handler&lt;HttpRouting&gt; auth) {
+        <span class="k">return new</span> WebService(HttpMethod.GET, <span class="s">"/api/tasks/:id/delete"</span>, auth, r -&gt; {
+            String id = r.request().firstParameter(<span class="s">"id"</span>);
+            <span class="k">if</span> (!svc.delete(id)) { r.fail(<span class="n">404</span>); <span class="k">return</span>; }
+            ws.send(<span class="k">new</span> JsonObject().put(<span class="s">"event"</span>, <span class="s">"deleted"</span>).put(<span class="s">"id"</span>, id).encode());
+            r.response().send(<span class="k">new</span> JsonObject().put(<span class="s">"ok"</span>, <span class="k">true</span>));
+        });
+    }
+
+    <span class="c">// GET /api/tasks/:id  — single task or 404</span>
+    <span class="k">public static</span> WebService getById(TaskService svc, Handler&lt;HttpRouting&gt; auth) {
+        <span class="k">return new</span> WebService(HttpMethod.GET, <span class="s">"/api/tasks/:id"</span>, auth, r -&gt; {
+            Task task = svc.findById(r.request().firstParameter(<span class="s">"id"</span>));
+            <span class="k">if</span> (task == <span class="k">null</span>) { r.fail(<span class="n">404</span>); <span class="k">return</span>; }
+            r.response().send(task.toJson());
+        });
+    }
+
+    <span class="c">// GET /api/tasks/export  — triggers async CSV write, returns immediately</span>
+    <span class="k">public static</span> WebService exportCsv(TaskService svc, Handler&lt;HttpRouting&gt; auth) {
+        <span class="k">return new</span> WebService(HttpMethod.GET, <span class="s">"/api/tasks/export"</span>, auth, r -&gt; {
+            svc.exportCsv();
+            r.response().send(<span class="k">new</span> JsonObject().put(<span class="s">"status"</span>, <span class="s">"export started"</span>));
+        });
+    }
+}</code></pre>
+
+    <!-- ================================================================== -->
+    <h2 id="main">Step 6 — Wiring it all: <code>Main.java</code></h2>
+    <p>
+      <code>Main.start()</code> brings every piece together in one place.
+      Reading it top to bottom you can see the full routing of the application:
+    </p>
+    <ul>
+      <li>A <strong>session store</strong> (<code>SID</code> cookie, 30-minute idle).</li>
+      <li>A recurring <strong>Timer</strong> that logs board stats every 30 seconds.</li>
+      <li>A single <strong>auth handler</strong> reused in front of every task endpoint.</li>
+      <li>Two <strong>static web apps</strong> served from jars:
+        the Yoja-Web runtime under <code>/yoja</code> and the example webapp at <code>/</code>.</li>
+      <li>Auth, quote, and task routes wired in declaration order.</li>
+      <li>A <strong>response hook</strong> that stamps <code>X-Powered-By: yoja</code> on every reply.</li>
+      <li>Optional <strong>TLS</strong> via a self-signed certificate.</li>
+    </ul>
+<pre><code><span class="k">package</span> com.easygoingapi.yoja.example;
+
+<span class="k">import</span> com.easygoingapi.yoja.core.YojaApp;
+<span class="k">import</span> com.easygoingapi.yoja.core.http.HttpMethod;
+<span class="k">import</span> com.easygoingapi.yoja.core.worker.Timer;
+<span class="k">import</span> com.easygoingapi.yoja.http.server.*;
+
+<span class="k">public class</span> Main {
+
+    <span class="k">public static void</span> main(String[] args) {
+        <span class="k">int</span> port = <span class="n">8080</span>;
+        <span class="k">boolean</span> ssl = <span class="k">false</span>;
+        <span class="k">for</span> (<span class="k">int</span> i = <span class="n">0</span>; i &lt; args.length - <span class="n">1</span>; i++) {
+            <span class="k">if</span> (<span class="s">"-p"</span>  .equals(args[i])) port = Integer.parseInt(args[i + <span class="n">1</span>]);
+            <span class="k">if</span> (<span class="s">"-ssl"</span>.equals(args[i])) ssl  = Boolean.parseBoolean(args[i + <span class="n">1</span>]);
+        }
+        YojaApp.start();                       <span class="c">// 1. boot the Vert.x runtime</span>
+        start(port, ssl)
+            .onSuccess(s -&gt; LOGGER.info(<span class="s">"http://localhost:{} — login: demo / demo"</span>, s.port()))
+            .onFailure(Throwable::printStackTrace);
+    }
+
+    <span class="k">public static</span> Future&lt;HttpServer&gt; start(<span class="k">int</span> port, <span class="k">boolean</span> ssl) {
+
+        <span class="c">// 2. Services</span>
+        TaskService   taskService   = <span class="k">new</span> TaskService();
+        QuoteService  quoteService  = <span class="k">new</span> QuoteService();
+
+        <span class="c">// 3. WebSocket endpoint  — broadcast task mutations to every client</span>
+        WebSocket        taskWebSocket     = <span class="k">new</span> WebSocket(<span class="s">"/ws/tasks"</span>);
+        WebSocketService webSocketService  = <span class="k">new</span> WebSocketService();
+        webSocketService.add(taskWebSocket);
+
+        <span class="c">// 4. Session store — SID cookie, 30-minute idle timeout</span>
+        HttpSessionStore httpSessionStore = <span class="k">new</span> HttpSessionStore(<span class="s">"SID"</span>, Duration.ofMinutes(<span class="n">30</span>));
+
+        <span class="c">// 5. Recurring timer — log board stats every 30 s on the event loop</span>
+        Timer.schedule(<span class="s">"logs"</span>, t -&gt; taskService.logStats())
+             .period(Duration.ofSeconds(<span class="n">30</span>))
+             .build();
+
+        <span class="c">// 6. Auth guard — reused in front of every task endpoint</span>
+        Handler&lt;HttpRouting&gt; authHandler = routing -&gt; {
+            <span class="k">if</span> (routing.session() == <span class="k">null</span> || routing.session().get(<span class="s">"user"</span>) == <span class="k">null</span>)
+                AuthApi.unauthorized(routing);
+            routing.nextHandler();
+        };
+
+        <span class="c">// 7. Router — declare everything in one fluent chain</span>
+        HttpRouter router = HttpRouter.builder()
+            .session(httpSessionStore)
+            .contentType(<span class="s">"js"</span>,   <span class="s">"application/javascript"</span>)
+            .contentType(<span class="s">"css"</span>,  <span class="s">"text/css"</span>)
+            .contentType(<span class="s">"html"</span>, <span class="s">"text/html"</span>)
+            .contentType(<span class="s">"xml"</span>,  <span class="s">"application/xml"</span>)
+            <span class="c">// static resources — served from jars on the classpath</span>
+            .webResource(WebApp.of(WebApp.Type.jar, <span class="s">"com.easygoingapi.yoja.web"</span>, <span class="s">"/yoja"</span>), <span class="s">"/*"</span>)
+            .webResource(WebApp.jar(<span class="s">"com.easygoingapi.yoja.example.webapp"</span>), <span class="s">"/*"</span>)
+            <span class="c">// misc utility routes</span>
+            .webService(HttpMethod.GET, <span class="s">"/favicon.ico"</span>, r -&gt; r.response())
+            .webService(HttpMethod.GET, <span class="s">"/"</span>,            r -&gt; r.redirect(<span class="s">"/index.html"</span>))
+            <span class="c">// auth API</span>
+            .webService(AuthApi.login())
+            .webService(AuthApi.logout())
+            .webService(AuthApi.me())
+            <span class="c">// quote from external API (no auth required)</span>
+            .webService(<span class="k">new</span> WebService(HttpMethod.GET, <span class="s">"/api/quote"</span>, routing -&gt;
+                quoteService.fetch()
+                            .onSuccess(json -&gt; routing.response().send(json))
+                            .onFailure(e    -&gt; routing.response().send(QuoteService.FALLBACK))))
+            <span class="c">// task API — all gated by the auth handler</span>
+            .webService(TaskApi.getAll(taskService, authHandler))
+            .webService(TaskApi.create(taskService, taskWebSocket, authHandler))
+            .webService(TaskApi.update(taskService, taskWebSocket, authHandler))
+            .webService(TaskApi.delete(taskService, taskWebSocket, authHandler))
+            .webService(TaskApi.exportCsv(taskService, authHandler))
+            .webService(TaskApi.getById(taskService, authHandler))
+            <span class="c">// cross-cutting response hook — stamp every reply</span>
+            .onResponse(event -&gt; event.putHeader(<span class="s">"X-Powered-By"</span>, <span class="s">"yoja"</span>))
+            .build();
+
+        <span class="c">// 8. Server</span>
+        HttpServer.Builder builder = HttpServer.builder(router, port)
+                                               .webSocketService(webSocketService);
+        <span class="k">if</span> (ssl) builder.sslSelfSigned();
+        <span class="k">return</span> builder.start();
+    }
+}</code></pre>
+
+    <!-- ================================================================== -->
+    <h2 id="frontend">Frontend tour</h2>
+    <p>
+      Each section of the page has its own ES6 controller class, exported as
+      the module's default export. The runtime instantiates it once and injects
+      the <code>section</code> handle. Controllers communicate through
+      <code>eventService</code> — they never import each other directly.
+    </p>
+
+    <div class="hello-file">
+      <span class="code-label">index.html</span>
+<pre><code>&lt;html&gt;
+&lt;head&gt;
+    &lt;meta http-equiv=<span class="s">"Content-Type"</span> content=<span class="s">"text/html;charset=utf-8"</span>/&gt;
+    &lt;meta name=<span class="s">"viewport"</span> content=<span class="s">"width=device-width, initial-scale=1"</span>/&gt;
+    &lt;title&gt;Yoja Kanban&lt;/title&gt;
+    &lt;script type=<span class="s">"module"</span> src=<span class="s">"/yoja/YojaWeb-1.0.0.js"</span>&gt;&lt;/script&gt;
+&lt;/head&gt;
+<span class="c">&lt;!-- yw-controler on &lt;body&gt; — the page-level entry point --&gt;</span>
+&lt;body <span class="a">yw-controler</span>=<span class="s">"./indexControler.js"</span> style=<span class="s">"display:none"</span>&gt;
+
+    <span class="c">&lt;!-- Header injected dynamically by indexControler via yojaWeb.prepend --&gt;</span>
+
+    <span class="c">&lt;!-- Login: yw-css loads section styles, yw-language loads the i18n file --&gt;</span>
+    &lt;section id=<span class="s">"login-section"</span>
+             <span class="a">yw-controler</span>=<span class="s">"./sections/login/LoginControler.js"</span>
+             <span class="a">yw-css</span>=<span class="s">"./sections/login/login.css"</span>
+             <span class="a">yw-language</span>=<span class="s">"./sections/login/login.xml"</span>&gt;
+        &lt;h2 <span class="a">yw-i18n</span>=<span class="s">"login.title"</span>&gt;&lt;/h2&gt;
+        &lt;form&gt;
+            &lt;input type=<span class="s">"text"</span>     name=<span class="s">"username"</span> <span class="a">yw-i18n-placeholder</span>=<span class="s">"login.user"</span>/&gt;
+            &lt;input type=<span class="s">"password"</span> name=<span class="s">"password"</span> <span class="a">yw-i18n-placeholder</span>=<span class="s">"login.pass"</span>/&gt;
+            &lt;button type=<span class="s">"submit"</span> <span class="a">yw-i18n</span>=<span class="s">"login.submit"</span>&gt;&lt;/button&gt;
+        &lt;/form&gt;
+        &lt;p class=<span class="s">"error-msg"</span>&gt;&lt;/p&gt;
+    &lt;/section&gt;
+
+    <span class="c">&lt;!-- Task board: kanban columns, cards appended by the controller --&gt;</span>
+    &lt;section id=<span class="s">"taskboard-section"</span>
+             <span class="a">yw-controler</span>=<span class="s">"./sections/taskboard/TaskBoardControler.js"</span>
+             <span class="a">yw-css</span>=<span class="s">"./sections/taskboard/taskboard.css"</span>
+             <span class="a">yw-language</span>=<span class="s">"./sections/taskboard/taskboard.xml"</span>&gt;
+        &lt;div class=<span class="s">"quote-bar"</span>&gt;&lt;/div&gt;
+        &lt;div class=<span class="s">"columns"</span>&gt;
+            &lt;div class=<span class="s">"column"</span> data-status=<span class="s">"todo"</span>&gt;
+                &lt;h3 <span class="a">yw-i18n</span>=<span class="s">"col.todo"</span>&gt;&lt;/h3&gt;
+                &lt;div class=<span class="s">"cards"</span>&gt;&lt;/div&gt;
+            &lt;/div&gt;
+            &lt;div class=<span class="s">"column"</span> data-status=<span class="s">"in-progress"</span>&gt;
+                &lt;h3 <span class="a">yw-i18n</span>=<span class="s">"col.inprogress"</span>&gt;&lt;/h3&gt;
+                &lt;div class=<span class="s">"cards"</span>&gt;&lt;/div&gt;
+            &lt;/div&gt;
+            &lt;div class=<span class="s">"column"</span> data-status=<span class="s">"done"</span>&gt;
+                &lt;h3 <span class="a">yw-i18n</span>=<span class="s">"col.done"</span>&gt;&lt;/h3&gt;
+                &lt;div class=<span class="s">"cards"</span>&gt;&lt;/div&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+    &lt;/section&gt;
+
+    <span class="c">&lt;!-- Task detail: HTML loaded via yw-include (separate file) --&gt;</span>
+    &lt;div <span class="a">yw-include</span>=<span class="s">"./sections/taskdetail/taskdetail.html"</span>&gt;&lt;/div&gt;
+
+    <span class="c">&lt;!-- Task form: markup loaded via yw-slot, controller and styles declared here --&gt;</span>
+    &lt;section id=<span class="s">"taskform-section"</span>
+             <span class="a">yw-controler</span>=<span class="s">"./sections/taskform/TaskFormControler.js"</span>
+             <span class="a">yw-css</span>=<span class="s">"./sections/taskform/taskform.css"</span>
+             <span class="a">yw-language</span>=<span class="s">"./sections/taskform/taskform.xml"</span>
+             <span class="a">yw-slot</span>=<span class="s">"./sections/taskform/taskform.html"</span>&gt;&lt;/section&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+    </div>
+
+    <div class="note">
+      <p>
+        <strong><code>yw-controler</code></strong> — declares the ES6 module whose default export is the controller class.<br>
+        <strong><code>yw-css</code></strong> — scoped stylesheet loaded and applied to the section.<br>
+        <strong><code>yw-language</code></strong> — XML i18n file; <code>yw-i18n</code> / <code>yw-i18n-placeholder</code> bind keys to DOM nodes.<br>
+        <strong><code>yw-include</code></strong> — fetches an HTML fragment and injects it as children.<br>
+        <strong><code>yw-slot</code></strong> — same as <code>yw-include</code> but the markup is loaded <em>into</em> the element, alongside its controller.
+      </p>
+    </div>
+
+    <h3>Step 7 — Page entry point: <code>indexControler.js</code></h3>
+    <p>
+      Prepends the shared header fragment into <code>&lt;body&gt;</code> on
+      <code>onDocumentReady</code>, then reveals the page once the fragment has
+      resolved (hides the FOUC while sections wire up). Also demonstrates the
+      <code>storageService</code> "set" hook: every write to the
+      <code>login-date</code> key is logged to the console.
+    </p>
+<pre><code>yojaWeb.onDocumentReady(() =&gt; {
+    yojaWeb.prepend(yojaWeb.firstTag(<span class="s">'body'</span>),
+                    import.meta.resolve(yojaWeb.path(<span class="s">'./sections/header/header.html'</span>)))
+           .then(() =&gt; yojaWeb.firstTag(<span class="s">'body'</span>).style.display = <span class="s">'block'</span>);
+});
+
+<span class="k">export default class</span> IndexControler {
+    constructor(section) {
+        <span class="k">const</span> storage = yojaWebApi.storageService;
+        storage.on(<span class="s">'local'</span>, <span class="s">'set'</span>, <span class="s">'login-date'</span>, date =&gt; {
+            <span class="k">const</span> previous = storage.getLocalItem(<span class="s">'login-date'</span>);
+            <span class="k">if</span> (previous) console.log(<span class="s">'last time connected:'</span>, previous);
+            console.log(<span class="s">'login date:'</span>, date);
+        });
+    }
+}</code></pre>
+
+    <h3 id="step8">Step 8 — Shared header: <code>HeaderControler.js</code></h3>
+    <p>
+      Wires the language-switch buttons, shows/hides the logout button on
+      <code>user:logged-in</code> / <code>user:logged-out</code> events,
+      and mirrors the active breakpoint into <code>section.tag.dataset.media</code>
+      so CSS can target <code>[data-media="mobile"]</code> etc.
+    </p>
+<pre><code><span class="k">export default class</span> HeaderControler {
+    constructor(section) {
+        <span class="k">const</span> lang = yojaWebApi.languageService;
+        <span class="k">const</span> events = yojaWebApi.eventService;
+        <span class="k">const</span> http = yojaWebApi.httpClient;
+        <span class="k">const</span> responsive = yojaWebApi.responsiveService;
+
+        <span class="c">// Language switch</span>
+        section.findTags(<span class="s">'.btn-lang'</span>).forEach(btn =&gt; {
+            btn.addEventListener(<span class="s">'click'</span>, () =&gt; lang.setLanguage(btn.dataset.lang));
+        });
+
+        <span class="c">// Logout button — hidden until login event fires</span>
+        <span class="k">const</span> btnLogout = section.firstTag(<span class="s">'.btn-logout'</span>);
+        btnLogout.style.display = <span class="s">'none'</span>;
+        events.on(<span class="s">'user:logged-in'</span>,  () =&gt; { btnLogout.style.display = <span class="s">'inline-block'</span>; });
+        events.on(<span class="s">'user:logged-out'</span>, () =&gt; { btnLogout.style.display = <span class="s">'none'</span>; });
+        btnLogout.addEventListener(<span class="s">'click'</span>, () =&gt; {
+            http.get({ url: <span class="s">'/api/logout'</span> }).then(() =&gt; events.trigger(<span class="s">'user:logged-out'</span>));
+        });
+
+        <span class="c">// Responsive marker on the root element</span>
+        responsive.onMedia(media =&gt; { section.tag.dataset.media = media; });
+    }
+}</code></pre>
+
+    <h3 id="step9">Step 9 — Login form: <code>LoginControler.js</code></h3>
+    <p>
+      Uses a top-level <code>await</code> to load the i18n translator before
+      the class is exported. The submit handler POSTs credentials; on 200 it
+      hides itself, broadcasts <code>user:logged-in</code> and stamps
+      <code>login-date</code> in <code>localStorage</code>. A
+      <code>section.pageReady</code> hook silently auto-logs-in if an existing
+      session is found.
+    </p>
+<pre><code><span class="c">// top-level await — translator is ready before any constructor runs</span>
+<span class="k">const</span> lang = yojaWebApi.languageService;
+<span class="k">const</span> translator = <span class="k">await</span> lang.loadTranslator(
+    import.meta.resolve(yojaWeb.path(<span class="s">'./login.xml'</span>)));
+
+<span class="k">export default class</span> LoginControler {
+    constructor(section) {
+        <span class="k">const</span> http = yojaWebApi.httpClient;
+        <span class="k">const</span> events = yojaWebApi.eventService;
+        <span class="k">const</span> form = section.firstTag(<span class="s">'form'</span>);
+        <span class="k">const</span> error = section.firstTag(<span class="s">'.error-msg'</span>);
+
+        form.addEventListener(<span class="s">'submit'</span>, e =&gt; {
+            e.preventDefault();
+            <span class="k">const</span> username = section.firstTag(<span class="s">'[name=username]'</span>).value;
+            <span class="k">const</span> password = section.firstTag(<span class="s">'[name=password]'</span>).value;
+            http.post({ url: <span class="s">'/api/login'</span> }, { username, password }).then(res =&gt; {
+                <span class="k">if</span> (res.status === <span class="n">200</span>) {
+                    section.tag.style.display = <span class="s">'none'</span>;
+                    events.trigger(<span class="s">'user:logged-in'</span>, res.body);
+                    yojaWebApi.storageService.setLocalItem(<span class="s">'login-date'</span>, <span class="k">new</span> Date());
+                } <span class="k">else</span> {
+                    error.textContent = translator(<span class="s">'login.error'</span>) ?? <span class="s">'Invalid credentials'</span>;
+                }
+            });
+        });
+
+        <span class="c">// Reset form on logout</span>
+        events.on(<span class="s">'user:logged-out'</span>, () =&gt; {
+            section.tag.style.display = <span class="s">''</span>;
+            section.findTags(<span class="s">'input'</span>).forEach(i =&gt; (i.value = <span class="s">''</span>));
+            error.textContent = <span class="s">''</span>;
+        });
+
+        <span class="c">// Auto-login if session already exists</span>
+        section.pageReady(() =&gt; {
+            http.get({ url: <span class="s">'/api/me'</span> }).then(check =&gt; {
+                <span class="k">if</span> (check.status === <span class="n">200</span>) {
+                    section.tag.style.display = <span class="s">'none'</span>;
+                    events.trigger(<span class="s">'user:logged-in'</span>, check.body);
+                } <span class="k">else</span> {
+                    events.trigger(<span class="s">'user:logged-out'</span>);
+                }
+            });
+        });
+    }
+}</code></pre>
+
+    <h3 id="step10">Step 10 — Kanban board: <code>TaskBoardControler.js</code></h3>
+    <p>
+      Hidden by default; revealed on <code>user:logged-in</code> after loading
+      tasks and the "quote of the moment". Opens <code>/ws/tasks</code> and
+      applies <code>created</code> / <code>updated</code> / <code>deleted</code>
+      events incrementally so every connected browser stays in sync without
+      polling.
+    </p>
+<pre><code><span class="k">const</span> STATUS_NEXT = { <span class="s">'todo'</span>: <span class="s">'in-progress'</span>, <span class="s">'in-progress'</span>: <span class="s">'done'</span> };
+
+<span class="k">export default class</span> TaskBoardControler {
+    #section; #http; #ws; #events; #params;
+
+    constructor(section) {
+        this.#section = section;
+        this.#http    = yojaWebApi.httpClient;
+        this.#ws      = yojaWebApi.webSocketService;
+        this.#events  = yojaWebApi.eventService;
+        this.#params  = yojaWebApi.urlParameterService;
+
+        this.hide();
+        this.#events.on(<span class="s">'user:logged-in'</span>, () =&gt; {
+            this.#loadTasks().then(() =&gt; this.show())
+                             .then(() =&gt; this.#connectWebSocket());
+            this.#loadQuote();
+        });
+        this.#events.on(<span class="s">'user:logged-out'</span>, () =&gt; this.hide());
+    }
+
+    hide() { this.#section.tag.style.display = <span class="s">'none'</span>; }
+    show() { this.#section.tag.style.display = <span class="s">'block'</span>; }
+
+    #loadQuote() {
+        <span class="k">return</span> this.#http.get({ url: <span class="s">'/api/quote'</span> }).then(res =&gt; {
+            <span class="k">if</span> (res.status === <span class="n">200</span>) {
+                <span class="k">const</span> bar = this.#section.firstTag(<span class="s">'.quote-bar'</span>);
+                bar.textContent = <span class="s">`"${res.body.quote}" — ${res.body.author}`</span>;
+                bar.style.display = <span class="s">'block'</span>;
+            }
+        });
+    }
+
+    #loadTasks() {
+        <span class="k">return</span> this.#http.get({ url: <span class="s">'/api/tasks'</span> }).then(res =&gt; {
+            <span class="k">if</span> (res.status === <span class="n">200</span>) {
+                this.#section.findTags(<span class="s">'.cards'</span>).forEach(col =&gt; (col.innerHTML = <span class="s">''</span>));
+                res.body.forEach(task =&gt; this.#addCard(task));
+            }
+        });
+    }
+
+    #addCard(task) {
+        <span class="k">const</span> col = this.#section.firstTag(<span class="s">`.column[data-status="${task.status}"] .cards`</span>);
+        <span class="k">if</span> (!col) <span class="k">return</span>;
+        <span class="k">const</span> card = document.createElement(<span class="s">'div'</span>);
+        card.className = <span class="s">'card'</span>;
+        card.dataset.id = task.id;
+        card.innerHTML = <span class="s">`
+            &lt;span class="task-title"&gt;${task.title}&lt;/span&gt;
+            &lt;span class="task-assignee"&gt;${task.assignee}&lt;/span&gt;
+            &lt;div class="card-actions"&gt;
+                &lt;button class="btn-detail"&gt;···&lt;/button&gt;
+                ${STATUS_NEXT[task.status] ? '&lt;button class="btn-next"&gt;→&lt;/button&gt;' : ''}
+                &lt;button class="btn-delete"&gt;✕&lt;/button&gt;
+            &lt;/div&gt;`</span>;
+        card.querySelector(<span class="s">'.btn-detail'</span>).addEventListener(<span class="s">'click'</span>, () =&gt; {
+            this.#params.set(<span class="s">'task'</span>, task.id); this.#params.push();
+        });
+        card.querySelector(<span class="s">'.btn-delete'</span>)?.addEventListener(<span class="s">'click'</span>, () =&gt;
+            this.#http.get({ url: <span class="s">`/api/tasks/${task.id}/delete`</span> }));
+        card.querySelector(<span class="s">'.btn-next'</span>)?.addEventListener(<span class="s">'click'</span>, () =&gt;
+            this.#http.post({ url: <span class="s">`/api/tasks/${task.id}/status`</span> },
+                            { status: STATUS_NEXT[task.status] }));
+        col.appendChild(card);
+    }
+
+    #connectWebSocket() {
+        <span class="k">const</span> socket = this.#ws.webSocket(<span class="s">'/ws/tasks'</span>);
+        socket.onMessage(msg =&gt; {
+            <span class="k">const</span> data = JSON.parse(msg.data);
+            <span class="k">if</span> (data.event === <span class="s">'created'</span>) {
+                this.#addCard(data.task);
+            } <span class="k">else if</span> (data.event === <span class="s">'updated'</span>) {
+                this.#section.firstTag(<span class="s">`.card[data-id="${data.task.id}"]`</span>)?.remove();
+                this.#addCard(data.task);
+            } <span class="k">else if</span> (data.event === <span class="s">'deleted'</span>) {
+                this.#section.firstTag(<span class="s">`.card[data-id="${data.id}"]`</span>)?.remove();
+            }
+        });
+    }
+}</code></pre>
+
+    <h3 id="step11">Step 11 — Task detail: <code>TaskDetailControler.js</code></h3>
+    <p>
+      Visibility driven by the <code>?task=&lt;id&gt;</code> URL parameter.
+      <code>show()</code> hides every sibling controller that exposes a
+      <code>hide()</code> method; <code>hide()</code> restores them — making
+      the back button work without any direct coupling between controllers.
+    </p>
+<pre><code><span class="k">export default class</span> TaskDetailControler {
+    #section; #http; #params; #events;
+
+    constructor(section) {
+        this.#section = section;
+        this.#http    = yojaWebApi.httpClient;
+        this.#params  = yojaWebApi.urlParameterService;
+        this.#events  = yojaWebApi.eventService;
+
+        this.hide();
+
+        this.#params.onChange(handler =&gt; {
+            <span class="k">if</span> (handler.event === <span class="s">'after-push'</span> || handler.event === <span class="s">'pop'</span>)
+                this.#onParamChange();
+        });
+
+        section.firstTag(<span class="s">'.btn-back'</span>).addEventListener(<span class="s">'click'</span>, () =&gt; {
+            this.#params.remove(<span class="s">'task'</span>); this.#params.push();
+        });
+        this.#events.on(<span class="s">'user:logged-out'</span>, () =&gt; {
+            this.#params.remove(<span class="s">'task'</span>);
+            this.#section.tag.style.display = <span class="s">'none'</span>;
+        });
+        section.pageReady(() =&gt; {
+            <span class="k">if</span> (this.#params.has(<span class="s">'task'</span>)) this.#onParamChange();
+        });
+    }
+
+    hide() {
+        this.#section.tag.style.display = <span class="s">'none'</span>;
+        yojaWeb.controlerService.find(document, c =&gt; c.show &amp;&amp; c !== this)
+               .forEach(c =&gt; c.show());
+    }
+
+    show() {
+        this.#section.tag.style.display = <span class="s">'block'</span>;
+        yojaWeb.controlerService.find(document, c =&gt; c.hide &amp;&amp; c !== this)
+               .forEach(c =&gt; c.hide());
+    }
+
+    #onParamChange() {
+        <span class="k">const</span> taskId = this.#params.get(<span class="s">'task'</span>);
+        <span class="k">if</span> (!taskId) { this.hide(); <span class="k">return</span>; }
+        this.#http.get({ url: <span class="s">`/api/tasks/${taskId}`</span> }).then(res =&gt; {
+            <span class="k">if</span> (res.status === <span class="n">200</span>) {
+                this.#section.firstTag(<span class="s">'.detail-title'</span>).textContent    = res.body.title;
+                this.#section.firstTag(<span class="s">'.detail-assignee'</span>).textContent = res.body.assignee;
+                this.#section.firstTag(<span class="s">'.detail-status'</span>).textContent   = res.body.status;
+                this.#section.firstTag(<span class="s">'.detail-id'</span>).textContent       = res.body.id;
+                this.show();
+            } <span class="k">else</span> {
+                this.#params.remove(<span class="s">'task'</span>); this.#params.replace(); this.hide();
+            }
+        });
+    }
+}</code></pre>
+
+    <h3 id="step12">Step 12 — Task form: <code>TaskFormControler.js</code></h3>
+    <p>
+      Shown on <code>user:logged-in</code>, hidden on logout. The submit
+      handler POSTs <code>{title, assignee}</code> to <code>/api/tasks</code>
+      — the WebSocket fan-out in <code>TaskBoardControler</code> handles
+      rendering the new card. The export button triggers the backend's CSV
+      worker and logs the <code>status</code> response.
+    </p>
+<pre><code><span class="k">export default class</span> TaskFormControler {
+    #section;
+
+    constructor(section) {
+        this.#section = section;
+        <span class="k">const</span> http = yojaWebApi.httpClient;
+        <span class="k">const</span> events = yojaWebApi.eventService;
+
+        this.hide();
+        events.on(<span class="s">'user:logged-in'</span>,  () =&gt; this.show());
+        events.on(<span class="s">'user:logged-out'</span>, () =&gt; this.hide());
+
+        section.firstTag(<span class="s">'form'</span>).addEventListener(<span class="s">'submit'</span>, e =&gt; {
+            e.preventDefault();
+            <span class="k">const</span> title    = section.firstTag(<span class="s">'[name=title]'</span>).value.trim();
+            <span class="k">const</span> assignee = section.firstTag(<span class="s">'[name=assignee]'</span>).value.trim();
+            <span class="k">if</span> (!title) <span class="k">return</span>;
+            http.post({ url: <span class="s">'/api/tasks'</span> }, { title, assignee })
+                .then(() =&gt; section.firstTag(<span class="s">'form'</span>).reset());
+        });
+
+        <span class="c">// CSV export — kicks off a Worker thread on the backend</span>
+        section.firstTag(<span class="s">'.btn-export'</span>).addEventListener(<span class="s">'click'</span>, () =&gt; {
+            http.get({ url: <span class="s">'/api/tasks/export'</span> })
+                .then(res =&gt; console.info(<span class="s">'Export:'</span>, res.body?.status));
+        });
+    }
+
+    hide() { this.#section.tag.style.display = <span class="s">'none'</span>; }
+    show() { this.#section.tag.style.display = <span class="s">'block'</span>; }
+}</code></pre>
+
+    <!-- ================================================================== -->
+    <h2 id="tests">Tests</h2>
+
+    <h3 id="step13">Step 13 — End-to-end Selenium suite: <code>TaskAppTest.java</code></h3>
+    <p>
+      Nine ordered tests covering auth, task CRUD and the detail view.
+      One <code>HttpServer</code> is shared across the whole class; each
+      <code>@Test</code> gets a fresh Chrome session. Uses
+      <code>SeleniumService</code> directly — no <code>TestBuilder</code>.
+      <code>repeatScript</code> polls a JS snippet until it returns truthy,
+      providing a reliable wait without <code>Thread.sleep</code>.
+    </p>
+<pre><code><span class="k">@TestMethodOrder</span>(MethodOrderer.OrderAnnotation.class)
+<span class="k">public class</span> TaskAppTest {
+
+    <span class="k">private static final int</span> PORT = <span class="n">9090</span>;
+    <span class="k">private static</span> HttpServer server;
+    <span class="k">private</span> SeleniumService selenium;
+
+    <span class="k">@BeforeAll static void</span> startApp() {
+        server = awaitValue(Main.start(PORT, <span class="k">false</span>));
+    }
+    <span class="k">@AfterAll  static void</span> stopApp()  { <span class="k">if</span> (server != <span class="k">null</span>) await(server.stop()); }
+
+    <span class="k">@BeforeEach void</span> setUp() {
+        selenium = SeleniumService.newInstance(
+            Browser.builder(Browser.CHROME).mode(Browser.Mode.HEADFUL).build());
+    }
+    <span class="k">@AfterEach  void</span> tearDown() { <span class="k">if</span> (selenium != <span class="k">null</span>) selenium.close(); }
+
+    <span class="k">@Test @Order</span>(<span class="n">1</span>)
+    <span class="k">void</span> loginPageIsDisplayed() {
+        selenium.getHttpPage(appUrl(<span class="s">"/index.html"</span>));
+        assertNotNull(selenium.firstTag(<span class="s">"form"</span>));
+    }
+
+    <span class="k">@Test @Order</span>(<span class="n">2</span>)
+    <span class="k">void</span> loginWithInvalidCredentials() {
+        selenium.getHttpPage(appUrl(<span class="s">"/index.html"</span>));
+        selenium.firstTag(<span class="s">"[name=username]"</span>).sendKeys(<span class="s">"demo"</span>);
+        selenium.firstTag(<span class="s">"[name=password]"</span>).sendKeys(<span class="s">"wrong-password"</span>);
+        selenium.firstTag(<span class="s">"[type=submit]"</span>).click();
+        String errorText = selenium.repeatScript(Duration.ofSeconds(<span class="n">10</span>), <span class="s">"""
+            const el = yojaWeb.firstTag('.error-msg')
+            return el && el.textContent.trim().length > 0 ? el.textContent : null
+        """</span>);
+        assertFalse(errorText.isBlank());
+    }
+
+    <span class="k">@Test @Order</span>(<span class="n">3</span>)
+    <span class="k">void</span> loginWithValidCredentials() {
+        login();
+        assertTrue(selenium.findTags(<span class="s">".card"</span>).size() &gt; <span class="n">0</span>);
+    }
+
+    <span class="k">@Test @Order</span>(<span class="n">5</span>)
+    <span class="k">void</span> addTaskAppearsOnBoard() {
+        login();
+        selenium.firstTag(<span class="s">"[name=title]"</span>).sendKeys(<span class="s">"Test task from Selenium"</span>);
+        selenium.firstTagFrom(selenium.firstTag(<span class="s">"#taskform-section"</span>), <span class="s">"[type=submit]"</span>).click();
+        selenium.repeatScript(Duration.ofSeconds(<span class="n">10</span>), <span class="s">"""
+            return yojaWeb.findTags('.task-title')
+                          .some(t => t.textContent.includes('Test task from Selenium')) ? true : null
+        """</span>);
+        <span class="k">long</span> count = selenium.findTags(<span class="s">".task-title"</span>).stream()
+                             .filter(el -&gt; el.getText().contains(<span class="s">"Test task from Selenium"</span>))
+                             .count();
+        assertEquals(<span class="n">1</span>, count);
+    }
+
+    <span class="c">// ... 5 more tests: logoutHidesTaskBoard, moveTaskToNextStatus,</span>
+    <span class="c">//     deleteTask, openTaskDetail, taskDetailBackButtonReturnsToBoard</span>
+
+    <span class="k">private void</span> login() {
+        selenium.getHttpPage(appUrl(<span class="s">"/index.html"</span>));
+        selenium.firstTag(<span class="s">"[name=username]"</span>).sendKeys(<span class="s">"demo"</span>);
+        selenium.firstTag(<span class="s">"[name=password]"</span>).sendKeys(<span class="s">"demo"</span>);
+        selenium.firstTag(<span class="s">"[type=submit]"</span>).click();
+        selenium.repeatScript(Duration.ofSeconds(<span class="n">10</span>), <span class="s">"return yojaWeb.findTags('.card').length > 0 ? true : null"</span>);
+    }
+}</code></pre>
+
+    <h3 id="step14">Step 14 — JS-unit tests: <code>JsUnitDemoTest.java</code></h3>
+    <p>
+      <code>testJsUnit</code> imports a JS module and runs each <strong>named export</strong>
+      as its own independent test step. A failure in one function does not skip the others.
+      <code>ywAssert</code> is injected via <code>.loadYwAssert()</code> before the module runs.
+    </p>
+
+    <div class="hello-file">
+      <span class="code-label">JsUnitDemoTest.java</span>
+<pre><code><span class="k">public class</span> JsUnitDemoTest {
+
+    <span class="k">@BeforeAll static void</span> startApp() { server = awaitValue(Main.start(<span class="n">9091</span>, <span class="k">false</span>)); }
+    <span class="k">@AfterAll  static void</span> stopApp()  { <span class="k">if</span> (server != <span class="k">null</span>) await(server.stop()); }
+
+    <span class="k">@TestFactory</span>
+    Stream&lt;DynamicNode&gt; jsUnitDemo() {
+        <span class="k">return</span> TestBuilder.builder()
+            .browser(Browser.builder(Browser.CHROME)
+                            .mode(Browser.Mode.HEADLESS).build())
+            .test(<span class="s">"open login page"</span>,
+                  ctx -&gt; ctx.seleniumService().getHttpPage(INDEX_URL))
+            .loadYwAssert()
+            <span class="c">// each named export = one step</span>
+            .testJsUnit(<span class="s">"/jsUnitSyncTest.js"</span>,
+                        List.of(<span class="s">"titleIsTaskManager"</span>, <span class="s">"loginFormIsPresent"</span>))
+            .stream();
+    }
+}</code></pre>
+    </div>
+
+    <div class="hello-file">
+      <span class="code-label">jsUnitSyncTest.js</span>
+<pre><code><span class="c">// Each named export = one independent test step.</span>
+<span class="c">// Throw to fail; return to pass.</span>
+
+<span class="k">export function</span> titleIsTaskManager() {
+    ywAssert.assertEquals(<span class="s">'Yoja Kanban'</span>,
+                          document.title,
+                          <span class="s">'document title'</span>)
+}
+
+<span class="k">export function</span> loginFormIsPresent() {
+    ywAssert.assertNotNull(yojaWeb.firstTag(<span class="s">'form'</span>),
+                           <span class="s">'login form should exist'</span>)
+}</code></pre>
+    </div>
+
+    <h3 id="step15">Step 15 — JS-module tests: <code>TestModuleDemoTest.java</code></h3>
+    <p>
+      <code>testModule</code> imports a JS module and calls its <strong>single default export</strong>
+      once — the whole file is one test step. Use this when you want a self-contained
+      scenario rather than a set of independent assertions.
+    </p>
+
+    <div class="hello-file">
+      <span class="code-label">TestModuleDemoTest.java</span>
+<pre><code><span class="k">public class</span> TestModuleDemoTest {
+
+    <span class="k">@BeforeAll static void</span> startApp() { server = awaitValue(Main.start(<span class="n">9092</span>, <span class="k">false</span>)); }
+    <span class="k">@AfterAll  static void</span> stopApp()  { <span class="k">if</span> (server != <span class="k">null</span>) await(server.stop()); }
+
+    <span class="k">@TestFactory</span>
+    Stream&lt;DynamicNode&gt; testModuleDemo() {
+        <span class="k">return</span> TestBuilder.builder()
+            .browser(Browser.builder(Browser.CHROME)
+                            .mode(Browser.Mode.HEADLESS).build())
+            .test(<span class="s">"open login page"</span>,
+                  ctx -&gt; ctx.seleniumService().getHttpPage(INDEX_URL))
+            .loadYwAssert()
+            <span class="c">// default export = one step</span>
+            .testModule(<span class="s">"/moduleSyncTest.js"</span>)
+            .stream();
+    }
+}</code></pre>
+    </div>
+
+    <div class="hello-file">
+      <span class="code-label">moduleSyncTest.js</span>
+<pre><code><span class="c">// Single default export = one test step.</span>
+<span class="c">// Throw to fail; return to pass.</span>
+
+<span class="k">export default function</span>() {
+    ywAssert.assertEquals(<span class="s">'Yoja Kanban'</span>,
+                          document.title,
+                          <span class="s">'document title'</span>)
+    ywAssert.assertNotNull(yojaWeb.firstTag(<span class="s">'form'</span>),
+                           <span class="s">'login form should be present'</span>)
+}</code></pre>
+    </div>
+
+    <!-- ================================================================== -->
+    <h2 id="run">Run it</h2>
+
+    <h3>Clone and run</h3>
+<pre><code>$ git clone https://github.com/Easy-API-Style/yoja-blueprint-kanban.git
+$ cd yoja-blueprint-kanban
+$ ./gradlew run</code></pre>
+
+    <h3>Custom port or TLS</h3>
+<pre><code>$ ./gradlew run --args=<span class="s">"-p 9090"</span>
+$ ./gradlew run --args=<span class="s">"-p 8443 -ssl true"</span></code></pre>
+
+    <h3>Try it</h3>
+<pre><code><span class="c"># Check the server is up</span>
+$ curl http://localhost:8080/api/me
+unauthorized
+
+<span class="c"># Login</span>
+$ curl -c cookies.txt -X POST http://localhost:8080/api/login \
+       -H "Content-Type: application/json" \
+       -d '{"username":"demo","password":"demo"}'
+{"user":"demo"}
+
+<span class="c"># List tasks (session cookie sent automatically)</span>
+$ curl -b cookies.txt http://localhost:8080/api/tasks
+
+<span class="c"># Create a task</span>
+$ curl -b cookies.txt -X POST http://localhost:8080/api/tasks \
+       -H "Content-Type: application/json" \
+       -d '{"title":"Read the docs","assignee":"you"}'</code></pre>
+
+    <div class="tip">
+      <p>
+        Open <code>http://localhost:8080</code> in a browser to see the
+        full Yoja-Web frontend. Log in with <code>demo</code> /
+        <code>demo</code>. Open a second tab — task mutations broadcast
+        over WebSocket and both tabs stay in sync instantly.
+      </p>
+    </div>
+
+    <!-- ================================================================== -->
+    <h2 id="next">Where to go next</h2>
+    <ul>
+      <li>
+        <strong><a href="modules/http-server.html">yoja-http-server</a></strong>
+        — full router API: sessions, WebSocket, static resources, response hooks.
+      </li>
+      <li>
+        <strong><a href="modules/http-client.html">yoja-http-client</a></strong>
+        — GET/POST builders, JSON body handling, WebSocket dialer.
+      </li>
+      <li>
+        <strong><a href="modules/web.html">yoja-web</a></strong>
+        — the frontend framework. Section components, routing, i18n, all in native ES6.
+      </li>
+      <li>
+        <strong><a href="modules/core.html">yoja-core</a></strong>
+        — <code>Worker</code>, <code>Timer</code>, <code>FutureUtil</code> and the HTTP primitive types.
+      </li>
+      <li>
+        <strong><a href="modules/selenium.html">yoja-selenium</a></strong>
+        — write browser tests that boot the real app and run JS modules end-to-end.
+      </li>
+      <li>
+        <strong><a href="https://github.com/Easy-API-Style/yoja-blueprint-kanban" target="_blank" rel="noopener">yoja-blueprint-kanban</a></strong>
+        — the complete source of this app. Clone it, run it, read it.
+      </li>
+    </ul>
+
+   </div>
+
+   <footer class="footer">
+     <p>
+       Yoja Framework · Apache License 2.0 ·
+       <a href="https://github.com/Easy-API-Style/yoja-framework">GitHub</a>
+     </p>
+   </footer>
+  </main>
+</div>
+
+
+<script src="assets/js/theme.js"></script>
+</body>
+</html>

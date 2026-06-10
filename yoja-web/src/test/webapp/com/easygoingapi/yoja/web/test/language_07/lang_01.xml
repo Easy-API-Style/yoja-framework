@@ -1,0 +1,13 @@
+<yw-language>
+    <yw-import path="/lang_02.xml"/>
+    <yw-import path="./lang_03.xml"/>
+    
+    <yw-text key="familyName">
+        <en>Family Name</en>
+        <fr>Nom De Famille</fr>
+    </yw-text>
+    <yw-text key="firstName">
+        <en>First Name</en>
+        <fr>Prénom</fr>
+    </yw-text>
+</yw-language>

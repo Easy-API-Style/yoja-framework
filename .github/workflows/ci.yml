@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Java 21 bootstraps Gradle; the foojay toolchain resolver
+      # downloads Java 25 automatically for compilation and tests.
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # Gradle remote cache + wrapper validation
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # yoja-web and yoja-selenium tests run Firefox and Chrome in headless mode
+      - name: Install Firefox
+        run: sudo apt-get install -y --no-install-recommends firefox
+
+      - name: Run spotlessCheck + tests
+        run: ./gradlew spotlessCheck test
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: '**/build/reports/tests/'
+          retention-days: 7

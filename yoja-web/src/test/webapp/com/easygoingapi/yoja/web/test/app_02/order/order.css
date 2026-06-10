@@ -1,0 +1,6 @@
+@import url("/main.css");
+
+fieldset {
+    display: flex;
+    flex-flow: column nowrap;
+}

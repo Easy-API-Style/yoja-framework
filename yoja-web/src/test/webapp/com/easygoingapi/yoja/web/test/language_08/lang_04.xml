@@ -1,0 +1,8 @@
+<yw-language>
+    <yw-import path="/lang_02.xml"/>
+    
+    <yw-text key="familyNamePlaceholder">
+        <en>type your family name</en>
+        <fr>saisir le nom de famille</fr>
+    </yw-text>
+</yw-language>

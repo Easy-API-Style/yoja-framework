@@ -1,0 +1,18 @@
+<yw-language>
+    <yw-text key="familyName">
+        <en>Family Name</en>
+        <fr>Nom De Famille</fr>
+    </yw-text>
+    <yw-text key="firstName">
+        <en>First Name</en>
+        <fr>Prénom</fr>
+    </yw-text>
+    <yw-text key="familyNamePlaceholder">
+        <en>type your family name</en>
+        <fr>saisir le nom de famille</fr>
+    </yw-text>
+    <yw-text key="firstNamePlaceholder">
+        <en>type your first name</en>
+        <fr>saisir votre prénom</fr>
+    </yw-text>
+</yw-language>

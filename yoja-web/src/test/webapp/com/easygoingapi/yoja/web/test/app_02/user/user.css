@@ -1,0 +1,17 @@
+@import url("/main.css");
+
+:host(div) {
+    margin: 5px;
+     
+    display: flex;
+    flex-flow: column nowrap;
+}
+
+.id-section {
+    display: flex;
+    flex-flow: column nowrap;
+}
+
+label {
+    background: var(--theme-color);
+}

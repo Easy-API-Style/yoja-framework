@@ -1,0 +1,593 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>yoja-http-server — Yoja Framework</title>
+  <script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('yoja-theme')||'dark')}catch(e){document.documentElement.setAttribute('data-theme','dark')}</script>
+  <link rel="stylesheet" href="../assets/css/styles.css">
+</head>
+<body>
+
+<nav class="top-nav">
+  <a class="top-nav__brand" href="../index.html">
+    <span class="brand-yoja">Yoja</span>
+  </a>
+  <div class="top-nav__links">
+    <a href="../index.html" class="nav-home">Home</a>
+    <a href="../getting-started.html">Get started</a>
+    <a href="index.html" class="is-active">Modules</a>
+    <a href="https://github.com/Easy-API-Style/yoja-framework">GitHub</a>
+    <button class="theme-toggle-button" aria-label="Toggle dark mode"><svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg></button>
+  </div>
+</nav>
+
+<div class="layout">
+  <aside class="sidebar">
+    <h4>Modules</h4>
+    <ul>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="core.html">yoja-core</a></li>
+      <li><a href="http-server.html" class="is-active">yoja-http-server</a></li>
+      <li><a href="http-client.html">yoja-http-client</a></li>
+      <li><a href="reverse-proxy.html">yoja-reverse-proxy</a></li>
+      <li><a href="selenium.html">yoja-selenium</a></li>
+      <li><a href="web.html">yoja-web</a></li>
+    </ul>
+    <h4>On this page</h4>
+    <ul>
+      <li><a href="#install">Installation</a></li>
+      <li><a href="#quickstart">Quick start</a></li>
+      <li><a href="#server">HttpServer</a></li>
+      <li><a href="#router">HttpRouter</a></li>
+      <li><a href="#services">WebService / WebResource</a></li>
+      <li><a href="#routing">HttpRouting / Request / Response</a></li>
+      <li><a href="#events">Events / hooks</a></li>
+      <li><a href="#session">Sessions</a></li>
+      <li><a href="#websocket">WebSockets</a></li>
+      <li><a href="#json">JSON helpers</a></li>
+    </ul>
+  </aside>
+
+  <main class="main">
+   <div class="main__inner">
+    <p class="crumb">
+      <a href="../index.html" class="nav-home">Home</a> <span>/</span>
+      <a href="index.html">Modules</a> <span>/</span> yoja-http-server
+    </p>
+    <h1>yoja-http-server</h1>
+    <p class="lead">
+      Declarative router with sessions, WebSocket dispatching, static-resource
+      serving (from jars or folders), request/response hooks and TLS
+      hot-reload — built on Vert.x Web.
+    </p>
+
+    <h2 id="install">Installation</h2>
+<pre><code>implementation <span class="s">'com.easygoingapi:yoja-http-server:VERSION'</span></code></pre>
+
+    <h2 id="quickstart">Quick start</h2>
+<pre><code><span class="k">import</span> com.easygoingapi.yoja.core.YojaApp;
+<span class="k">import</span> com.easygoingapi.yoja.core.http.HttpMethod;
+<span class="k">import</span> com.easygoingapi.yoja.http.server.*;
+<span class="k">import</span> io.vertx.core.json.JsonObject;
+
+<span class="k">public class</span> App {
+    <span class="k">public static void</span> main(String[] args) {
+        YojaApp.start();
+
+        HttpRouter router = HttpRouter.builder()
+            .contextPath(<span class="s">"/api"</span>)
+            .contentType(<span class="s">"html"</span>, <span class="s">"text/html"</span>)
+            .webResource(WebApp.jar(<span class="s">"com.example.webapp"</span>), <span class="s">"/*"</span>)
+            .webService(HttpMethod.GET, <span class="s">"/hello"</span>, r -&gt;
+                r.response().send(<span class="k">new</span> JsonObject().put(<span class="s">"hello"</span>, <span class="s">"world"</span>)))
+            .onResponse(e -&gt; e.putHeader(<span class="s">"X-Powered-By"</span>, <span class="s">"yoja"</span>))
+            .build();
+
+        HttpServer.builder(router, <span class="n">8080</span>)
+                  .sslSelfSigned()
+                  .start();
+    }
+}</code></pre>
+
+    <h2 id="server">HttpServer</h2>
+
+    <div class="api-class">
+      <h3><code>HttpServer</code> <span class="kind">class (Certificatable)</span></h3>
+      <p>Vert.x lifecycle wrapper. Owns the listener and implements <code>Certificatable</code> for hot TLS rotation.</p>
+
+      <span class="api-table-group">Factory (Builder)</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>static builder(HttpRouter, int port)</code></td><td class="ret"><code>Builder</code></td><td class="desc"></td></tr>
+          <tr><td><code>Builder.ssl(Path keyPath, Path certPath)</code></td><td class="ret"><code>Builder</code></td><td class="desc">TLS with PEM files</td></tr>
+          <tr><td><code>Builder.sslSelfSigned()</code></td><td class="ret"><code>Builder</code></td><td class="desc">TLS with a self-signed certificate generated at start time</td></tr>
+          <tr><td><code>Builder.webSocketService(WebSocketService)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Attach a WebSocket dispatcher</td></tr>
+          <tr><td><code>Builder.options(HttpServerOptions)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Override the default Vert.x options</td></tr>
+          <tr><td><code>Builder.start()</code></td><td class="ret"><code>Future&lt;HttpServer&gt;</code></td><td class="desc">Bind the listener</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Lifecycle</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>stop()</code></td><td class="ret"><code>Future&lt;HttpServer&gt;</code></td><td class="desc">Close the listener</td></tr>
+          <tr><td><code>state()</code></td><td class="ret"><code>State</code></td><td class="desc"><code>stopping | stopped | starting | started</code></td></tr>
+          <tr><td><code>is(State)</code></td><td class="ret"><code>boolean</code></td><td class="desc"></td></tr>
+          <tr><td><code>updateCertificate(Path key, Path cert)</code></td><td class="ret"><code>Future&lt;Boolean&gt;</code></td><td class="desc">Hot-swap TLS material without restart</td></tr>
+          <tr><td><code>logOptions()</code></td><td class="ret"><code>void</code></td><td class="desc">Dump effective Vert.x options to the log</td></tr>
+          <tr><td><code>static defaultOptions(HttpCertificate)</code></td><td class="ret"><code>HttpServerOptions</code></td><td class="desc">HTTP/2 with ALPN fallback</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Accessors</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>port()</code></td><td class="ret"><code>int</code></td><td class="desc">Bound port</td></tr>
+          <tr><td><code>certificate()</code></td><td class="ret"><code>HttpCertificate</code></td><td class="desc">Active TLS strategy</td></tr>
+          <tr><td><code>httpSessionStore()</code></td><td class="ret"><code>HttpSessionStore</code></td><td class="desc"></td></tr>
+          <tr><td><code>webSocketService()</code></td><td class="ret"><code>WebSocketService</code></td><td class="desc"></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="router">HttpRouter</h2>
+
+    <div class="api-class">
+      <h3><code>HttpRouter</code> <span class="kind">class</span></h3>
+      <p>Maps requests to <code>WebService</code> and <code>WebResource</code> endpoints.</p>
+
+      <span class="api-table-group">Builder</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>static builder()</code></td><td class="ret"><code>Builder</code></td><td class="desc"></td></tr>
+          <tr><td><code>contextPath(String)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Global URL prefix applied to all routes</td></tr>
+          <tr><td><code>session(HttpSessionStore)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Install a session handler</td></tr>
+          <tr><td><code>contentType(String ext, String mime)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Map a file extension to a MIME type for static serving</td></tr>
+          <tr><td><code>contentTypes(Map&lt;String,String&gt;)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Bulk-register extension → MIME mappings</td></tr>
+          <tr><td><code>webResource(WebApp, String url, Handler...)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Mount static resources from a jar or folder</td></tr>
+          <tr><td><code>webResource(WebApp, String url, HttpHeader, Handler...)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Same with default response headers</td></tr>
+          <tr><td><code>webService(HttpMethod, String path, Handler...)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Register a service endpoint inline</td></tr>
+          <tr><td><code>webService(WebService)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Register a pre-built <code>WebService</code></td></tr>
+          <tr><td><code>webServices(List&lt;WebService&gt;)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Bulk-register services</td></tr>
+          <tr><td><code>onRequest(Handler&lt;HttpRequestEvent&gt;)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Pre-dispatch hook; handler can <code>abort()</code> the exchange</td></tr>
+          <tr><td><code>onResponse(Handler&lt;HttpResponseEvent&gt;)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Pre-send hook; handler can mutate or replace the body</td></tr>
+          <tr><td><code>build()</code></td><td class="ret"><code>HttpRouter</code></td><td class="desc"></td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Accessors &amp; utilities</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>getContextPath()</code></td><td class="ret"><code>String</code></td><td class="desc"></td></tr>
+          <tr><td><code>getHttpSessionStore()</code></td><td class="ret"><code>HttpSessionStore</code></td><td class="desc"></td></tr>
+          <tr><td><code>getContentTypes()</code></td><td class="ret"><code>Map&lt;String,String&gt;</code></td><td class="desc"></td></tr>
+          <tr><td><code>getWebServices()</code></td><td class="ret"><code>List&lt;WebService&gt;</code></td><td class="desc"></td></tr>
+          <tr><td><code>hasResource(WebApp, String path)</code></td><td class="ret"><code>boolean</code></td><td class="desc">Whether a bundled asset exists at <code>path</code></td></tr>
+          <tr><td><code>loadResource(WebApp, String path)</code></td><td class="ret"><code>byte[]</code></td><td class="desc">Read a bundled asset directly</td></tr>
+          <tr><td><code>static formatPath(String | Path)</code></td><td class="ret"><code>String</code></td><td class="desc">Normalise a path (ensure leading slash, forward slashes)</td></tr>
+          <tr><td><code>static cleanPath(String | Path)</code></td><td class="ret"><code>String</code></td><td class="desc">Strip leading slash and normalise separators</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="services">WebService / WebResource / WebApp</h2>
+
+    <div class="api-class">
+      <h3><code>WebService</code> <span class="kind">class</span></h3>
+      <p>One endpoint: HTTP method + path + handler chain. Path must begin with <code>/</code>.</p>
+
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>WebService(HttpMethod, String path, Handler&lt;HttpRouting&gt;...)</code></td><td class="ret"></td><td class="desc">Constructor; path validated to start with <code>/</code></td></tr>
+          <tr><td><code>getMethod()</code></td><td class="ret"><code>HttpMethod</code></td><td class="desc"></td></tr>
+          <tr><td><code>getPath()</code></td><td class="ret"><code>String</code></td><td class="desc"></td></tr>
+          <tr><td><code>getHandlers()</code></td><td class="ret"><code>List&lt;Handler&gt;</code></td><td class="desc"></td></tr>
+          <tr><td><code>getType()</code></td><td class="ret"><code>Type</code></td><td class="desc"><code>WebService</code> or <code>WebResource</code> — discriminator</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="api-class">
+      <h3><code>WebResource</code> <span class="kind">class (extends WebService)</span></h3>
+      <p>A GET endpoint serving static content from a <code>WebApp</code>. The route pattern includes the web app's own context path.</p>
+
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>WebResource(WebApp, String path, Handler...)</code></td><td class="ret"></td><td class="desc"></td></tr>
+          <tr><td><code>WebResource(WebApp, String path, HttpHeader, Handler...)</code></td><td class="ret"></td><td class="desc">With default response headers added to every static response</td></tr>
+          <tr><td><code>webApp()</code></td><td class="ret"><code>WebApp</code></td><td class="desc"></td></tr>
+          <tr><td><code>headers()</code></td><td class="ret"><code>Map&lt;String,String&gt;</code></td><td class="desc">Default response headers; empty if none configured</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="api-class">
+      <h3><code>WebApp</code> <span class="kind">class</span></h3>
+      <p>Describes a bundle of static resources: source type (folder or jar), base path, and optional URL context path.</p>
+
+      <span class="api-table-group">Factory</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>static folder(String path)</code></td><td class="ret"><code>WebApp</code></td><td class="desc">Resources from a filesystem folder</td></tr>
+          <tr><td><code>static jar(String classpathBase)</code></td><td class="ret"><code>WebApp</code></td><td class="desc">Resources from a jar at the given classpath base</td></tr>
+          <tr><td><code>static of(Type, String path)</code></td><td class="ret"><code>WebApp</code></td><td class="desc"></td></tr>
+          <tr><td><code>static of(Type, String path, String contextPath)</code></td><td class="ret"><code>WebApp</code></td><td class="desc">With an explicit URL context path</td></tr>
+          <tr><td><code>static builder(Type, String path)</code></td><td class="ret"><code>Builder</code></td><td class="desc"></td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Accessors</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>type()</code></td><td class="ret"><code>Type</code></td><td class="desc"><code>folder</code> or <code>jar</code></td></tr>
+          <tr><td><code>path()</code></td><td class="ret"><code>String</code></td><td class="desc">Filesystem path or classpath base</td></tr>
+          <tr><td><code>contextPath()</code></td><td class="ret"><code>String</code></td><td class="desc">URL prefix under which resources are served</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="routing">HttpRouting / HttpRequest / HttpResponse</h2>
+
+    <div class="api-class">
+      <h3><code>HttpRouting</code> <span class="kind">class (extends HttpRoutingContext)</span></h3>
+      <p>Context handed to every service handler.</p>
+
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>request()</code></td><td class="ret"><code>HttpRequest</code></td><td class="desc">Inbound request</td></tr>
+          <tr><td><code>response()</code></td><td class="ret"><code>HttpResponse</code></td><td class="desc">Outbound response</td></tr>
+          <tr><td><code>nextHandler()</code></td><td class="ret"><code>void</code></td><td class="desc">Pass control to the next handler in the chain</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="api-class">
+      <h3><code>HttpRoutingContext</code> <span class="kind">class</span></h3>
+      <p>Base context visible to both <code>onRequest</code> and <code>onResponse</code> hooks.</p>
+
+      <span class="api-table-group">Session</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>session()</code></td><td class="ret"><code>HttpSession</code></td><td class="desc">Current session, or <code>null</code> if no session handler is configured</td></tr>
+          <tr><td><code>sessionStore()</code></td><td class="ret"><code>HttpSessionStore</code></td><td class="desc"></td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Control flow</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>redirect(String path)</code></td><td class="ret"><code>void</code></td><td class="desc">Send a 302 redirect</td></tr>
+          <tr><td><code>fail(int status)</code></td><td class="ret"><code>void</code></td><td class="desc">Short-circuit with the given status code</td></tr>
+          <tr><td><code>fail(Throwable)</code></td><td class="ret"><code>void</code></td><td class="desc">Short-circuit with 500 and the given cause</td></tr>
+          <tr><td><code>fail(int, Throwable)</code></td><td class="ret"><code>void</code></td><td class="desc">Short-circuit with status + cause</td></tr>
+          <tr><td><code>failed()</code></td><td class="ret"><code>boolean</code></td><td class="desc"><code>true</code> if <code>fail()</code> has been called</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Context data &amp; resources</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>contextPath()</code></td><td class="ret"><code>String</code></td><td class="desc">Router's global context path</td></tr>
+          <tr><td><code>contextPath(WebApp)</code></td><td class="ret"><code>String</code></td><td class="desc">Effective URL prefix for the given <code>WebApp</code></td></tr>
+          <tr><td><code>hasResource(WebApp, String)</code></td><td class="ret"><code>boolean</code></td><td class="desc">Whether the asset exists in the bundle</td></tr>
+          <tr><td><code>loadResource(WebApp, String)</code></td><td class="ret"><code>byte[]</code></td><td class="desc">Read a bundled asset</td></tr>
+          <tr><td><code>putData(key, value)</code></td><td class="ret"><code>void</code></td><td class="desc">Store arbitrary data for downstream handlers</td></tr>
+          <tr><td><code>getData(key)</code></td><td class="ret"><code>Object</code></td><td class="desc"></td></tr>
+          <tr><td><code>getData(key, default)</code></td><td class="ret"><code>Object</code></td><td class="desc"></td></tr>
+          <tr><td><code>removeData(key)</code></td><td class="ret"><code>void</code></td><td class="desc"></td></tr>
+          <tr><td><code>data()</code></td><td class="ret"><code>Map</code></td><td class="desc">All stored data</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="api-class">
+      <h3><code>HttpRequest</code> <span class="kind">class</span></h3>
+      <p>Read-only view of the inbound server request.</p>
+
+      <span class="api-table-group">General</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>version()</code></td><td class="ret"><code>HttpVersion</code></td><td class="desc">HTTP/1.1 or HTTP/2</td></tr>
+          <tr><td><code>method()</code></td><td class="ret"><code>HttpMethod</code></td><td class="desc"></td></tr>
+          <tr><td><code>ssl()</code></td><td class="ret"><code>boolean</code></td><td class="desc"><code>true</code> for HTTPS</td></tr>
+          <tr><td><code>host()</code></td><td class="ret"><code>String</code></td><td class="desc"></td></tr>
+          <tr><td><code>path()</code></td><td class="ret"><code>String</code></td><td class="desc">Request path without query string</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Headers, parameters &amp; cookies</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>hasHeader()</code></td><td class="ret"><code>boolean</code></td><td class="desc"><code>true</code> if any header is present</td></tr>
+          <tr><td><code>hasHeader(name)</code></td><td class="ret"><code>boolean</code></td><td class="desc"></td></tr>
+          <tr><td><code>headerNames()</code></td><td class="ret"><code>Set&lt;String&gt;</code></td><td class="desc"></td></tr>
+          <tr><td><code>header(name)</code></td><td class="ret"><code>String</code></td><td class="desc">First value, or <code>null</code></td></tr>
+          <tr><td><code>parameters()</code></td><td class="ret"><code>HttpParameter</code></td><td class="desc">All query parameters as a multimap</td></tr>
+          <tr><td><code>parameters(name)</code></td><td class="ret"><code>List&lt;String&gt;</code></td><td class="desc"></td></tr>
+          <tr><td><code>firstParameter(name)</code></td><td class="ret"><code>String</code></td><td class="desc">First value, or <code>null</code></td></tr>
+          <tr><td><code>hasParameter()</code></td><td class="ret"><code>boolean</code></td><td class="desc"><code>true</code> if any parameter is present</td></tr>
+          <tr><td><code>parameterNames()</code></td><td class="ret"><code>Set&lt;String&gt;</code></td><td class="desc"></td></tr>
+          <tr><td><code>cookies()</code></td><td class="ret"><code>Set&lt;HttpCookie&gt;</code></td><td class="desc"></td></tr>
+          <tr><td><code>cookie(name)</code></td><td class="ret"><code>HttpCookie</code></td><td class="desc">First match, or <code>null</code></td></tr>
+          <tr><td><code>hasCookie()</code></td><td class="ret"><code>boolean</code></td><td class="desc"><code>true</code> if any cookie is present</td></tr>
+          <tr><td><code>hasCookie(name)</code></td><td class="ret"><code>boolean</code></td><td class="desc"></td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Body</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>bodyAsJsonObject()</code></td><td class="ret"><code>JsonObject</code></td><td class="desc"></td></tr>
+          <tr><td><code>bodyAsJsonArray()</code></td><td class="ret"><code>JsonArray</code></td><td class="desc"></td></tr>
+          <tr><td><code>bodyAsText()</code></td><td class="ret"><code>String</code></td><td class="desc"></td></tr>
+          <tr><td><code>bodyAsByteArray()</code></td><td class="ret"><code>byte[]</code></td><td class="desc"></td></tr>
+          <tr><td><code>&lt;C&gt; body(Class&lt;C&gt;)</code></td><td class="ret"><code>C</code></td><td class="desc">Deserialise to the given type via Jackson</td></tr>
+          <tr><td><code>isEmptyBody()</code></td><td class="ret"><code>boolean</code></td><td class="desc"></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="api-class">
+      <h3><code>HttpResponse</code> <span class="kind">class (extends AbstractHttpResponse)</span></h3>
+      <p>Outbound response. Every <code>send*</code> call triggers the <code>onResponse</code> hook chain before writing.</p>
+
+      <span class="api-table-group">Send</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>send()</code></td><td class="ret"><code>Future&lt;Void&gt;</code></td><td class="desc">Empty body</td></tr>
+          <tr><td><code>send(JsonObject)</code> · <code>send(JsonArray)</code> · <code>send(String)</code> · <code>send(byte[])</code></td><td class="ret"><code>Future&lt;Void&gt;</code></td><td class="desc">Auto Content-Type from body type</td></tr>
+          <tr><td><code>sendJson(Object)</code></td><td class="ret"><code>Future&lt;Void&gt;</code></td><td class="desc">Serialise via Jackson</td></tr>
+          <tr><td><code>sendJson(Object, Class&lt;?&gt; view)</code></td><td class="ret"><code>Future&lt;Void&gt;</code></td><td class="desc">Serialise with a Jackson view</td></tr>
+          <tr><td><code>sent()</code></td><td class="ret"><code>boolean</code></td><td class="desc"><code>true</code> once the response has been written</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Inherited from AbstractHttpResponse</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>statusCode(int)</code></td><td class="ret"><code>void</code></td><td class="desc">Set the response status code</td></tr>
+          <tr><td><code>statusCode()</code></td><td class="ret"><code>int</code></td><td class="desc">Current status code (default 200)</td></tr>
+          <tr><td><code>putHeader(name, value)</code></td><td class="ret"><code>void</code></td><td class="desc"></td></tr>
+          <tr><td><code>addCookie(HttpCookie)</code></td><td class="ret"><code>void</code></td><td class="desc"></td></tr>
+          <tr><td><code>removeCookie(name)</code></td><td class="ret"><code>void</code></td><td class="desc"></td></tr>
+          <tr><td><code>hasHeader(name)</code> · <code>hasCookie(name)</code></td><td class="ret"><code>boolean</code></td><td class="desc"></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="events">Events / hooks</h2>
+
+    <div class="api-class">
+      <h3><code>HttpRequestEvent</code> · <code>HttpResponseEvent</code> <span class="kind">classes</span></h3>
+      <p>Events handed to <code>onRequest</code> and <code>onResponse</code> hooks. Both extend the full request/response surface.</p>
+
+      <span class="api-table-group">HttpRequestEvent (extends HttpRequest)</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>abort()</code></td><td class="ret"><code>void</code></td><td class="desc">Short-circuit the exchange; router replies with 444</td></tr>
+          <tr><td><code>aborted()</code></td><td class="ret"><code>boolean</code></td><td class="desc"><code>true</code> once <code>abort()</code> has been called</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">HttpResponseEvent (extends AbstractHttpResponse)</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>body()</code></td><td class="ret"><code>Object</code></td><td class="desc">Current body value (<code>JsonObject</code>, <code>String</code>, <code>byte[]</code>, …)</td></tr>
+          <tr><td><code>bodyType()</code></td><td class="ret"><code>Class&lt;?&gt;</code></td><td class="desc">Runtime type of the body</td></tr>
+          <tr><td><code>hasBody()</code></td><td class="ret"><code>boolean</code></td><td class="desc"></td></tr>
+          <tr><td><code>updateBody(JsonObject | JsonArray | String | byte[])</code></td><td class="ret"><code>void</code></td><td class="desc">Replace the body before it is written</td></tr>
+          <tr><td><code>updateJsonBody(Object [, Class view])</code></td><td class="ret"><code>void</code></td><td class="desc">Serialise via Jackson, optionally with a view</td></tr>
+          <tr><td><code>clearBody()</code></td><td class="ret"><code>void</code></td><td class="desc">Remove the body</td></tr>
+          <tr><td><code>abort()</code></td><td class="ret"><code>void</code></td><td class="desc">Prevent the response from being sent</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="session">Sessions</h2>
+
+    <div class="api-class">
+      <h3><code>HttpSessionStore</code> <span class="kind">class</span></h3>
+      <p>In-memory store wrapping Vert.x' <code>LocalSessionStore</code>.</p>
+
+      <span class="api-table-group">Constructor &amp; configuration</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>HttpSessionStore(String cookieName, Duration timeout)</code></td><td class="ret"></td><td class="desc"></td></tr>
+          <tr><td><code>cookieName()</code></td><td class="ret"><code>String</code></td><td class="desc">Name of the session cookie</td></tr>
+          <tr><td><code>timeout()</code></td><td class="ret"><code>Duration</code></td><td class="desc">Session idle timeout</td></tr>
+          <tr><td><code>onSession(Handler&lt;HttpSession&gt;)</code></td><td class="ret"><code>void</code></td><td class="desc">Invoked once per newly-created session</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Operations</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>size()</code></td><td class="ret"><code>Future&lt;Integer&gt;</code></td><td class="desc">Number of active sessions</td></tr>
+          <tr><td><code>sessions()</code></td><td class="ret"><code>Future&lt;Set&lt;HttpSession&gt;&gt;</code></td><td class="desc">All active sessions</td></tr>
+          <tr><td><code>get(String id)</code></td><td class="ret"><code>Future&lt;HttpSession&gt;</code></td><td class="desc">Look up by session id</td></tr>
+          <tr><td><code>delete(String id)</code></td><td class="ret"><code>Future&lt;Void&gt;</code></td><td class="desc">Invalidate and remove a session</td></tr>
+          <tr><td><code>clear()</code></td><td class="ret"><code>void</code></td><td class="desc">Remove all sessions</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="api-class">
+      <h3><code>HttpSession</code> <span class="kind">final class</span></h3>
+      <p>Thin façade over a Vert.x Web session.</p>
+
+      <span class="api-table-group">Identity</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>id()</code></td><td class="ret"><code>String</code></td><td class="desc">Current session id</td></tr>
+          <tr><td><code>oldId()</code></td><td class="ret"><code>String</code></td><td class="desc">Previous id, set after regeneration</td></tr>
+          <tr><td><code>regenerateId()</code></td><td class="ret"><code>void</code></td><td class="desc">Issue a new id (guards against fixation)</td></tr>
+          <tr><td><code>isRegenerated()</code></td><td class="ret"><code>boolean</code></td><td class="desc"></td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Data</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>put(key, value)</code></td><td class="ret"><code>void</code></td><td class="desc"></td></tr>
+          <tr><td><code>putIfAbsent(key, value)</code></td><td class="ret"><code>void</code></td><td class="desc"></td></tr>
+          <tr><td><code>computeIfAbsent(key, fn)</code></td><td class="ret"><code>void</code></td><td class="desc"></td></tr>
+          <tr><td><code>&lt;T&gt; get(key)</code></td><td class="ret"><code>T</code></td><td class="desc"></td></tr>
+          <tr><td><code>&lt;T&gt; remove(key)</code></td><td class="ret"><code>T</code></td><td class="desc"></td></tr>
+          <tr><td><code>data()</code></td><td class="ret"><code>Map</code></td><td class="desc">All session data</td></tr>
+          <tr><td><code>isEmpty()</code></td><td class="ret"><code>boolean</code></td><td class="desc"></td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Lifecycle</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>timeout()</code></td><td class="ret"><code>Duration</code></td><td class="desc">Session idle timeout</td></tr>
+          <tr><td><code>destroy()</code></td><td class="ret"><code>void</code></td><td class="desc">Invalidate the session</td></tr>
+          <tr><td><code>isDestroyed()</code></td><td class="ret"><code>boolean</code></td><td class="desc"></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="websocket">WebSockets</h2>
+
+    <div class="api-class">
+      <h3><code>WebSocketService</code> <span class="kind">class</span></h3>
+      <p>Registry of server-side <code>WebSocket</code> endpoints for an <code>HttpServer</code>.</p>
+
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>add(WebSocket)</code></td><td class="ret"><code>WebSocket</code></td><td class="desc">Register and start listening on the given endpoint</td></tr>
+          <tr><td><code>remove(String path)</code></td><td class="ret"><code>CompositeFuture</code></td><td class="desc">Close all connections and unregister the endpoint</td></tr>
+          <tr><td><code>hasWebSocket(String path)</code></td><td class="ret"><code>boolean</code></td><td class="desc"></td></tr>
+          <tr><td><code>getWebSocket(String path)</code></td><td class="ret"><code>WebSocket</code></td><td class="desc"></td></tr>
+          <tr><td><code>getWebSocketPaths()</code></td><td class="ret"><code>Set&lt;String&gt;</code></td><td class="desc">All registered paths</td></tr>
+          <tr><td><code>getWebSocketPaths(Status)</code></td><td class="ret"><code>Set&lt;String&gt;</code></td><td class="desc">Paths filtered by <code>Status.open</code> or <code>Status.close</code></td></tr>
+          <tr><td><code>getWebSockets(Status)</code></td><td class="ret"><code>Set&lt;WebSocket&gt;</code></td><td class="desc">Endpoints filtered by status</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="api-class">
+      <h3><code>WebSocket</code> <span class="kind">class</span></h3>
+      <p>One logical endpoint at a single path. Fans events out to all connected clients. An optional <code>accept</code> function can reject handshakes based on query parameters.</p>
+
+      <span class="api-table-group">Constructor</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>WebSocket(String path)</code></td><td class="ret"></td><td class="desc">Accept all connections</td></tr>
+          <tr><td><code>WebSocket(String path, Function&lt;WebSocketParameter, Boolean&gt; accept)</code></td><td class="ret"></td><td class="desc">Accept only when <code>accept</code> returns <code>true</code></td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Handlers</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>onOpen(Handler&lt;OpenEvent&gt;)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires when a client connects; event carries <code>WebSocketServer</code></td></tr>
+          <tr><td><code>onClose(Handler&lt;CloseEvent&gt;)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires when a client disconnects; event carries <code>code()</code> and <code>reason()</code></td></tr>
+          <tr><td><code>onTextMessage(Handler&lt;TextMessageEvent&gt;)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires on each incoming text frame</td></tr>
+          <tr><td><code>onBinaryMessage(Handler&lt;BinaryMessageEvent&gt;)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires on each incoming binary frame</td></tr>
+          <tr><td><code>clear(On...)</code></td><td class="ret"><code>void</code></td><td class="desc">Drop handlers of the given kinds (<code>open, close, textMessage, binaryMessage</code>)</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Broadcast &amp; lifecycle</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>send(String)</code></td><td class="ret"><code>CompositeFuture</code></td><td class="desc">Broadcast a text frame to all connected clients</td></tr>
+          <tr><td><code>send(byte[])</code></td><td class="ret"><code>CompositeFuture</code></td><td class="desc">Broadcast a binary frame</td></tr>
+          <tr><td><code>isOpened()</code></td><td class="ret"><code>boolean</code></td><td class="desc"><code>true</code> when at least one client is connected</td></tr>
+          <tr><td><code>close()</code> · <code>close(short)</code> · <code>close(short, String)</code></td><td class="ret"><code>void</code></td><td class="desc">Close all connections with optional close code and reason</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="api-class">
+      <h3><code>WebSocketServer</code> · <code>WebSocketParameter</code> <span class="kind">classes</span></h3>
+
+      <table class="api-table">
+        <thead><tr><th>Class</th><th>Key API</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>WebSocketServer</code></td><td class="ret"><code>isOpened()</code> · <code>host()</code> · <code>path()</code> · <code>close(...)</code></td><td class="desc">Per-client handle injected into <code>OpenEvent</code></td></tr>
+          <tr><td><code>WebSocketParameter</code></td><td class="ret"><code>entries()</code> · <code>values(name)</code> · <code>firstValue(name)</code> · <code>names()</code> · <code>hasName(name)</code></td><td class="desc">Parsed handshake query string, used by the <code>accept</code> function</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="json">JSON helpers</h2>
+
+    <div class="api-class">
+      <h3><code>json.JsonReader</code> · <code>json.JsonWriter</code> · <code>json.Mapper</code> <span class="kind">classes</span></h3>
+      <p>Thin Jackson wrappers. Failures wrap as <code>HttpServerException</code>.</p>
+
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>JsonReader.readValue(String json, Class&lt;O&gt;)</code></td><td class="ret"><code>O</code></td><td class="desc">Deserialise JSON</td></tr>
+          <tr><td><code>JsonReader.builder().view(Class).build()</code></td><td class="ret"><code>JsonReader</code></td><td class="desc">Reader with a Jackson view</td></tr>
+          <tr><td><code>JsonWriter.writeValue(Object [, Class view])</code></td><td class="ret"><code>String</code></td><td class="desc">Serialise to a JSON string</td></tr>
+          <tr><td><code>JsonWriter.writeValueAsJsonObject(Object [, view])</code></td><td class="ret"><code>JsonObject</code></td><td class="desc"></td></tr>
+          <tr><td><code>JsonWriter.writeValueAsJsonArray(Object [, view])</code></td><td class="ret"><code>JsonArray</code></td><td class="desc"></td></tr>
+          <tr><td><code>JsonWriter.builder().pretty(boolean).view(Class).build()</code></td><td class="ret"><code>JsonWriter</code></td><td class="desc"></td></tr>
+          <tr><td><code>Mapper.jsonMapper()</code></td><td class="ret"><code>ObjectMapper</code></td><td class="desc">Process-wide Jackson mapper</td></tr>
+          <tr><td><code>Mapper.jsonMapper(ObjectMapper)</code></td><td class="ret"><code>void</code></td><td class="desc">Replace the process-wide mapper</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="api-class">
+      <h3><code>HttpServerException</code> <span class="kind">runtime exception</span></h3>
+      <p>Raised for invalid paths, missing resources and unrecoverable I/O. Extends <code>YojaAppException</code>.</p>
+    </div>
+
+    <div class="note">
+      <p>
+        Module README (full prose + recipes):
+        <a href="https://github.com/Easy-API-Style/yoja-framework/blob/main/yoja-http-server/README.md">yoja-http-server/README.md</a>.
+      </p>
+    </div>
+   </div>
+
+   <footer class="footer">
+     <p>
+       Yoja Framework · Apache License 2.0 ·
+       <a href="https://github.com/Easy-API-Style/yoja-framework">GitHub</a>
+     </p>
+   </footer>
+  </main>
+</div>
+
+
+<script src="../assets/js/theme.js"></script>
+</body>
+</html>

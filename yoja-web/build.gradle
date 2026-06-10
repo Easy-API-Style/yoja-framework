@@ -1,0 +1,25 @@
+sourceSets {
+    main {
+        resources {
+            srcDirs 'src/main/webapp'
+        }
+    }
+    test {
+        resources {
+            srcDirs 'src/test/webapp'
+        }
+    }
+}
+tasks.register('exportYojaWeb', Copy) {
+    group = 'yoja-web'
+    description = 'Copy src/main/webapp/com/easygoingapi/yoja/web to -PfolderDestination=<path>'
+    def dest = project.findProperty('folderDestination') ?: "$buildDir/yoja-web-export"
+    doFirst { mkdir dest }
+    from 'src/main/webapp/com/easygoingapi/yoja/web'
+    into dest
+}
+
+dependencies {
+    testImplementation project(':yoja-http-server')
+    testImplementation project(':yoja-selenium')
+}

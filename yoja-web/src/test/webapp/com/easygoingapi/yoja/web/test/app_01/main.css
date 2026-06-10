@@ -1,0 +1,20 @@
+:host(*) {
+   --theme-color: gray;
+}
+
+* {
+    font-family: serif;
+}
+
+label, input {
+    padding: 5px;
+}
+
+input:focus {
+    outline: 1px none transparent;
+}
+
+::placeholder {
+  opacity: 0.33;
+  font-style:italic;
+}

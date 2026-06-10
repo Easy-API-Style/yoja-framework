@@ -1,0 +1,15 @@
+@import url("/main.css");
+
+fieldset {
+    display: flex;
+    flex-flow: column nowrap;
+}
+
+label, input {
+    --label-color: pink;
+}
+
+label {
+    background: var(--label-color);
+}
+

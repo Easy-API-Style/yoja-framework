@@ -1,0 +1,31 @@
+'use strict'
+
+const urlParameterService = yojaWebApi.urlParameterService 
+const navigationService = yojaWebApi.navigationService 
+
+export default function test(args, resolve, rejet) {
+    urlParameterService.onChange(h => {
+        if (h.event === 'before-push') {
+            ywAssert.assertEquals('/page_1.html', navigationService.path())
+            ywAssert.assertEquals(0, navigationService.urlParameter().size())
+        }
+        else if (h.event === 'after-push') {
+            ywAssert.assertEquals('/page_1.html', navigationService.path())
+            ywAssert.assertArrayEquals([{key: 'key_1', value: 'value_11'}, 
+                                      {key: 'key_1', value: 'value_12'}], 
+                                     navigationService.urlParameter().entries())
+        }
+        else if (h.event === 'after-replace') {
+            ywAssert.assertEquals(0, navigationService.urlParameter().size())
+            resolve()
+        }
+    })
+    
+   urlParameterService.set('key_1', 'value_11')
+   urlParameterService.append('key_1', 'value_12')
+   ywAssert.assertEquals('/page_1.html', navigationService.path())
+   ywAssert.assertEquals(0, navigationService.urlParameter().size())
+   urlParameterService.push()
+   urlParameterService.clear()
+   urlParameterService.replace()
+}

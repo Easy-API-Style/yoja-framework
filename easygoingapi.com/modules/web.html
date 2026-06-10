@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>yoja-web — Yoja Framework</title>
+  <script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('yoja-theme')||'dark')}catch(e){document.documentElement.setAttribute('data-theme','dark')}</script>
+  <link rel="stylesheet" href="../assets/css/styles.css">
+</head>
+<body>
+
+<nav class="top-nav">
+  <a class="top-nav__brand" href="../index.html">
+    <span class="brand-yoja">Yoja</span>
+  </a>
+  <div class="top-nav__links">
+    <a href="../index.html" class="nav-home">Home</a>
+    <a href="../getting-started.html">Get started</a>
+    <a href="index.html" class="is-active">Modules</a>
+    <a href="https://github.com/Easy-API-Style/yoja-framework">GitHub</a>
+    <button class="theme-toggle-button" aria-label="Toggle dark mode"><svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg></button>
+  </div>
+</nav>
+
+<div class="layout">
+  <aside class="sidebar">
+    <h4>Modules</h4>
+    <ul>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="core.html">yoja-core</a></li>
+      <li><a href="http-server.html">yoja-http-server</a></li>
+      <li><a href="http-client.html">yoja-http-client</a></li>
+      <li><a href="reverse-proxy.html">yoja-reverse-proxy</a></li>
+      <li><a href="selenium.html">yoja-selenium</a></li>
+      <li><a href="web.html" class="is-active">yoja-web</a></li>
+    </ul>
+    <h4>On this page</h4>
+    <ul>
+      <li><a href="#why">Why yoja-web</a></li>
+      <li><a href="#install">Installation</a></li>
+      <li><a href="#config">Configuration</a></li>
+      <li><a href="#directives">HTML directives</a></li>
+      <li><a href="#yojaweb">yojaWeb global</a></li>
+      <li><a href="#section">Section</a></li>
+      <li><a href="#services">Services</a></li>
+    </ul>
+  </aside>
+
+  <main class="main">
+   <div class="main__inner">
+    <p class="crumb">
+      <a href="../index.html" class="nav-home">Home</a> <span>/</span>
+      <a href="index.html">Modules</a> <span>/</span> yoja-web
+    </p>
+    <h1>yoja-web</h1>
+    <p class="lead">
+      JavaScript / CSS / HTML framework for modular web apps. Section-based
+      components, routing, i18n, HTTP, WebSocket, storage — all in native ES6
+      modules. No build toolchain, no <code>node_modules</code>, no virtual DOM.
+    </p>
+
+    <h2 id="why">Why yoja-web</h2>
+    <ul>
+      <li><strong>Zero build toolchain.</strong> Drop a JS file, reload the page.</li>
+      <li><strong>Native ES6 modules — no magic.</strong> Standard <code>import</code>, served as-is.</li>
+      <li><strong>Native Shadow DOM</strong> for CSS scoping (when you want it).</li>
+      <li><strong>HTML-first architecture.</strong> Components are declared with attributes (<code>yw-*</code>), hydrated from JS classes.</li>
+      <li><strong>Gradual adoption.</strong> Drop yoja-web into an existing page; nothing else has to change.</li>
+    </ul>
+
+    <h2 id="install">Installation</h2>
+    <p>
+      Yoja-Web ships as a jar packaged at <code>com.easygoingapi.yoja.web</code>.
+      Mount it as a static resource on a <code>yoja-http-server</code> router
+      and reference it from your HTML:
+    </p>
+<pre><code>HttpRouter.builder()
+    .webResource(WebApp.of(WebApp.Type.jar,
+                           <span class="s">"com.easygoingapi.yoja.web"</span>,
+                           <span class="s">"/yoja"</span>),
+                 <span class="s">"/*"</span>)
+    .webResource(WebApp.jar(<span class="s">"my.app.webapp"</span>), <span class="s">"/*"</span>)
+    .build();</code></pre>
+
+<pre><code><span class="k">&lt;script</span> <span class="a">type</span>=<span class="s">"module"</span> <span class="a">src</span>=<span class="s">"/yoja/YojaWeb-1.0.0.js"</span><span class="k">&gt;&lt;/script&gt;</span></code></pre>
+
+    <h2 id="config">Configuration</h2>
+    <p>
+      A single <code>YojaWeb.conf.js</code> module exports the runtime config.
+    </p>
+<pre><code><span class="k">export default</span> {
+    version: <span class="s">'1.0.1'</span>,
+    defaultLanguage: <span class="s">'fr'</span>,
+    mediaDescriptions: [
+        { name: <span class="s">'mobile'</span>, maxWidth: <span class="n">767</span> },
+        { name: <span class="s">'tablet'</span>, maxWidth: <span class="n">1023</span> },
+        { name: <span class="s">'desktop'</span> }
+    ]
+};</code></pre>
+    <ul>
+      <li><code>version</code> — app version surfaced in debug helpers.</li>
+      <li><code>defaultLanguage</code> — fallback locale when the browser doesn't advertise a supported one.</li>
+      <li><code>mediaDescriptions</code> — ordered breakpoints fed to <code>responsiveService</code>.</li>
+    </ul>
+
+    <h2 id="directives">HTML directives</h2>
+
+    <div class="api-class">
+      <h3><code>yw-controler</code> <span class="kind">attribute</span></h3>
+      <p>Attach a JS class as the controller of an element. The class' constructor receives a <code>Section</code> handle.</p>
+<pre><code><span class="k">&lt;section</span> <span class="a">yw-controler</span>=<span class="s">"./sections/header/HeaderControler.js"</span><span class="k">&gt;</span>
+  <span class="c">&lt;!-- header markup --&gt;</span>
+<span class="k">&lt;/section&gt;</span></code></pre>
+    </div>
+
+    <div class="api-class">
+      <h3><code>yw-language</code> <span class="kind">attribute</span></h3>
+      <p>Bind a translator to the section. Points at an XML file with per-locale translations; values referenced via <code>translator('key')</code>.</p>
+    </div>
+
+    <div class="api-class">
+      <h3><code>yw-css</code> <span class="kind">attribute</span></h3>
+      <p>Attach a scoped stylesheet to the section (loaded into the section's shadow tree).</p>
+    </div>
+
+    <div class="api-class">
+      <h3><code>yw-slot</code> <span class="kind">attribute</span></h3>
+      <p>Mark an element as a slot for projected content from a parent section.</p>
+    </div>
+
+    <div class="api-class">
+      <h3><code>yw-include</code> <span class="kind">attribute</span></h3>
+      <p>Pull HTML fragments from external files inline; the included file's own <code>yw-*</code> directives are resolved relative to its location.</p>
+<pre><code><span class="k">&lt;div</span> <span class="a">yw-include</span>=<span class="s">"./sections/taskdetail/taskdetail.html"</span><span class="k">&gt;&lt;/div&gt;</span></code></pre>
+    </div>
+
+    <h2 id="yojaweb">yojaWeb: Global API</h2>
+
+    <div class="api-class">
+      <h3><code>window.yojaWeb</code> <span class="kind">global object</span></h3>
+      <p>Runtime entry point injected before any controller runs.</p>
+
+      <span class="api-table-group">Lifecycle</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>onDocumentReady(fn)</code></td><td class="ret"><code>void</code></td><td class="desc">Registers <code>fn</code>; fires once after the full document bootstrap</td></tr>
+          <tr><td><code>onTagReady(fn)</code></td><td class="ret"><code>void</code></td><td class="desc">Registers <code>fn</code>; fires each time a <code>yw-*</code> element is initialized</td></tr>
+          <tr><td><code>isReady()</code></td><td class="ret"><code>boolean</code></td><td class="desc"><code>true</code> once the runtime bootstrap is complete</td></tr>
+          <tr><td><code>onError(fn)</code></td><td class="ret"><code>void</code></td><td class="desc">Registers a global error handler</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">DOM — deep (crosses shadow DOM)</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>firstTag(selector [, fromTag])</code></td><td class="ret"><code>Element | null</code></td><td class="desc">First match; searches from <code>fromTag</code> or <code>document</code></td></tr>
+          <tr><td><code>findTags(selector [, fromTag])</code></td><td class="ret"><code>Element[]</code></td><td class="desc">All matches; searches from <code>fromTag</code> or <code>document</code></td></tr>
+          <tr><td><code>walkTag(consumer [, fromTag])</code></td><td class="ret"><code>void</code></td><td class="desc">Depth-first walk of every element</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">DOM — shallow (stops at section boundaries)</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>firstSectionTag(selector [, fromTag])</code></td><td class="ret"><code>Element | null</code></td><td class="desc">First match within section boundaries</td></tr>
+          <tr><td><code>findSectionTags(selector [, fromTag])</code></td><td class="ret"><code>Element[]</code></td><td class="desc">All matches within section boundaries</td></tr>
+          <tr><td><code>walkSectionTag(consumer [, fromTag])</code></td><td class="ret"><code>void</code></td><td class="desc">Depth-first walk within section boundaries</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Utilities</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>path(path [, options])</code></td><td class="ret"><code>string</code></td><td class="desc">Normalizes path and appends <code>?version=…</code>; <code>options.force=true</code> also adds <code>&amp;date=…</code></td></tr>
+          <tr><td><code>version()</code></td><td class="ret"><code>string</code></td><td class="desc">Runtime version string</td></tr>
+          <tr><td><code>append(tag, path)</code></td><td class="ret"><code>Promise&lt;HTMLElement[]&gt;</code></td><td class="desc">Fetches HTML at <code>path</code>, appends all children to <code>tag</code> (or its shadow root)</td></tr>
+          <tr><td><code>prepend(tag, path)</code></td><td class="ret"><code>Promise&lt;HTMLElement[]&gt;</code></td><td class="desc">Same as <code>append</code>, but prepended</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Services &amp; Config</span>
+      <table class="api-table">
+        <thead><tr><th>Property</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>sectionService</code></td><td class="ret"><code>SectionService</code></td><td class="desc">Low-level section tree-traversal service</td></tr>
+          <tr><td><code>controlerService</code></td><td class="ret"><code>ControlerService</code></td><td class="desc">Low-level controller tree-traversal service</td></tr>
+          <tr><td><code>config</code></td><td class="ret"><code>object</code></td><td class="desc">Config object exported by <code>YojaWeb.conf.js</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="api-class">
+      <h3><code>window.yojaWebApi</code> <span class="kind">global object</span></h3>
+      <p>Aggregator exposing every service as a single namespace.</p>
+
+      <span class="api-table-group">Services</span>
+      <table class="api-table">
+        <thead><tr><th>Property</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>httpClient</code></td><td class="desc">Promise-based HTTP client with interceptors and offline fallback</td></tr>
+          <tr><td><code>webSocketService</code></td><td class="desc">WebSocket lifecycle management</td></tr>
+          <tr><td><code>storageService</code></td><td class="desc"><code>localStorage</code> / <code>sessionStorage</code> wrappers with change events</td></tr>
+          <tr><td><code>eventService</code></td><td class="desc">Pub/sub event bus</td></tr>
+          <tr><td><code>navigationService</code></td><td class="desc">Client-side navigation and history management</td></tr>
+          <tr><td><code>urlParameterService</code></td><td class="desc">Read and write URL query parameters</td></tr>
+          <tr><td><code>responsiveService</code></td><td class="desc">Viewport breakpoint detection</td></tr>
+          <tr><td><code>languageService</code></td><td class="desc">Internationalisation (i18n)</td></tr>
+          <tr><td><code>cssSheetService</code></td><td class="desc">Dynamic CSS stylesheet management</td></tr>
+          <tr><td><code>sectionService</code></td><td class="desc">Section tree traversal</td></tr>
+          <tr><td><code>controlerService</code></td><td class="desc">Controller tree traversal</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="section">Section: Component Lifecycle</h2>
+
+    <div class="api-class">
+      <h3><code>Section</code> <span class="kind">class (injected, not exported)</span></h3>
+      <p>Handle injected into every controller constructor. One <code>Section</code> per DOM element carrying a <code>yw-*</code> directive.</p>
+
+      <span class="api-table-group">Properties</span>
+      <table class="api-table">
+        <thead><tr><th>Property</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>tag</code></td><td class="ret"><code>Element</code></td><td class="desc">Root DOM element of this section</td></tr>
+          <tr><td><code>shadowTag</code></td><td class="ret"><code>ShadowRoot | null</code></td><td class="desc">Shadow root of the section element, if any</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">DOM — shallow (within section boundaries)</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>firstTag(selector)</code></td><td class="ret"><code>Element | null</code></td><td class="desc">First match within the section, stops at nested section boundaries</td></tr>
+          <tr><td><code>findTags(selector)</code></td><td class="ret"><code>Element[]</code></td><td class="desc">All matches within the section</td></tr>
+          <tr><td><code>walkTag(consumer)</code></td><td class="ret"><code>void</code></td><td class="desc">Depth-first walk within the section</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">DOM — deep (crosses shadow DOM)</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>deepFirstTag(selector)</code></td><td class="ret"><code>Element | null</code></td><td class="desc">First match across shadow DOM boundaries</td></tr>
+          <tr><td><code>deepFindTags(selector)</code></td><td class="ret"><code>Element[]</code></td><td class="desc">All matches across shadow DOM boundaries</td></tr>
+          <tr><td><code>deepWalkTag(consumer)</code></td><td class="ret"><code>void</code></td><td class="desc">Depth-first walk across shadow DOM</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Section navigation</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>firstSection(predicate)</code></td><td class="ret"><code>Section | null</code></td><td class="desc">First descendant section matching predicate</td></tr>
+          <tr><td><code>findSections(predicate)</code></td><td class="ret"><code>Section[]</code></td><td class="desc">All descendant sections matching predicate</td></tr>
+          <tr><td><code>childrenSections(predicate)</code></td><td class="ret"><code>Section[]</code></td><td class="desc">Direct child sections only</td></tr>
+          <tr><td><code>closestSection(predicate)</code></td><td class="ret"><code>Section | null</code></td><td class="desc">Nearest ancestor section matching predicate</td></tr>
+          <tr><td><code>parentSection(predicate)</code></td><td class="ret"><code>Section | null</code></td><td class="desc">Direct parent section, optionally filtered</td></tr>
+          <tr><td><code>parentSections(predicate)</code></td><td class="ret"><code>Section[]</code></td><td class="desc">All ancestor sections</td></tr>
+          <tr><td><code>rootSection()</code></td><td class="ret"><code>Section</code></td><td class="desc">Top-most section ancestor</td></tr>
+          <tr><td><code>walkSection(consumer)</code></td><td class="ret"><code>void</code></td><td class="desc">Depth-first walk of all descendant sections</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Controller navigation</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>firstControler(predicate)</code></td><td class="ret"><code>Controler | null</code></td><td class="desc">First descendant controller matching predicate</td></tr>
+          <tr><td><code>findControlers(predicate)</code></td><td class="ret"><code>Controler[]</code></td><td class="desc">All descendant controllers</td></tr>
+          <tr><td><code>childrenControlers(predicate)</code></td><td class="ret"><code>Controler[]</code></td><td class="desc">Direct child controllers only</td></tr>
+          <tr><td><code>closestControler(predicate)</code></td><td class="ret"><code>Controler | null</code></td><td class="desc">Nearest ancestor controller</td></tr>
+          <tr><td><code>parentControler(predicate)</code></td><td class="ret"><code>Controler | null</code></td><td class="desc">Direct parent controller, optionally filtered</td></tr>
+          <tr><td><code>parentControlers(predicate)</code></td><td class="ret"><code>Controler[]</code></td><td class="desc">All ancestor controllers</td></tr>
+          <tr><td><code>rootControler()</code></td><td class="ret"><code>Controler</code></td><td class="desc">Top-most controller ancestor</td></tr>
+          <tr><td><code>walkControler(consumer)</code></td><td class="ret"><code>void</code></td><td class="desc">Depth-first walk of all descendant controllers</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Lifecycle</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>controlerReady(action)</code></td><td class="ret"><code>void</code></td><td class="desc">Registers <code>action</code>; fires once the controller is initialized</td></tr>
+          <tr><td><code>pageReady(action)</code></td><td class="ret"><code>void</code></td><td class="desc">Registers <code>action</code>; fires once the full page bootstrap is complete</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Debug</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>log()</code></td><td class="ret"><code>void</code></td><td class="desc">Logs the section tree structure to the console</td></tr>
+          <tr><td><code>logCss()</code></td><td class="ret"><code>void</code></td><td class="desc">Logs the resolved CSS inheritance chain for this section</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="services">Services</h2>
+
+    <div class="api-class">
+      <h3><code>httpClient</code> <span class="kind">service</span></h3>
+      <p>Promise-based HTTP client. Content-Type is auto-detected from the body's runtime type. Exposes interceptors and an online/offline fallback.</p>
+
+      <span class="api-table-group">Requests</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>get(request [, callback])</code></td><td class="ret"><code>Promise</code></td><td class="desc">GET — request is <code>{ url, headers? }</code> or a URL string</td></tr>
+          <tr><td><code>post(request, body [, callback])</code></td><td class="ret"><code>Promise</code></td><td class="desc">POST — Content-Type auto-detected from body type (<code>JsonObject</code>, <code>Blob</code>, <code>string</code>, …)</td></tr>
+          <tr><td><code>load(request [, callback])</code></td><td class="ret"><code>Promise</code></td><td class="desc">GET that returns the response body as text</td></tr>
+          <tr><td><code>fetch(request [, callback])</code></td><td class="ret"><code>Promise</code></td><td class="desc">Raw Fetch API passthrough</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Interceptors</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>onRequest(callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Called before every outgoing request</td></tr>
+          <tr><td><code>onResponse(callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Called after every response is received</td></tr>
+          <tr><td><code>onFetch(callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Called for each Fetch-mode request</td></tr>
+          <tr><td><code>addContentTypes(config)</code></td><td class="ret"><code>void</code></td><td class="desc">Register custom MIME → parse-mode mappings (<code>jsonContentTypes</code>, <code>textContentTypes</code>, <code>blobContentTypes</code>, <code>base64ContentTypes</code>)</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Network state</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>isOffline()</code></td><td class="ret"><code>boolean</code></td><td class="desc"><code>true</code> when the browser has no network connection</td></tr>
+          <tr><td><code>onOnline(callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires when the network connection is restored</td></tr>
+          <tr><td><code>onOffline(callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires when the network connection is lost</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="api-class">
+      <h3><code>storageService</code> <span class="kind">service</span></h3>
+      <p>Wrappers for <code>localStorage</code> and <code>sessionStorage</code> with typed accessors and change events.</p>
+
+      <span class="api-table-group">localStorage</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>hasLocalItem(key)</code></td><td class="ret"><code>boolean</code></td><td class="desc"></td></tr>
+          <tr><td><code>getLocalItem(key)</code></td><td class="ret"><code>any</code></td><td class="desc"></td></tr>
+          <tr><td><code>getLocalItemKeys(query)</code></td><td class="ret"><code>string[]</code></td><td class="desc">Keys matching the given query pattern</td></tr>
+          <tr><td><code>setLocalItem(key, value)</code></td><td class="ret"><code>void</code></td><td class="desc"></td></tr>
+          <tr><td><code>removeLocalItem(key)</code></td><td class="ret"><code>void</code></td><td class="desc"></td></tr>
+          <tr><td><code>clearLocal()</code></td><td class="ret"><code>void</code></td><td class="desc">Remove all local storage entries</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">sessionStorage</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>hasSessionItem(key)</code></td><td class="ret"><code>boolean</code></td><td class="desc"></td></tr>
+          <tr><td><code>getSessionItem(key)</code></td><td class="ret"><code>any</code></td><td class="desc"></td></tr>
+          <tr><td><code>getSessionItemKeys(query)</code></td><td class="ret"><code>string[]</code></td><td class="desc">Keys matching the given query pattern</td></tr>
+          <tr><td><code>setSessionItem(key, value)</code></td><td class="ret"><code>void</code></td><td class="desc"></td></tr>
+          <tr><td><code>removeSessionItem(key)</code></td><td class="ret"><code>void</code></td><td class="desc"></td></tr>
+          <tr><td><code>clearSession()</code></td><td class="ret"><code>void</code></td><td class="desc">Remove all session storage entries</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Events</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>on(scope, method, key, callback)</code></td><td class="ret"><code>void</code></td><td class="desc">scope: <code>'local'|'session'</code>, method: <code>'set'|'remove'</code></td></tr>
+          <tr><td><code>onEvent(callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires on any storage change (all scopes and methods)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="api-class">
+      <h3><code>eventService</code> <span class="kind">service</span></h3>
+      <p>App-wide publish/subscribe bus. Events are identified by an <code>eventId</code> string; queries can target one or several events.</p>
+
+      <span class="api-table-group">Subscribe / publish</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>on(eventId, action)</code></td><td class="ret"><code>void</code></td><td class="desc">Subscribe <code>action</code> to <code>eventId</code></td></tr>
+          <tr><td><code>trigger(query, parameter)</code></td><td class="ret"><code>void</code></td><td class="desc">Publish to all events matching <code>query</code>, passing <code>parameter</code></td></tr>
+          <tr><td><code>remove(query)</code></td><td class="ret"><code>void</code></td><td class="desc">Unsubscribe all actions from matching events</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Control</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>pause(query)</code></td><td class="ret"><code>void</code></td><td class="desc">Pause matching events — triggers are silently dropped</td></tr>
+          <tr><td><code>activate(query)</code></td><td class="ret"><code>void</code></td><td class="desc">Resume paused events</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Introspection</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>has(query)</code></td><td class="ret"><code>boolean</code></td><td class="desc">Whether at least one matching event exists</td></tr>
+          <tr><td><code>event(query)</code></td><td class="ret"><code>Event</code></td><td class="desc">First matching event descriptor</td></tr>
+          <tr><td><code>events(query)</code></td><td class="ret"><code>Event[]</code></td><td class="desc">All matching event descriptors</td></tr>
+          <tr><td><code>actions(query)</code></td><td class="ret"><code>Action[]</code></td><td class="desc">All subscribed actions across matching events</td></tr>
+          <tr><td><code>count(query)</code></td><td class="ret"><code>number</code></td><td class="desc">Number of matching events</td></tr>
+          <tr><td><code>countAction(query)</code></td><td class="ret"><code>number</code></td><td class="desc">Total number of subscribed actions</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="api-class">
+      <h3><code>webSocketService</code> <span class="kind">service</span></h3>
+      <p>WebSocket client. <code>webSocket(request)</code> opens a new connection or returns the existing one for the same URL.</p>
+
+      <span class="api-table-group">Connection</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>webSocket(request)</code></td><td class="ret"><code>WebSocket</code></td><td class="desc">Open or reuse a connection; request is <code>{ url }</code> or a URL string</td></tr>
+          <tr><td><code>send(request, data)</code></td><td class="ret"><code>Promise</code></td><td class="desc">Send text or binary data on the connection identified by <code>request</code></td></tr>
+          <tr><td><code>close(request [, code [, reason]])</code></td><td class="ret"><code>void</code></td><td class="desc">Close the connection</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Handlers</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>onOpen(request, callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires when the socket is opened</td></tr>
+          <tr><td><code>onMessage(request, callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires on each incoming message</td></tr>
+          <tr><td><code>onClose(request, callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires when the socket is closed</td></tr>
+          <tr><td><code>onError(request, callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires on socket error</td></tr>
+          <tr><td><code>on(eventType, request, callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Raw event listener for any WebSocket event type</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="api-class">
+      <h3><code>navigationService</code> <span class="kind">service</span></h3>
+      <p>Browser navigation and location helpers.</p>
+
+      <span class="api-table-group">Navigation</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>load(url [, parameters])</code></td><td class="ret"><code>void</code></td><td class="desc">Navigate to <code>url</code> (<code>window.location.assign</code>), optionally merging <code>parameters</code></td></tr>
+          <tr><td><code>reload()</code></td><td class="ret"><code>void</code></td><td class="desc">Reload the current page</td></tr>
+          <tr><td><code>back()</code></td><td class="ret"><code>void</code></td><td class="desc"><code>history.back()</code></td></tr>
+          <tr><td><code>forward()</code></td><td class="ret"><code>void</code></td><td class="desc"><code>history.forward()</code></td></tr>
+          <tr><td><code>go(delta)</code></td><td class="ret"><code>void</code></td><td class="desc"><code>history.go(delta)</code></td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Location accessors</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>path()</code></td><td class="ret"><code>string</code></td><td class="desc">Current <code>window.location.pathname</code></td></tr>
+          <tr><td><code>fragment()</code></td><td class="ret"><code>string</code></td><td class="desc">Current <code>window.location.hash</code></td></tr>
+          <tr><td><code>host()</code></td><td class="ret"><code>string</code></td><td class="desc">Current hostname</td></tr>
+          <tr><td><code>port()</code></td><td class="ret"><code>string</code></td><td class="desc">Current port</td></tr>
+          <tr><td><code>urlParameter()</code></td><td class="ret"><code>UrlParameter</code></td><td class="desc">Parsed current query string</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="api-class">
+      <h3><code>urlParameterService</code> <span class="kind">service</span></h3>
+      <p>Read and write URL query parameters with history management.</p>
+
+      <span class="api-table-group">Read</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>has(key [, value])</code></td><td class="ret"><code>boolean</code></td><td class="desc">Whether the key (optionally with value) is present</td></tr>
+          <tr><td><code>get(key)</code></td><td class="ret"><code>string</code></td><td class="desc">First value for the given key</td></tr>
+          <tr><td><code>getAll(key)</code></td><td class="ret"><code>string[]</code></td><td class="desc">All values for the given key</td></tr>
+          <tr><td><code>keys()</code></td><td class="ret"><code>string[]</code></td><td class="desc">All parameter names</td></tr>
+          <tr><td><code>entries()</code></td><td class="ret"><code>Entry[]</code></td><td class="desc">All key/value entries</td></tr>
+          <tr><td><code>currentUrlParameter()</code></td><td class="ret"><code>UrlParameter</code></td><td class="desc">Current parsed URL parameters snapshot</td></tr>
+          <tr><td><code>toUrlQuery()</code></td><td class="ret"><code>string</code></td><td class="desc">Render current params as a raw query string</td></tr>
+          <tr><td><code>isUpdated()</code></td><td class="ret"><code>boolean</code></td><td class="desc"><code>true</code> if params changed since the last <code>push</code> or <code>replace</code></td></tr>
+          <tr><td><code>state()</code></td><td class="ret"><code>HistoryState</code></td><td class="desc">Current history state object</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Write</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>set(key, value)</code></td><td class="ret"><code>void</code></td><td class="desc">Set (replace) a parameter value</td></tr>
+          <tr><td><code>append(key, value)</code></td><td class="ret"><code>void</code></td><td class="desc">Add a value without removing existing ones</td></tr>
+          <tr><td><code>remove(key [, value])</code></td><td class="ret"><code>void</code></td><td class="desc">Remove a parameter (or a specific value)</td></tr>
+          <tr><td><code>clear()</code></td><td class="ret"><code>void</code></td><td class="desc">Remove all parameters</td></tr>
+          <tr><td><code>push(data)</code></td><td class="ret"><code>void</code></td><td class="desc">Push current params to the history stack</td></tr>
+          <tr><td><code>replace(data)</code></td><td class="ret"><code>void</code></td><td class="desc">Replace the current history entry with updated params</td></tr>
+          <tr><td><code>onChange(callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires when URL parameters change (popstate or manual update)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="api-class">
+      <h3><code>languageService</code> <span class="kind">service</span></h3>
+      <p>Internationalisation. Loads XML translation files and retranslates the page on language change.</p>
+
+      <span class="api-table-group">Language</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>setLanguage(language)</code></td><td class="ret"><code>void</code></td><td class="desc">Set the active language code (e.g. <code>'en'</code>, <code>'fr'</code>)</td></tr>
+          <tr><td><code>getLanguage()</code></td><td class="ret"><code>string</code></td><td class="desc">Active language code</td></tr>
+          <tr><td><code>onLanguageChange(action)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires when the language is changed</td></tr>
+          <tr><td><code>refresh([language])</code></td><td class="ret"><code>Promise</code></td><td class="desc">Re-translate the whole page; defaults to current language</td></tr>
+          <tr><td><code>refreshFrom(tags [, language])</code></td><td class="ret"><code>Promise</code></td><td class="desc">Re-translate a specific set of elements</td></tr>
+          <tr><td><code>onLanguageTranslate(action)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires after each translation pass</td></tr>
+          <tr><td><code>loadTranslator(path)</code></td><td class="ret"><code>void</code></td><td class="desc">Load an XML translation file at <code>path</code></td></tr>
+          <tr><td><code>log(path)</code></td><td class="ret"><code>void</code></td><td class="desc">Log all translation keys defined in the file at <code>path</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="api-class">
+      <h3><code>responsiveService</code> <span class="kind">service</span></h3>
+      <p>Viewport breakpoint detection. Breakpoints are declared in <code>YojaWeb.conf.js</code> via <code>initialize()</code>.</p>
+
+      <span class="api-table-group">Methods</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>getMedia()</code></td><td class="ret"><code>string</code></td><td class="desc">Name of the currently active breakpoint</td></tr>
+          <tr><td><code>getListOfMedia()</code></td><td class="ret"><code>string[]</code></td><td class="desc">Names of all defined breakpoints</td></tr>
+          <tr><td><code>findMedia(mediaName)</code></td><td class="ret"><code>MediaDescription</code></td><td class="desc">Descriptor for the named breakpoint</td></tr>
+          <tr><td><code>onMedia(callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires with the new breakpoint name on every viewport change</td></tr>
+          <tr><td><code>onResize(callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires on every window resize event</td></tr>
+          <tr><td><code>initialize(mediaDescriptions)</code></td><td class="ret"><code>void</code></td><td class="desc">Configure breakpoints — typically called once from <code>YojaWeb.conf.js</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note">
+      <p>
+        Module README (much more depth):
+        <a href="https://github.com/Easy-API-Style/yoja-framework/blob/main/yoja-web/README.md">yoja-web/README.md</a>.
+        It walks through every directive, the section lifecycle, the full
+        service surface, and the path-resolution rules.
+      </p>
+    </div>
+   </div>
+
+   <footer class="footer">
+     <p>
+       Yoja Framework · Apache License 2.0 ·
+       <a href="https://github.com/Easy-API-Style/yoja-framework">GitHub</a>
+     </p>
+   </footer>
+  </main>
+</div>
+
+
+<script src="../assets/js/theme.js"></script>
+</body>
+</html>

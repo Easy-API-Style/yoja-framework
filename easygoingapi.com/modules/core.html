@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>yoja-core — Yoja Framework</title>
+  <script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('yoja-theme')||'dark')}catch(e){document.documentElement.setAttribute('data-theme','dark')}</script>
+  <link rel="stylesheet" href="../assets/css/styles.css">
+</head>
+<body>
+
+<nav class="top-nav">
+  <a class="top-nav__brand" href="../index.html">
+    <span class="brand-yoja">Yoja</span>
+  </a>
+  <div class="top-nav__links">
+    <a href="../index.html" class="nav-home">Home</a>
+    <a href="../getting-started.html">Get started</a>
+    <a href="index.html" class="is-active">Modules</a>
+    <a href="https://github.com/Easy-API-Style/yoja-framework">GitHub</a>
+    <button class="theme-toggle-button" aria-label="Toggle dark mode"><svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg></button>
+  </div>
+</nav>
+
+<div class="layout">
+  <aside class="sidebar">
+    <h4>Modules</h4>
+    <ul>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="core.html" class="is-active">yoja-core</a></li>
+      <li><a href="http-server.html">yoja-http-server</a></li>
+      <li><a href="http-client.html">yoja-http-client</a></li>
+      <li><a href="reverse-proxy.html">yoja-reverse-proxy</a></li>
+      <li><a href="selenium.html">yoja-selenium</a></li>
+      <li><a href="web.html">yoja-web</a></li>
+    </ul>
+    <h4>On this page</h4>
+    <ul>
+      <li><a href="#install">Installation</a></li>
+      <li><a href="#yojaapp">YojaApp</a></li>
+      <li><a href="#worker">Worker</a></li>
+      <li><a href="#timer">Timer</a></li>
+      <li><a href="#future">FutureUtil</a></li>
+      <li><a href="#http">HTTP primitives</a></li>
+      <li><a href="#util">Other utilities</a></li>
+      <li><a href="#exception">YojaAppException</a></li>
+    </ul>
+  </aside>
+
+  <main class="main">
+   <div class="main__inner">
+    <p class="crumb">
+      <a href="../index.html" class="nav-home">Home</a> <span>/</span>
+      <a href="index.html">Modules</a> <span>/</span> yoja-core
+    </p>
+    <h1>yoja-core</h1>
+    <p class="lead">
+      The runtime foundation. Application lifecycle, worker thread pools, task
+      scheduling, async helpers, and the HTTP primitive value objects shared
+      by every other module — all built on Vert.x.
+    </p>
+
+    <h2 id="install">Installation</h2>
+<pre><code>implementation <span class="s">'com.easygoingapi:yoja-core:VERSION'</span></code></pre>
+    <p>
+      <code>yoja-core</code> is pulled transitively by every other Yoja module,
+      so you rarely need to declare it explicitly.
+    </p>
+
+    <h2 id="yojaapp">YojaApp: Application Lifecycle</h2>
+    <p>
+      <code>YojaApp</code> owns the shared Vert.x instance every module dials
+      through. One <code>start()</code> per JVM.
+    </p>
+<pre><code><span class="k">import</span> com.easygoingapi.yoja.core.YojaApp;
+
+<span class="k">public class</span> Main {
+    <span class="k">public static void</span> main(String[] args) {
+        YojaApp.start();
+        <span class="c">// ... build your router / server / clients here</span>
+    }
+}</code></pre>
+
+    <div class="api-class">
+      <h3><code>YojaApp</code> <span class="kind">class</span></h3>
+      <p>Process-wide bootstrap. Starts and exposes the singleton Vert.x runtime.</p>
+
+      <span class="api-table-group">Lifecycle</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>static start()</code></td><td class="ret"><code>void</code></td><td class="desc">Initialise the runtime with defaults; no-op if already started</td></tr>
+          <tr><td><code>static builder()</code></td><td class="ret"><code>Builder</code></td><td class="desc">Fluent builder for custom <code>VertxOptions</code>, default timeouts, etc.</td></tr>
+          <tr><td><code>static restart()</code></td><td class="ret"><code>Future&lt;Void&gt;</code></td><td class="desc">Close and re-initialise the runtime</td></tr>
+          <tr><td><code>static logVertxConfig()</code></td><td class="ret"><code>void</code></td><td class="desc">Dump effective Vert.x options to the log</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Accessors</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>static vertx()</code></td><td class="ret"><code>Vertx</code></td><td class="desc">The shared Vert.x instance used by every module</td></tr>
+          <tr><td><code>static isStarted()</code></td><td class="ret"><code>boolean</code></td><td class="desc"><code>true</code> once <code>start()</code> has been called</td></tr>
+          <tr><td><code>static defaultTimeout()</code></td><td class="ret"><code>Duration</code></td><td class="desc">Process-wide default timeout for futures</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="worker">Worker: Background Thread Execution</h2>
+    <p>
+      <code>Worker</code> provides two named thread pools whose work never
+      runs on the event loop. <code>singleThread</code> serialises work by
+      key (one-at-a-time semantics); <code>parallelThread</code> runs work
+      concurrently up to the pool size.
+    </p>
+
+    <div class="api-class">
+      <h3><code>Worker</code> <span class="kind">class</span></h3>
+      <p>Two public, statically initialised pools. Neither pool runs work on the Vert.x event loop.</p>
+
+      <span class="api-table-group">Worker.singleThread — serialises by key</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>once(key, runnable)</code></td><td class="ret"><code>void</code></td><td class="desc">Run at most one task per key concurrently; additional triggers dedupe or queue</td></tr>
+          <tr><td><code>schedule(key, supplier)</code></td><td class="ret"><code>Future</code></td><td class="desc">Variants accepting <code>Future</code> / <code>Supplier</code></td></tr>
+          <tr><td><code>close()</code></td><td class="ret"><code>void</code></td><td class="desc">Graceful shutdown</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Worker.parallelThread — concurrent pool</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>execute(runnable)</code></td><td class="ret"><code>void</code></td><td class="desc">Fire-and-forget execution</td></tr>
+          <tr><td><code>submit(callable)</code></td><td class="ret"><code>Future</code></td><td class="desc">Returns a <code>Future</code> for the result</td></tr>
+          <tr><td><code>close()</code></td><td class="ret"><code>void</code></td><td class="desc">Graceful shutdown</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="timer">Timer: Task Scheduling</h2>
+    <p>
+      A small scheduler covering one-shot delays, recurring periods,
+      fixed-rate runs, calendar dates, and worker-pinned execution.
+    </p>
+
+<pre><code>Timer.schedule(<span class="s">"stats"</span>, t -&gt; taskService.logStats())
+     .period(Duration.ofSeconds(<span class="n">30</span>))
+     .build();</code></pre>
+
+    <div class="api-class">
+      <h3><code>Timer</code> <span class="kind">class</span></h3>
+      <p>Fluent task scheduler built on Vert.x' periodic / timer primitives.</p>
+
+      <span class="api-table-group">Factory</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>static schedule(String id, Consumer&lt;Task&gt; action)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Named task</td></tr>
+          <tr><td><code>static schedule(Consumer&lt;Task&gt; action)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Auto-sequenced task (no explicit id)</td></tr>
+          <tr><td><code>static cancelAll()</code></td><td class="ret"><code>void</code></td><td class="desc">Cancel every active scheduled task</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Builder</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>delay(Duration)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Initial delay before the first fire</td></tr>
+          <tr><td><code>period(Duration)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Recurring fire interval</td></tr>
+          <tr><td><code>fixedRate(Duration)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Drift-compensating recurring fire</td></tr>
+          <tr><td><code>at(Instant)</code></td><td class="ret"><code>Builder</code></td><td class="desc">First fire at a specific absolute date/time</td></tr>
+          <tr><td><code>on(Worker)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Pin execution to a worker pool instead of the event loop</td></tr>
+          <tr><td><code>build()</code></td><td class="ret"><code>Task</code></td><td class="desc">Materialise and start the scheduled task</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="future">FutureUtil: Async Helpers</h2>
+    <p>
+      Synchronous helpers for tests and CLI entry points. <strong>Never</strong>
+      call <code>await</code> from a Vert.x event-loop thread.
+    </p>
+
+    <div class="api-class">
+      <h3><code>FutureUtil</code> <span class="kind">class</span></h3>
+      <p>Static helpers that bridge the async world with blocking call sites. <strong>Never</strong> call from a Vert.x event-loop thread.</p>
+
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>static await(Future&lt;?&gt;)</code></td><td class="ret"><code>void</code></td><td class="desc">Block until the future completes</td></tr>
+          <tr><td><code>static &lt;V&gt; awaitValue(Future&lt;V&gt;)</code></td><td class="ret"><code>V</code></td><td class="desc">Block and return the resolved value</td></tr>
+          <tr><td><code>static await(List&lt;Future&lt;?&gt;&gt;)</code></td><td class="ret"><code>void</code></td><td class="desc">Block until every future in the list completes</td></tr>
+          <tr><td><code>static sleep(long millis)</code></td><td class="ret"><code>void</code></td><td class="desc">Worker-thread-safe sleep; does not block the event loop</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="http">HTTP primitives</h2>
+    <p>
+      Value objects shared by every HTTP-related module (server, client,
+      reverse-proxy). They model URLs, parameters, headers, cookies, and
+      encoding helpers without depending on Vert.x in their public API.
+    </p>
+
+    <div class="api-class">
+      <h3><code>HttpUrl</code> <span class="kind">class</span></h3>
+      <p>Immutable URL value object: protocol, host, port, path, query, fragment. Built through a fluent builder.</p>
+
+      <span class="api-table-group">Builder</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>static builder(String host)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Start a new URL for the given host</td></tr>
+          <tr><td><code>protocol(HttpProtocole)</code></td><td class="ret"><code>Builder</code></td><td class="desc"></td></tr>
+          <tr><td><code>port(int)</code></td><td class="ret"><code>Builder</code></td><td class="desc"></td></tr>
+          <tr><td><code>path(String)</code></td><td class="ret"><code>Builder</code></td><td class="desc"></td></tr>
+          <tr><td><code>parameterQuery(String)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Raw query string</td></tr>
+          <tr><td><code>fragment(String)</code></td><td class="ret"><code>Builder</code></td><td class="desc"></td></tr>
+          <tr><td><code>build()</code></td><td class="ret"><code>HttpUrl</code></td><td class="desc">Materialise the value</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Accessors</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>url(Format)</code></td><td class="ret"><code>String</code></td><td class="desc">Full URL string, <code>encoded</code> or <code>decoded</code></td></tr>
+          <tr><td><code>pathAndQuery(Format)</code></td><td class="ret"><code>String</code></td><td class="desc">Path + query portion only</td></tr>
+          <tr><td><code>host()</code></td><td class="ret"><code>String</code></td><td class="desc"></td></tr>
+          <tr><td><code>port()</code></td><td class="ret"><code>int</code></td><td class="desc"></td></tr>
+          <tr><td><code>path()</code></td><td class="ret"><code>String</code></td><td class="desc"></td></tr>
+          <tr><td><code>parameterQuery(Format)</code></td><td class="ret"><code>String</code></td><td class="desc">Raw query string, encoded or decoded</td></tr>
+          <tr><td><code>fragment(Format)</code></td><td class="ret"><code>String</code></td><td class="desc"></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="api-class">
+      <h3><code>HttpParameter</code> <span class="kind">class</span></h3>
+      <p>Multimap for HTTP query parameters. Preserves duplicate names. Parsed from raw text or built from named entries.</p>
+
+      <span class="api-table-group">Factory &amp; mutation</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>static parse(String raw)</code></td><td class="ret"><code>HttpParameter</code></td><td class="desc">URL-decode and parse a raw query string</td></tr>
+          <tr><td><code>addEntry(name)</code> · <code>addEntry(name, value)</code> · <code>addEntries(name, List)</code></td><td class="ret"><code>void</code></td><td class="desc">Append entries (keeps duplicates)</td></tr>
+          <tr><td><code>putEntry(name)</code> · <code>putEntry(name, value)</code> · <code>putEntries(name, List)</code></td><td class="ret"><code>void</code></td><td class="desc">Replace all entries with the same name</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Accessors</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>entries()</code></td><td class="ret"><code>List&lt;Entry&gt;</code></td><td class="desc">Full ordered entry list</td></tr>
+          <tr><td><code>values(name)</code></td><td class="ret"><code>List&lt;String&gt;</code></td><td class="desc">All values for the given name</td></tr>
+          <tr><td><code>firstValue(name)</code></td><td class="ret"><code>String</code></td><td class="desc">First value, or <code>null</code></td></tr>
+          <tr><td><code>hasName(name)</code></td><td class="ret"><code>boolean</code></td><td class="desc"></td></tr>
+          <tr><td><code>names()</code></td><td class="ret"><code>Set&lt;String&gt;</code></td><td class="desc">Distinct parameter names</td></tr>
+          <tr><td><code>parameterQuery(Format)</code></td><td class="ret"><code>String</code></td><td class="desc">Render as a raw query string</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="api-class">
+      <h3><code>HttpHeader</code> <span class="kind">class</span></h3>
+      <p>Name → single-value header map. Case-aware on insertion; case-insensitive on lookup.</p>
+
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>put(name, value)</code></td><td class="ret"><code>void</code></td><td class="desc">Set or replace a header</td></tr>
+          <tr><td><code>get(name)</code></td><td class="ret"><code>String</code></td><td class="desc">Value or <code>null</code> (case-insensitive lookup)</td></tr>
+          <tr><td><code>has(name)</code></td><td class="ret"><code>boolean</code></td><td class="desc"></td></tr>
+          <tr><td><code>remove(name)</code></td><td class="ret"><code>void</code></td><td class="desc"></td></tr>
+          <tr><td><code>values()</code></td><td class="ret"><code>Map&lt;String,String&gt;</code></td><td class="desc">All headers as a map</td></tr>
+          <tr><td><code>names()</code></td><td class="ret"><code>Set&lt;String&gt;</code></td><td class="desc"></td></tr>
+          <tr><td><code>size()</code></td><td class="ret"><code>int</code></td><td class="desc"></td></tr>
+          <tr><td><code>isEmpty()</code></td><td class="ret"><code>boolean</code></td><td class="desc"></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="api-class">
+      <h3><code>HttpCookie</code> <span class="kind">class</span></h3>
+      <p>Full <code>Set-Cookie</code> value object. Comparable; usable in sorted sets.</p>
+
+      <span class="api-table-group">Builder</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>static builder(String name, String value)</code></td><td class="ret"><code>Builder</code></td><td class="desc"></td></tr>
+          <tr><td><code>domain(String)</code> · <code>path(String)</code> · <code>maxAge(long)</code></td><td class="ret"><code>Builder</code></td><td class="desc"></td></tr>
+          <tr><td><code>httpOnly(boolean)</code> · <code>secure(boolean)</code> · <code>sameSite(CookieSameSite)</code></td><td class="ret"><code>Builder</code></td><td class="desc"></td></tr>
+          <tr><td><code>build()</code></td><td class="ret"><code>HttpCookie</code></td><td class="desc"></td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Accessors</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>getName()</code> · <code>getValue()</code></td><td class="ret"><code>String</code></td><td class="desc"></td></tr>
+          <tr><td><code>getDomain()</code> · <code>getPath()</code></td><td class="ret"><code>String</code></td><td class="desc"></td></tr>
+          <tr><td><code>getMaxAge()</code></td><td class="ret"><code>long</code></td><td class="desc">Max age in seconds; <code>-1</code> = session cookie</td></tr>
+          <tr><td><code>isHttpOnly()</code> · <code>isSecure()</code></td><td class="ret"><code>boolean</code></td><td class="desc"></td></tr>
+          <tr><td><code>getSameSite()</code></td><td class="ret"><code>CookieSameSite</code></td><td class="desc"></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="api-class">
+      <h3><code>HttpEncoding</code> <span class="kind">class</span></h3>
+      <p>URL-encoding helpers and the <code>Format</code> enum used throughout the HTTP primitives.</p>
+
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>enum Format { encoded, decoded }</code></td><td class="ret"></td><td class="desc">Controls how URL components are rendered throughout the API</td></tr>
+          <tr><td><code>static urlEncode(String)</code></td><td class="ret"><code>String</code></td><td class="desc">Percent-encode a string</td></tr>
+          <tr><td><code>static urlDecode(String)</code></td><td class="ret"><code>String</code></td><td class="desc">Decode a percent-encoded string</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="api-class">
+      <h3><code>HttpMethod</code> · <code>HttpProtocole</code> · <code>HttpCertificate</code> · <code>ContentType</code> <span class="kind">enums</span></h3>
+      <p>Small enums shared across all HTTP modules.</p>
+
+      <table class="api-table">
+        <thead><tr><th>Type</th><th>Values</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>HttpMethod</code></td><td class="ret"><code>GET, POST, PUT, DELETE, PATCH, …</code></td><td class="desc">Standard HTTP verbs</td></tr>
+          <tr><td><code>HttpProtocole</code></td><td class="ret"><code>http, https, ws, wss</code></td><td class="desc">Protocol scheme</td></tr>
+          <tr><td><code>HttpCertificate</code></td><td class="ret"><code>NONE, SSL, SELF_SIGNED</code></td><td class="desc">TLS strategy for servers</td></tr>
+          <tr><td><code>ContentType</code></td><td class="ret"><code>jsonObject, jsonArray, text, …</code></td><td class="desc">Pre-baked MIME constants; <code>key()</code> = <code>"Content-Type"</code>, <code>value()</code> = MIME string</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="api-class">
+      <h3><code>Certificatable</code> <span class="kind">interface</span></h3>
+      <p>Implemented by every server that supports hot TLS rotation.</p>
+
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>keyPath()</code></td><td class="ret"><code>Path</code></td><td class="desc">Path to the currently active private key</td></tr>
+          <tr><td><code>certificatePath()</code></td><td class="ret"><code>Path</code></td><td class="desc">Path to the currently active certificate</td></tr>
+          <tr><td><code>updateCertificate(Path keyPath, Path certPath)</code></td><td class="ret"><code>Future&lt;Boolean&gt;</code></td><td class="desc">Hot-swap TLS material without restarting the server</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="util">Other utilities</h2>
+    <p>Smaller helpers used across the framework.</p>
+
+    <div class="api-class">
+      <h3><code>StringUtil</code> · <code>TimeUtil</code> · <code>PathUtil</code> · <code>ResourceUtil</code> · <code>ProcessUtil</code> · <code>JavaReflectUtil</code> <span class="kind">utility classes</span></h3>
+
+      <table class="api-table">
+        <thead><tr><th>Class</th><th>Key methods</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>StringUtil</code></td><td class="ret"></td><td class="desc">Null-safe trim/blank checks, splitting, padding</td></tr>
+          <tr><td><code>TimeUtil</code></td><td class="ret"><code>prettyPrint(Duration)</code></td><td class="desc">Human-readable duration; instant ↔ epoch helpers</td></tr>
+          <tr><td><code>PathUtil</code></td><td class="ret"></td><td class="desc">Forward-slash normalisation, prefix stripping</td></tr>
+          <tr><td><code>ResourceUtil</code></td><td class="ret"><code>read(String classpathPath)</code></td><td class="desc">Read a jar-bundled text resource as a String</td></tr>
+          <tr><td><code>ProcessUtil</code></td><td class="ret"></td><td class="desc">Current-process introspection helpers</td></tr>
+          <tr><td><code>JavaReflectUtil</code></td><td class="ret"></td><td class="desc">Internal reflection accessor used by the framework (not for application use)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="exception">YojaAppException</h2>
+    <div class="api-class">
+      <h3><code>YojaAppException</code> <span class="kind">runtime exception</span></h3>
+      <p>Common base of every framework-thrown unchecked exception. Catch this to handle "anything Yoja threw".</p>
+
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>YojaAppException(String message)</code></td><td class="desc">Message-only form</td></tr>
+          <tr><td><code>YojaAppException(String message, Throwable cause)</code></td><td class="desc">Wrapping form</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note">
+      <p>
+        For the full code-level reference, see the module's
+        <a href="https://github.com/Easy-API-Style/yoja-framework/blob/main/yoja-core/README.md">README on GitHub</a>
+        and the Javadoc-annotated source under <code>yoja-core/src/main/java/</code>.
+      </p>
+    </div>
+   </div>
+
+   <footer class="footer">
+     <p>
+       Yoja Framework · Apache License 2.0 ·
+       <a href="https://github.com/Easy-API-Style/yoja-framework">GitHub</a>
+     </p>
+   </footer>
+  </main>
+</div>
+
+
+<script src="../assets/js/theme.js"></script>
+</body>
+</html>

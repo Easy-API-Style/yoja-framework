@@ -1,0 +1,12 @@
+<yw-language>
+    <yw-import path="/lang_04.xml"/>
+    
+    <yw-text key="firstNamePlaceholder">
+        <en>type your first name</en>
+        <fr>saisir votre prénom</fr>
+    </yw-text>
+    <yw-text key="city">
+        <en>###</en>
+        <fr>???</fr>
+    </yw-text>
+</yw-language>

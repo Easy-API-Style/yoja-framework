@@ -1,0 +1,24 @@
+<yw-language>
+    <yw-text key="address">
+        <en>Address</en>
+        <fr>Adresse</fr>
+    </yw-text>
+    <yw-text key="street">
+        <en>Street</en>
+        <fr>Rue</fr>
+    </yw-text>
+    <yw-text key="city">
+        <en>City</en>
+        <fr>Ville</fr>
+    </yw-text>
+    <yw-text key="postcode">
+        <en>Postcode</en>
+        <fr>Code Postal</fr>
+    </yw-text>
+    
+    
+     <yw-text key="firstName">
+        <en>???</en>
+        <fr>???</fr>
+    </yw-text>
+</yw-language>

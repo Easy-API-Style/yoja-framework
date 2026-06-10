@@ -1,0 +1,19 @@
+@import url('/main_1.css')  screen
+/* aaaaa *
+   bbbbb /
+   ccccc *
+*/
+ and (orientation: landscape);
+@import /* ddd */ url("main_2.css") print;
+@import url("main_3.css") speech;
+/* @import ddd url("main.css") print; */
+/* @import url("main.css") speech; */
+@import  /* qqq */ "main_4.css";
+@import "main_5.css"  /* xxx */  (orientation: landscape);
+@import "main_6.css" /* eeee */  screen;
+/* 
+@import url("main.css") screen 
+                             and (orientation: landscape) ;
+*/
+@import url("main_7.css") screen 
+                             and (orientation: landscape) /* ffff */ ;
