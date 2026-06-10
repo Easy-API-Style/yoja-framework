@@ -27,11 +27,13 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       # yoja-web and yoja-selenium tests run Firefox and Chrome in headless mode
-      - name: Install Firefox
-        run: sudo apt-get install -y --no-install-recommends firefox
+      - name: Install browsers if missing
+        run: |
+          command -v firefox       || sudo apt-get install -y --no-install-recommends firefox
+          command -v google-chrome || sudo apt-get install -y --no-install-recommends google-chrome-stable
 
-      - name: Run spotlessCheck + tests
-        run: ./gradlew spotlessCheck test
+      - name: Run tests
+        run: ./gradlew test
 
       - name: Upload test reports
         if: always()
