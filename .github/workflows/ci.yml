@@ -8,21 +8,19 @@ on:
 
 jobs:
   test:
+    name: Build & test (JDK 25)
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Java 21 bootstraps Gradle; the foojay toolchain resolver
-      # downloads Java 25 automatically for compilation and tests.
-      - name: Set up Java 21
+      - name: Set up Java 25
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: '25'
 
-      # Gradle remote cache + wrapper validation
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
@@ -32,13 +30,13 @@ jobs:
           command -v firefox       || sudo apt-get install -y --no-install-recommends firefox
           command -v google-chrome || sudo apt-get install -y --no-install-recommends google-chrome-stable
 
-      - name: Run tests
-        run: ./gradlew test
+      - name: Run all tests
+        run: ./gradlew --no-daemon test
 
       - name: Upload test reports
-        if: always()
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: test-reports
           path: '**/build/reports/tests/'
-          retention-days: 7
+          if-no-files-found: ignore
