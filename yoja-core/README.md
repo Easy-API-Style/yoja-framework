@@ -1,11 +1,11 @@
 # yoja-core
 
-[![Website](https://img.shields.io/badge/website-easygoingapi.com%2Fyoja--core-blue)](https://easygoingapi.com/modules/core.html)
+[![Website](https://img.shields.io/badge/website-easygoingapi.com%2Fyoja--core-blue)](https://easygoingapi.com/modules/core.html) [![Email](https://img.shields.io/badge/email-easy.api.contact%40gmail.com-red)](mailto:easy.api.contact@gmail.com)
 
 [![Release](https://img.shields.io/badge/release-1.0.0-brightgreen)](https://github.com/Easy-API-Style/yoja-framework/releases/tag/1.0.0)
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue)](https://github.com/Easy-API-Style/yoja-framework/blob/main/LICENSE)
+[![License](https://img.shields.io/badge/license-Apache%202.0-green)](https://github.com/Easy-API-Style/yoja-framework/blob/main/LICENSE)
 [![Java](https://img.shields.io/badge/java-25-orange)](https://openjdk.org/projects/jdk/25/)
-[![Maven Central](https://img.shields.io/badge/com.easygoingapi%3Ayoja--core%3A1.0.0-blue)](https://central.sonatype.com/artifact/com.easygoingapi/yoja-core/1.0.0)
+[![Maven Central](https://img.shields.io/badge/maven--central-com.easygoingapi%3Ayoja--core%3A1.0.0-blue)](https://central.sonatype.com/artifact/com.easygoingapi/yoja-core/1.0.0)
 
 Core module of the Yoja Framework. Provides application lifecycle management, worker thread pools, scheduling, and HTTP utilities built on top of [Vert.x](https://vertx.io/).
 
