@@ -113,7 +113,7 @@ try {
     const configPath = scriptTag?.getAttribute('yw-config-path');
     if (configPath) {
         const configModule = await import(formatPath(configPath, {force: true, version: false}))
-                                     .catch(error => console.warn('yojaWew no config file: ' + configPath, {cause: error}));
+                                     .catch(error => console.warn('yojaWeb no config file: ' + configPath, {cause: error}));
         if (configModule.default) {
             config = configModule.default;
         }
@@ -1227,7 +1227,7 @@ function cloneSection(section) {
     if (section.include) {
         type = 'include';
     }
-    else if (section.include) {
+    else if (section.slot) {
         type = 'slot';
     }
     result.type = type;
@@ -1318,7 +1318,7 @@ function addCssMediaListener(cssSheetEntities, shadow) {
         if (cssMedia) {
             shadow.adoptedStyleSheets.push(cssSheetEmpty);
             const mediaQueryList = window.matchMedia(cssMedia);
-            mediaQueryList.addListener(mql => handleCssMedia(mql, shadow, i, cssSheet));
+            mediaQueryList.addEventListener('change', mql => handleCssMedia(mql, shadow, i, cssSheet));
             handleCssMedia(mediaQueryList, shadow, i, cssSheet);
         }
         else {
