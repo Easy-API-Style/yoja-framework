@@ -139,13 +139,19 @@
     .webResource(WebApp.jar(<span class="s">"my.app.webapp"</span>), <span class="s">"/*"</span>)
     .build();</code></pre>
 
-<pre><code><span class="k">&lt;script</span> <span class="a">type</span>=<span class="s">"module"</span> <span class="a">src</span>=<span class="s">"/yoja/YojaWeb-1.0.0.js"</span><span class="k">&gt;&lt;/script&gt;</span></code></pre>
+<pre><code><span class="k">&lt;script</span> <span class="a">type</span>=<span class="s">"module"</span>
+        <span class="a">src</span>=<span class="s">"/yoja/YojaWeb-1.0.0.js"</span>
+        <span class="a">yw-config-path</span>=<span class="s">"/YojaWeb.conf.js"</span><span class="k">&gt;&lt;/script&gt;</span></code></pre>
 
     <h2 id="config">Configuration</h2>
     <p>
-      A single <code>YojaWeb.conf.js</code> module exports the runtime config.
+      The config file is declared via the <code>yw-config-path</code> attribute on the <code>&lt;script&gt;</code> tag.
+      The framework dynamically imports that path as an ES6 module and reads its <code>default</code> export.
+      If the attribute is absent the framework starts with an empty config.
+      If the file cannot be loaded a <code>console.warn</code> is emitted and the framework starts with an empty config.
     </p>
-<pre><code><span class="k">export default</span> {
+<pre><code><span class="c">// /YojaWeb.conf.js</span>
+<span class="k">export default</span> {
     version: <span class="s">'1.0.1'</span>,
     defaultLanguage: <span class="s">'fr'</span>,
     mediaDescriptions: [

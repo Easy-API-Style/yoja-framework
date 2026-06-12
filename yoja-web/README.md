@@ -86,13 +86,13 @@ Because there is no build step and no global state management layer, yoja-web ca
 
 ## Installation
 
-Include the framework script in your HTML:
+Include the framework script in your HTML. Point `yw-config-path` at a config file to enable runtime configuration (optional — see [Configuration](#yojaweb-configuration)):
 
 ```html
-<script type="module" src="/com/easygoingapi/yoja/web/YojaWeb-1.0.0.js"></script>
+<script type="module"
+        src="/com/easygoingapi/yoja/web/YojaWeb-1.0.0.js"
+        yw-config-path="/YojaWeb.conf.js"></script>
 ```
-
-The framework automatically loads `/YojaWeb.conf.js` at startup (optional).
 
 ---
 
@@ -137,7 +137,13 @@ The framework automatically loads `/YojaWeb.conf.js` at startup (optional).
 
 ## YojaWeb: Configuration
 
-Create `/YojaWeb.conf.js` at the root of your web server. It is loaded automatically at startup via ES6 `import`.
+The config file is declared via the `yw-config-path` attribute on the `<script>` tag. The framework dynamically imports that path as an ES6 module and reads its `default` export.
+
+```html
+<script type="module"
+        src="/com/easygoingapi/yoja/web/YojaWeb-1.0.0.js"
+        yw-config-path="/YojaWeb.conf.js"></script>
+```
 
 ```js
 // /YojaWeb.conf.js
@@ -159,7 +165,7 @@ export default {
 };
 ```
 
-If the file is absent, the framework starts with an empty config and logs a warning.
+If `yw-config-path` is absent the framework starts with an empty config. If the file cannot be loaded a `console.warn` is emitted and the framework starts with an empty config.
 
 > **About `version`** — this property is the only reliable way to invalidate the browser cache for HTML, CSS and JS after a deploy. The framework appends `?version=<value>` to every URL **it** loads (controllers, stylesheets, included HTML, language XML, slot templates), so any change to this string produces brand-new URLs and forces the browser to re-fetch them. Typical values: a semantic version (`'1.0.0'`), a build number, or a git commit hash injected at build time. The method that actually stamps `?version=<value>` on a URL is [`yojaWeb.path(...)`](#path-resolution) — the framework calls it internally for every URL it loads, and you must call it yourself for any URL you build from JavaScript.
 >
@@ -973,7 +979,7 @@ http.addContentTypes({
 });
 ```
 
-These same keys are also read directly from `YojaWeb.conf.js` at startup, so you can configure them globally without calling `addContentTypes` at runtime:
+These same keys can also be declared in the config file pointed to by `yw-config-path`, so you can configure them globally without calling `addContentTypes` at runtime:
 
 ```js
 // /YojaWeb.conf.js
@@ -1095,7 +1101,7 @@ Connection timeout is 5 seconds. If the server does not respond within that wind
 
 ## responsiveService
 
-Media-query breakpoints and resize callbacks. Breakpoints are configured in `YojaWeb.conf.js` via `mediaDescriptions`. Each entry has a `name` and an optional `maxWidth` (pixels). The last entry without `maxWidth` matches everything above the previous breakpoint.
+Media-query breakpoints and resize callbacks. Breakpoints are configured via `mediaDescriptions` in the config file pointed to by `yw-config-path`. Each entry has a `name` and an optional `maxWidth` (pixels). The last entry without `maxWidth` matches everything above the previous breakpoint.
 
 ```js
 const responsive = window.yojaWebApi.responsiveService;
