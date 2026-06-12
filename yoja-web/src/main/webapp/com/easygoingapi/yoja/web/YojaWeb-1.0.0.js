@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 'use strict'
+const scriptTag = [...document.querySelectorAll('script[type="module"]')]
+                       .find(s => s.src && new URL(s.src).href === import.meta.url);
 
 const apiVersion = '1.0.0';
 
@@ -106,11 +108,15 @@ function formatPathFrom(path, fromPath, options) {
 
 // config
 let config = {};
+
 try {
-    const configModule = await import(formatPath('/YojaWeb.conf.js', {force: true, version: false}))
-                                  .catch(error => console.warn('yojaWew no config file: /YojaWeb.conf.js', {cause: error}));
-    if (configModule.default) {
-       config = configModule.default;
+    const configPath = scriptTag?.getAttribute('yw-config-path');
+    if (configPath) {
+        const configModule = await import(formatPath(configPath, {force: true, version: false}))
+                                     .catch(error => console.warn('yojaWew no config file: ' + configPath, {cause: error}));
+        if (configModule.default) {
+            config = configModule.default;
+        }
     }
 }
 catch(error) {
