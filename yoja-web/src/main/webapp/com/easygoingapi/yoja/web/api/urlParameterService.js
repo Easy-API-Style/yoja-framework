@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 'use strict'
-
 const urlParameterUtil = await import(yojaWeb.path('../util/urlParameterUtil.js'));
 
 const originBack = window.history.back;
@@ -28,11 +27,13 @@ class HistoryState {
     
     #data;
     #urlParameter;
+    #hash;
     #url;
     
-    constructor(data, urlParameter, url) {
+    constructor(data, urlParameter, hash, url) {
         this.#data = data;
         this.#urlParameter = urlParameter;
+        this.#hash = hash;
         this.#url = url;
     }
     
@@ -44,19 +45,25 @@ class HistoryState {
         return this.#url;
     }
     
+    get hash() {
+        return this.#hash;
+    }
+    
     get urlParameter() {
         return this.#urlParameter;
     }
     
     clone() {
-        return new HistoryEntity(this.#data, 
-                                 this.#urlParameter.clone(),
-                                 this.#url);
+        return new HistoryState(this.#data, 
+                                this.#urlParameter.clone(),
+                                this.#hash,
+                                this.#url);
     }
     
     toJson() {
         return {data: this.#data, 
                 urlParameter: this.#urlParameter.toJson(),
+                hash: this.#hash,
                 url: this.#url};
     }
 
@@ -68,18 +75,21 @@ class HistoryState {
 
 class UrlParameterService {
     
+    #hash = null;
     #urlParameter = null;
     #onChangeActions = [];
     
     constructor() {
         this.#updateUrlParameter();
-        const url = urlParameterUtil.toUrl(window.location.pathname, this.#urlParameter);
+        const url = urlParameterUtil.toUrl(window.location?.pathname, 
+                                           this.#urlParameter, 
+                                           this.#hash);
         const historyState = new HistoryState(undefined, 
                                               this.#urlParameter.clone(),
+                                              this.#hash,
                                               url);
         window.history.replaceState(historyState.toJson(), '', url);
-        this.#applyOnChange({event: 'load'});
-        
+        window.yojaWeb.onDocumentReady(() => this.#applyOnChange({event: 'load'}));
         window.addEventListener('popstate', () => {
              this.#updateUrlParameter();
              this.#applyOnChange({event: 'pop'});
@@ -90,10 +100,25 @@ class UrlParameterService {
         let result = value;
         if (result === null 
              || result === undefined 
-             || result == '') {
+             || result === '') {
             result = null;
         }
         return result;
+    }
+    
+    getHash() {
+        return this.#hash;
+    }
+    
+    setHash(hash) {
+        this.#hash = urlParameterUtil.cleanHash(hash);
+        this.#applyOnChange({event: 'set-hash', hash: this.#hash});
+    }
+    
+    removeHash() {
+        const _hash = this.#hash
+        this.#hash = null;
+        this.#applyOnChange({event: 'remove-hash', hash: _hash});
     }
     
     has(key, value) {
@@ -123,6 +148,7 @@ class UrlParameterService {
     clear() {
         const entries = this.entries();
         this.#urlParameter.clear();
+        this.#hash = null;
         this.#applyOnChange({event: 'clear', entries: entries});
     }
 
@@ -160,12 +186,8 @@ class UrlParameterService {
     #applyOnChange(handler) {
         let result = true;
         for (const action of this.#onChangeActions) {
-            const v = action(handler);
-            if (v === false) {
+            if (action(handler) === false) {
                 result = false;
-            }
-            else if (v === true) {
-                result = true;
             }
         }
         return result;
@@ -187,8 +209,12 @@ class UrlParameterService {
                 if (urlQuery) {
                     url = url + '?' + urlQuery;
                 }
+                if (this.#hash) {
+                    url = url + '#' + this.#hash;
+                }
                 const historyState = new HistoryState(handler.data,
                                                       this.#urlParameter.clone(),
+                                                      this.#hash,
                                                       url);
                 window.history.pushState(historyState.toJson(), '', url);
                 this.#applyOnChange({event: 'after-push'});
@@ -208,8 +234,12 @@ class UrlParameterService {
                 if (urlQuery) {
                     url = url + '?' + urlQuery;
                 }
+                if (this.#hash) {
+                    url = url + '#' + this.#hash;
+                }
                 const historyState = new HistoryState(handler.data,
                                                       this.#urlParameter.clone(),
+                                                      this.#hash,
                                                       url);
                 window.history.replaceState(historyState.toJson(), '', url);
                 this.#applyOnChange({event: 'after-replace'});
@@ -263,6 +293,7 @@ class UrlParameterService {
     
     #updateUrlParameter() {
         this.#urlParameter = urlParameterUtil.parseUrlParameter(window.location.search);
+        this.#hash = urlParameterUtil.cleanHash(window.location.hash);
     }
     
     state() {
@@ -278,7 +309,9 @@ class UrlParameterService {
     }
     
     go(delta) {
-        this.#history({action: 'go', delta: delta});
+        if (Number.isInteger(delta)) {
+            this.#history({action: 'go', delta: delta});
+        }
     }
     
     replace(data) {
@@ -290,7 +323,9 @@ class UrlParameterService {
     }
     
     #originGo(delta) {
-        originGo.apply(originHistory, delta);
+        if (Number.isInteger(delta)) {
+            originGo.apply(originHistory, [delta]);
+        }        
     }
 
     #originBack() {
@@ -323,6 +358,18 @@ const urlParameterService = new UrlParameterService();
 
 export function clear() {
     return urlParameterService.clear();
+}
+
+export function getHash() {
+    return urlParameterService.getHash();
+}
+
+export function setHash(hash) {
+    urlParameterService.setHash(hash);
+}
+
+export function removeHash() {
+    urlParameterService.removeHash();
 }
 
 export function has(key, value) {
@@ -361,8 +408,13 @@ export function currentUrlParameter() {
     return urlParameterUtil.parseUrlParameter(window.location.search);
 }
 
+export function currentUrlHash() {
+    return urlParameterUtil.cleanHash(window.location.hash);
+}
+
 export function isUpdated() {
-    return urlParameterService.urlParameterEquals(currentUrlParameter());
+    return urlParameterService.getHash() === currentUrlHash() 
+              && urlParameterService.urlParameterEquals(currentUrlParameter());
 }
 
 export function replace(data) {
@@ -381,6 +433,14 @@ export function toUrlQuery() {
     return urlParameterService.toUrlQuery();
 }
 
+export function toUrlQueryWithHash() {
+    let result = urlParameterService.toUrlQuery()
+    if (getHash()) {
+        result = result + '#' + getHash();
+    }
+    return result;
+}
+
 /*
  *  {event: String}
  *
@@ -388,6 +448,8 @@ export function toUrlQuery() {
  *           | append
  *           | set
  *           | remove
+ *           | set-hash
+ *           | remove-hash
  *           | before-replace
  *           | after-replace
  *           | before-push

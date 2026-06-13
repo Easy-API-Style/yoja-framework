@@ -16,11 +16,10 @@
  * limitations under the License.
  */
 'use strict'
-
 const urlParameterUtil = await import(yojaWeb.path('../util/urlParameterUtil.js'));
 
-export function load(url, parameters) {
-    window.location.assign(urlParameterUtil.toUrl(url, parameters));
+export function load(url, parameters, hash) {
+    window.location.assign(urlParameterUtil.toUrl(url, parameters, hash));
 }
 
 export function reload() {
@@ -36,15 +35,17 @@ export function forward() {
 }
 
 export function go(delta) {
-    window.history.go(delta);
+    if (Number.isInteger(delta)) {
+        window.history.go(delta);
+    }
 }
 
 export function path() {
     return window.location.pathname;
 }
 
-export function fragment() {
-    return window.location.hash;
+export function hash() {
+    return urlParameterUtil.cleanHash(window.location.hash);
 }
 
 export function host() {

@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 'use strict'
-
 const urlParameterService = await import(yojaWeb.path('../util/urlParameterUtil.js'));
 
 class WebSocketWrapper {
@@ -42,43 +41,77 @@ class WebSocketWrapper {
     
     async open() {
         return new Promise((resolve, reject) => {
-            if (this.#webSocket.readyState === 1) {
-                resolve();
+            if (this.#webSocket.readyState === WebSocket.OPEN) {
+                resolve(this.#webSocket);
+            }   
+            else if (this.#webSocket.readyState === WebSocket.CONNECTING) {
+                const timer = setTimeout(() => reject(new Error('openning websocket failed ' + this.#request + ', timeout: ' + this.#timeout + 'ms')), 
+                                         this.#timeout);
+                this.#webSocket.addEventListener('open', 
+                                                 () => { 
+                                                     clearTimeout(timer); 
+                                                     resolve(this.#webSocket); 
+                                                 }, 
+                                                 { once: true });
+                this.#webSocket.addEventListener('error', 
+                                                 event => { 
+                                                    clearTimeout(timer); 
+                                                    reject(new Error('openning websocket failed ' + this.#request, {cause: event})); 
+                                                  }, 
+                                                  { once: true })  
             }     
             else {  
-                setTimeout(() => reject('timeout ' + this.#timeout  + 'ms'), this.#timeout);
                 this.#webSocket = new WebSocket(this.#request);
-                this.#webSocket.addEventListener("open", () => resolve());
-                //this.#webSocket.addEventListener("error", event => reject(event))
                 for (const eventType of this.#eventTypes) {
                     for (const callbackAction of this.#callBackActions[eventType]) {
                         this.#webSocket.addEventListener(eventType, handler => callbackAction(handler));
                     }
                 }
+                const timer = setTimeout(() => reject(new Error('openning websocket failed ' + this.#request + ', timeout: ' + this.#timeout + 'ms')), 
+                                         this.#timeout);
+                this.#webSocket.addEventListener("open", 
+                                                 () => {
+                                                    clearTimeout(timer); 
+                                                    resolve(this.#webSocket);
+                                                 },
+                                                 { once: true });
+                this.#webSocket.addEventListener("error",
+                                                 event => {
+                                                    clearTimeout(timer); 
+                                                    reject(new Error('openning websocket failed ' + this.#request, {cause: event}))
+                                                  },
+                                                  { once: true });
+                
             }
-        })
-        .catch(error => { 
-            throw new Error('websocket not opened: ' + this.#request, {cause: error});
         });
     }
     
     async send(data) {
        return this.open()
-                  .then(() => this.#webSocket.send(data))
-                  .catch(error => { 
-                       throw new Error('message not sent: \n' + data, {cause: error})  
-                  });
+                  .then(ws => ws.send(data));
     }
     
-   async close(code, reason) {
+    async close(code, reason) {
         return new Promise((resolve, reject) => {
-            if (this.#webSocket.readyState === 3) {
+            if (this.#webSocket.readyState === WebSocket.CLOSED
+                   || this.#webSocket.readyState === WebSocket.CLOSING) {
                 resolve();
             }
             else {
-                this.#webSocket.addEventListener("close", () => resolve());
-                //this.#webSocket.addEventListener("error", event =>  reject(event))
-                setTimeout(() => reject('timeout ' +this.#timeout  + 'ms'), this.#timeout);
+                const timer = setTimeout(() => reject(new Error('closing websocket failed ' + this.#request + ', timeout: ' + this.#timeout + 'ms')), 
+                                         this.#timeout);
+                this.#webSocket.addEventListener("close", 
+                                                 () => {
+                                                    clearTimeout(timer); 
+                                                    resolve();
+                                                 },
+                                                 { once: true });
+                this.#webSocket.addEventListener("error", 
+                                                 event => {
+                                                    clearTimeout(timer); 
+                                                    reject(new Error('closing websocket failed ' + this.#request, {cause: event}));
+                                                 },
+                                                 { once: true });
                 this.#webSocket.close(code, reason);
             }
         })
@@ -93,7 +126,7 @@ class WebSocketWrapper {
     }
     
     isOpen() {
-        return this.#webSocket.readyState === 1;
+        return this.#webSocket.readyState === WebSocket.OPEN;
     }
     
     // state [ CONNECTING | OPEN | CLOSING | CLOSED ]
@@ -147,6 +180,9 @@ class WebSocketService {
         const _request = this.#toObjectRequest(request);
         const url = _request.url;
         let webSocket = this.#webSockets[url];
+//        if (!webSocket 
+//              || webSocket.is('CLOSING')
+//              || webSocket.is('CLOSED')) {
         if (!webSocket) {
             webSocket = new WebSocketWrapper(_request);
             this.#webSockets[url] = webSocket;
@@ -157,7 +193,7 @@ class WebSocketService {
     #toObjectRequest(request) {
         let result;
         if (typeof request === 'object') {
-            result = request;
+            result = {...request};
         }
         else {
             result = {};
@@ -178,11 +214,11 @@ export function webSocket(request) {
 }
 
 export function send(request, data) {
-    webSocket(request).send(data);
+    return webSocket(request).send(data);
 }
 
 export function close(request, code, reason) {
-    webSocket(request).close(code, reason);
+    return webSocket(request).close(code, reason);
 }
 
 export function onOpen(request, callback) {
@@ -203,5 +239,5 @@ export function onError(request, callback) {
 
 // eventType [ open | message | close | error ]
 export function on(eventType, request, callback) {
-    webSocket(request).addEventListener(eventType, callback);
+    webSocket(request).on(eventType, callback);
 }

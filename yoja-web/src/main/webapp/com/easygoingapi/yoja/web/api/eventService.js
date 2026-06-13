@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 'use strict'
-
 const jsUtil = await import(yojaWeb.path('../util/javascriptUtil.js'));
 
 class YojaAction {
@@ -219,7 +218,7 @@ class YojaEventService {
         for (const yojaEvent of this.#find(query)) {
             result.push(yojaEvent);
         }
-        result.sort((a, b) => a.id > b.id ? 1 : -1);
+        result.sort((a, b) => a.id.localeCompare(b.id));
         return result;
     }
     
@@ -245,16 +244,18 @@ class YojaEventService {
     }
 
     on(eventId, action) {
-        if (jsUtil.isString(eventId)
-               && (jsUtil.isFunction(action) || jsUtil.isFunction(action.action))) {
-            const yojaEvent = this.#yojaEvents[eventId];
-            if (yojaEvent) {
-                yojaEvent.addAction(action);
-            }
-            else {
-                const yojaEvent = new YojaEvent(eventId);
-                yojaEvent.addAction(action);
-                this.#yojaEvents[eventId] = yojaEvent;
+        if (action) {
+            if (jsUtil.isString(eventId)
+                  && (jsUtil.isFunction(action) || jsUtil.isFunction(action.action))) {
+                const yojaEvent = this.#yojaEvents[eventId];
+                if (yojaEvent) {
+                    yojaEvent.addAction(action);
+                }
+                else {
+                    const yojaEvent = new YojaEvent(eventId);
+                    yojaEvent.addAction(action);
+                    this.#yojaEvents[eventId] = yojaEvent;
+                }
             }
         }
     }

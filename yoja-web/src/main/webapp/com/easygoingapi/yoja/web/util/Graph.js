@@ -76,7 +76,7 @@ class Graph {
         for (const id of Object.keys(this.#nodes)) {
             ids.push(id);
         }
-        ids.sort((a, b) => a > b ? 1 : -1);
+        ids.sort((a, b) => a.localeCompare(b));
         const result = [];
         for (const id of ids) {
             result.push(this.#nodes[id]);

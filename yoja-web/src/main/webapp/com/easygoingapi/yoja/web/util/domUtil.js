@@ -286,7 +286,7 @@ export function childrenSection(tag) {
     return  childrenSectionOfTag(tag);
 }
 
- export function closestSection(tag) {
+export function closestSection(tag) {
     return toSection(closest(tag, SECTION_TAG_SELECTOR));
 }
 

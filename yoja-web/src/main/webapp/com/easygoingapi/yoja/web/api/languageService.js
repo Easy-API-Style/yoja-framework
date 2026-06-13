@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 'use strict'
-
 const httpClient = await import(yojaWeb.path('../api/httpClient.js'));
 const domUtil = await import(yojaWeb.path('../util/domUtil.js'));
 const jsUtil = await import(yojaWeb.path('../util/javascriptUtil.js'));

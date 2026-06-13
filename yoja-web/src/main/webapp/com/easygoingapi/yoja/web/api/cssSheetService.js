@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 'use strict'
-
 const sectionService = yojaWeb.sectionService;
 
 class CssSheetService {

@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 'use strict'
-
 const urlParameterUtil = await import(yojaWeb.path('../util/urlParameterUtil.js'));
 const javascriptUtil = await import(yojaWeb.path('../util/javascriptUtil.js'));
 
@@ -45,16 +44,16 @@ class HttpClient {
    
     constructor() {
         this.addContentTypes(yojaWeb.config);
-        window.ononline = (event) => {
+        window.addEventListener('online', event => {
             for (const action of this.#onOnlineActions) {
                 action(event);
             }
-        };
-        window.onoffline = (event) => {
+        });
+        window.addEventListener('offline', event => {
             for (const action of this.#onOfflineActions) {
                 action(event);
             }
-        };
+        });
     }
     
     addContentTypes(contentTypes) {
@@ -151,7 +150,12 @@ class HttpClient {
            }
         }
         else {
-            _request['body'] = javascriptUtil.stringify(body);
+            if (body instanceof Blob) {
+                _request['body'] = await javascriptUtil.blobTobase64(body);
+            }
+            else {
+                _request['body'] = javascriptUtil.stringify(body);
+            }
         }
         this.#applyOnResquest(_request);
         return this.#response(_request, callback);
@@ -179,7 +183,7 @@ class HttpClient {
                         return response;
                     })
                     .catch(error => {
-                        this.#error(url, error);
+                        this.#error(request.url, error);
                         throw new Error('fetch url failed: ' + request.url, {cause: error});
                     })
     }
@@ -206,28 +210,30 @@ class HttpClient {
         }
     }
     
+    #getHeader(request, name) {
+       let result = null;
+       if (request.headers) {
+           const headers = request.headers;
+           if (headers instanceof Headers) {
+               result = headers.get(name);
+           }
+           else if (typeof headers === 'object') {
+               if (typeof headers[name] !== 'undefined') {
+                    result = headers[name];
+               }
+           }
+       }
+       return result;
+    }
+    
     #hasHeader(request, name) {
-        let result = false;
-        if (request.headers) {
-            const headers = request.headers;
-            if (headers instanceof Headers) {
-                if (headers.get(name)) {
-                    result = true;
-                }
-            }
-            else if (typeof headers === 'object') {
-                if (headers[name]) {
-                    result = true;
-                }
-            }
-        }
-        return result;
+        return this.#getHeader(request, name) != null;
     }
     
     #toObjectRequest(request) {
         let result;
         if (typeof request === 'object') {
-            result = request;
+            result = {...request};
         }
         else {
             result = {};
@@ -244,16 +250,16 @@ class HttpClient {
         }
         else {
             const contentType = response.headers.get('Content-Type');
-            if (this.#jsonContentTypes.includes(contentType)) {
+            if (this.#containsContentType(this.#jsonContentTypes, contentType)) {
                 result = 'json';
             }
-            else if (this.#textContentTypes.includes(contentType)) {
+            else if (this.#containsContentType(this.#textContentTypes, contentType)) {
                 result = 'text';
             }
-            else if (this.#blobContentTypes.includes(contentType)) {
+            else if (this.#containsContentType(this.#blobContentTypes, contentType)) {
                 result = 'blob';
             }
-            else if (this.#base64ContentTypes.includes(contentType)) {
+            else if (this.#containsContentType(this.#base64ContentTypes, contentType)) {
                 result = 'base64';
             }
             else {
@@ -263,9 +269,37 @@ class HttpClient {
         return result;
     }
     
+    #containsContentType(contentTypes, contentType) {
+        let result = false;
+        if (contentType) {
+            const values = [];
+            if (contentType.includes(';')) {
+                const splitContentTypes = contentType.split(';');
+                for (const splitContentType of splitContentTypes) {
+                    values.push(splitContentType.trim().toLowerCase());
+                }
+            }
+            else {
+                values.push(contentType.trim().toLowerCase());
+            }
+            for (const value of values) {
+                for (const contentTypeValue of contentTypes) {
+                    if (contentTypeValue.trim().toLowerCase() == value) {
+                        result = true;
+                        break;
+                    }
+                }
+                if (result) {
+                    break;
+                }
+            }
+        }
+        return result;
+    }
+    
     async #response(request, callback) {
         let result;
-        if (request.responseWtih) {
+        if (request.responseWith) {
             return this.#responseWith(request, callback)
                        .then(response => this.#log(request, response));
         }
@@ -283,7 +317,7 @@ class HttpClient {
     #responseWith(request, callback) {
         return new Promise((resolve, reject) => {
             try {
-                const response = request.responseWtih;
+                const response = request.responseWith;
                 this.#applyOnResponse(request, response);
                 if (callback) {
                     callback(response);

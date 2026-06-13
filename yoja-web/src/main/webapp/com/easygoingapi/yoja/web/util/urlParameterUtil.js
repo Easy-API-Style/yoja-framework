@@ -29,7 +29,7 @@ class UrlParameter {
         let result = value;
         if (result === null 
              || result === undefined 
-             || result == '') {
+             || result === '') {
             result = null;
         }
         return result;
@@ -152,10 +152,29 @@ class UrlParameter {
     }
     
     equals(object) {
-        if (object instanceof UrlParameter) {
-            return JSON.stringify(this.entries()) === JSON.stringify(object.entries());
+        if (!(object instanceof UrlParameter)) {
+            return false;
         }
-        return false;
+        if (this.size() !== object.size()) {
+            return false;
+        }
+        const keys = this.keys();
+        if (keys.length !== object.keys().length) {
+            return false;
+        }
+        for (const key of keys) {
+            const values = this.getAll(key);
+            const otherValues = object.getAll(key);
+            if (values.length !== otherValues.length) {
+                return false;
+            }
+            for (let i = 0; i < values.length; i++) {
+                if (values[i] !== otherValues[i]) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
     
     toJson() {
@@ -172,11 +191,24 @@ class UrlParameter {
      
 }
 
+export function cleanHash(hash) {
+    let result = null;
+    if (typeof hash === 'string'
+          && hash.trim() !== ''
+          && hash.trim() !== '#') {
+        result = hash.trim();
+        if (result.startsWith('#')) {
+            result = result.substring(1);
+        }
+    }
+    return result;
+}
+
 function emptyToNull(value) {
     let result = value
     if (result === null 
          || result === undefined 
-         || result == '') {
+         || result === '') {
         result = null;
     }
     return result;
@@ -267,7 +299,7 @@ export function toUrlQuery(urlParameter) {
               : undefined;
 }
 
-export function toUrl(url, urlParameter) {
+export function toUrl(url, urlParameter, hash) {
     const urlQuery = toUrlQuery(urlParameter);
     //url = encodeURIComponent(url)
     if (urlQuery) {
@@ -278,6 +310,13 @@ export function toUrl(url, urlParameter) {
             url = url + '&';
         }
         url = url + urlQuery;
+    }
+    if (hash) {
+        hash = hash.trim();
+        if (hash.startsWith('#')) {
+            hash = hash.substring(1);
+        }
+        url = url + '#' + hash;
     }
     return url;
 }

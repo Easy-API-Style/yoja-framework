@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 'use strict'
-
 const jsUtil = await import(yojaWeb.path('../util/javascriptUtil.js'));
 
 class StorageService {
@@ -27,10 +26,12 @@ class StorageService {
     #onLocalSet = {};
     #onLocalGet = {};
     #onLocalRemove = {};
+    #onLocalHas = {};
     
     #onSessionSet = {};
     #onSessionGet = {};
     #onSessionRemove = {};
+    #onSessionHas = {};
     
     #onEvent = [];
     
@@ -63,7 +64,7 @@ class StorageService {
         const result = query === undefined 
                               ? itemKeys
                               : jsUtil.filterStringArray(itemKeys, query);
-        result.sort((a, b) => a > b ? 1 : -1 );                  
+        result.sort((a, b) => a.localeCompare(b));                  
         return result;
     }
        
@@ -85,12 +86,15 @@ class StorageService {
             storage.removeItem(this.#toYojaItemKey(itemKey));
         }
         storage.removeItem(this.#itemKeysPrefix + scope);
+        for (let i = 0; i < this.#onEvent.length; i++) {
+            this.#onEvent[i](scope, 'clear');
+        }
     }
     
     #removeItemKey(scope, itemKey) {
         if (itemKey) {
             const itemKeys = this.#getItemKeys(scope);
-            if (!itemKeys.includes(itemKey)) {
+            if (itemKeys.includes(itemKey)) {
                 const result = [];
                 for (const key of itemKeys) {
                     if (key !== itemKey) {
@@ -162,6 +166,12 @@ class StorageService {
                 }
                 this.#onLocalGet[key].push(action);
             }
+            else if (method === 'has') {
+                if (!this.#onLocalHas[key]) {
+                    this.#onLocalHas[key] = [];
+                }
+                this.#onLocalHas[key].push(action);
+            }
             else if (method === 'remove') {
                 if (!this.#onLocalRemove[key]) {
                     this.#onLocalRemove[key] = [];
@@ -182,6 +192,12 @@ class StorageService {
                 }
                 this.#onSessionGet[key].push(action);
             }
+            else if (method === 'has') {
+                if (!this.#onSessionHas[key]) {
+                    this.#onSessionHas[key] = [];
+                }
+                this.#onSessionHas[key].push(action);
+            }
             else if (method === 'remove') {
                 if (!this.#onSessionRemove[key]) {
                     this.#onSessionRemove[key] = [];
@@ -198,17 +214,27 @@ class StorageService {
        return this.#findItemKeys('local', query);
     }
 
-    getLocalItem(key) {
+    getLocalItem(key, event) {
         const yojaKey = this.#toYojaItemKey(key);
         const value = this.#parse(localStorage.getItem(yojaKey));
         if (value !== undefined) {
-            if (this.#onLocalGet[key]) {
-                for (let i = 0; i < this.#onLocalGet[key].length; i++) {
-                    this.#onLocalGet[key][i](value);
+            if (event === 'get') {
+                if (this.#onLocalGet[key]) {
+                    for (let i = 0;i < this.#onLocalGet[key].length;i++) {
+                        this.#onLocalGet[key][i](value);
+                    }
                 }
             }
-            for (let i = 0; i < this.#onEvent.length; i++) {
-                this.#onEvent[i]('local', 'get', key, value);
+            else {
+                if (this.#onLocalHas[key]) {
+                    for (let i = 0;i < this.#onLocalHas[key].length;i++) {
+                        this.#onLocalHas[key][i](value);
+                    }
+                }
+
+            }
+            for (let i = 0;i < this.#onEvent.length;i++) {
+                this.#onEvent[i]('local', event, key, value);
             }
         }
         return value;
@@ -257,18 +283,27 @@ class StorageService {
         return this.#findItemKeys('session', query);
     }
             
-    getSessionItem(key) {
+    getSessionItem(key, event) {
         const yojaKey = this.#toYojaItemKey(key);
         const value = this.#parse(sessionStorage.getItem(yojaKey));
         if (value !== undefined) {
-            if (this.#onSessionGet[key]) {
-               for (let i = 0; i < this.#onSessionGet[key].length; i++) {
-                   this.#onSessionGet[key][i](value);
-               }
-           }
-           for (let i = 0; i < this.#onEvent.length; i++) {
-             this.#onEvent[i]('session', 'get', key, value);
-           }
+            if (event === 'get') {
+                if (this.#onSessionGet[key]) {
+                    for (let i = 0;i < this.#onSessionGet[key].length;i++) {
+                        this.#onSessionGet[key][i](value);
+                    }
+                }
+            }
+            else {
+                if (this.#onSessionHas[key]) {
+                    for (let i = 0;i < this.#onSessionHas[key].length;i++) {
+                        this.#onSessionHas[key][i](value);
+                    }
+                }
+            }
+            for (let i = 0;i < this.#onEvent.length;i++) {
+                this.#onEvent[i]('session', event, key, value);
+            }
         }
         return value;
     }
@@ -315,14 +350,16 @@ const storageService = new StorageService();
 /*
  *    EVENT
  */
-// scope : [local | session]
-// method : [get | set | remove]
-// action parameter : value
+// @scope : [local | session]
+// @method : [get | set | has | remove]
+// @parameter action : Function
 export function on(scope, method, key, action) {
     return storageService.on(scope, method, key, action);
 }
 
-// action parameters : scope, method, key, value
+// scope : [local | session]
+// method : [get | set | has | remove | clear]
+// @parameter action : Function(scope, method, ...)
 export function onEvent(action) {
     return storageService.onEvent(action);
 }
@@ -335,11 +372,11 @@ export function getLocalItemKeys(query) {
 }
 
 export function hasLocalItem(key) {
-    return storageService.getLocalItem(key) ? true : false;
+    return storageService.getLocalItem(key, 'has') !== undefined ? true : false;
 }
 
 export function getLocalItem(key) {
-    return storageService.getLocalItem(key);
+    return storageService.getLocalItem(key, 'get');
 }
 
 export function setLocalItem(key, value) {
@@ -362,11 +399,11 @@ export function getSessionItemKeys(query) {
 }
 
 export function hasSessionItem(key) {
-    return storageService.getSessionItem(key) ? true : false;
+    return storageService.getSessionItem(key, 'has') !== undefined ? true : false;
 }
 
 export function getSessionItem(key) {
-    return storageService.getSessionItem(key);
+    return storageService.getSessionItem(key, 'get');
 }
 
 export function setSessionItem(key, value) {

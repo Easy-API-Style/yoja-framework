@@ -34,7 +34,7 @@ public class TestWebSocket {
 
     @TestFactory
     public Stream<DynamicNode> testWebSocket_01() {
-        final AtomicReference<String> message = new AtomicReference<String>();
+        final AtomicReference<String> message = new AtomicReference<>();
         final WebSocket webSocket = new WebSocket("/websocket/test");
         webSocket.onTextMessage(v -> {
             message.set(v.message());
@@ -57,7 +57,7 @@ public class TestWebSocket {
     
     @TestFactory
     public Stream<DynamicNode> testWebSocket_02() {
-        final AtomicReference<String> message = new AtomicReference<String>();
+        final AtomicReference<String> message = new AtomicReference<>();
         
         final WebSocket webSocket = new WebSocket("/websocket/test");
         webSocket.onTextMessage(v -> {
@@ -81,7 +81,7 @@ public class TestWebSocket {
     
     @TestFactory
     public Stream<DynamicNode> testWebSocket_03() {
-        final AtomicReference<String> message = new AtomicReference<String>();
+        final AtomicReference<String> message = new AtomicReference<>();
         
         final WebSocket webSocket = new WebSocket("/websocket/test");
         webSocket.onClose(v -> {
@@ -100,7 +100,7 @@ public class TestWebSocket {
 
     @TestFactory
     public Stream<DynamicNode> testWebSocket_04() {
-        final AtomicReference<String> message = new AtomicReference<String>();
+        final AtomicReference<String> message = new AtomicReference<>();
         
         final WebSocket webSocket = new WebSocket("/websocket/test");
         webSocket.onClose(v -> {
@@ -119,8 +119,8 @@ public class TestWebSocket {
     
     @TestFactory
     public Stream<DynamicNode> testWebSocket_05() {
-        final AtomicReference<String> onOpen = new AtomicReference<String>();
-        final AtomicReference<String> message = new AtomicReference<String>();
+        final AtomicReference<String> onOpen = new AtomicReference<>();
+        final AtomicReference<String> message = new AtomicReference<>();
         final WebSocket webSocket = new WebSocket("/websocket/test");
         webSocket.onOpen(v -> {
             onOpen.set(v.path());
