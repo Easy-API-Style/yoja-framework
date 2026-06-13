@@ -132,9 +132,11 @@
     <ul>
       <li><strong>Zero build toolchain.</strong> Drop a JS file, reload the page.</li>
       <li><strong>Native ES6 modules — no magic.</strong> Standard <code>import</code>, served as-is.</li>
+      <li><strong>Built-in cache busting — no content hashing.</strong> A <code>version</code> declared in <code>YojaWeb.conf.js</code> is appended as <code>?version=…</code> to every imported module, CSS and resource URL. Bump it and browsers re-fetch instead of serving stale files. The config file itself is always loaded uncached (<code>?date=&lt;timestamp&gt;</code>), so a new version takes effect on the very next page load.</li>
       <li><strong>Native Shadow DOM</strong> for CSS scoping (when you want it).</li>
       <li><strong>HTML-first architecture.</strong> Components are declared with attributes (<code>yw-*</code>), hydrated from JS classes.</li>
       <li><strong>Gradual adoption.</strong> Drop yoja-web into an existing page; nothing else has to change.</li>
+      <li><strong>Works well with AI.</strong> Plain standard HTML / CSS / ES6 with no hidden build step, no JSX and no virtual DOM — so AI coding assistants read the project as-is and generate code that runs without a transpilation round-trip.</li>
     </ul>
 
     <h2 id="install">Installation</h2>

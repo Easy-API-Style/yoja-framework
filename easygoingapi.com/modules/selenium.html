@@ -102,6 +102,7 @@
       <li><a href="#service">SeleniumService</a></li>
       <li><a href="#testbuilder">TestBuilder</a></li>
       <li><a href="#context">Test context</a></li>
+      <li><a href="#ywassert">ywAssert</a></li>
       <li><a href="#logs">Logs</a></li>
     </ul>
   </aside>
@@ -181,6 +182,20 @@
           <tr><td><code>DEBUGGER</code></td><td class="desc">Pins all timeouts to 1 hour and opens devtools</td></tr>
         </tbody>
       </table>
+
+      <span class="api-table-group">Browser Mode Debugger</span>
+      <p><code>Browser.Mode.DEBUGGER</code> mode flips three switches at browser-launch time:</p>
+      <table class="api-table">
+        <thead><tr><th>Switch</th><th>Firefox</th><th>Chrome</th><th>Edge</th></tr></thead>
+        <tbody>
+          <tr><td class="desc">DevTools opened on startup</td><td class="desc"><code>-devtools</code> arg</td><td class="desc"><code>--auto-open-devtools-for-tabs</code></td><td class="desc"><code>--auto-open-devtools-for-tabs</code></td></tr>
+          <tr><td class="desc">Window maximized</td><td class="desc">yes (after 1 s warm-up)</td><td class="desc">no (currently disabled)</td><td class="desc">yes (after 2 s warm-up)</td></tr>
+          <tr><td class="desc"><code>scriptTimeout</code><br><code>pageLoadTimeout</code><br><code>implicitlyWait</code></td><td class="desc"><code>Duration.ofHours(1)</code></td><td class="desc">same</td><td class="desc">same</td></tr>
+        </tbody>
+      </table>
+      <p style="text-align: justify">The 1-hour timeouts matter most: without them, pausing at a Java breakpoint for more than the default 10 s would make Selenium abort the in-flight script and break the session. They give you room to inspect state at length without losing the browser context.</p>
+      <p style="text-align: justify"><code>Browser.Mode.DEBUGGER</code> mode does <strong>not</strong> pause on its own — it only prepares the environment. To actually pause, set a Java breakpoint in your IDE on the line of interest, or insert <code>selenium.debugger()</code> / <code>builder.debugger()</code> as a marker; the auto-opened DevTools then let you inspect the live DOM in parallel.</p>
+      <p style="text-align: justify"><strong>Which exception to break on.</strong> <code>debugger()</code> works by throwing — and immediately swallowing — a <code>com.easygoingapi.yoja.selenium.Debugger</code> exception (a <code>RuntimeException</code>). It never propagates, so it can never fail your test; its only purpose is to be a stable target for the IDE. To make <code>debugger()</code> pause, add an <strong>exception breakpoint on <code>com.easygoingapi.yoja.selenium.Debugger</code></strong> (IntelliJ: <em>Run ▸ View Breakpoints ▸ + ▸ Java Exception Breakpoint</em>; Eclipse: <em>Add Java Exception Breakpoint</em>, keep "Caught" since the throw is caught inline) — every <code>debugger()</code> call then suspends the JVM at that throw while the browser stays alive thanks to the 1-hour timeouts.</p>
 
       <span class="api-table-group">Browser.Config (Builder)</span>
       <table class="api-table">
@@ -365,6 +380,16 @@
       </table>
     </div>
 
+    <div class="note">
+      <p>📂 <strong>Runnable examples</strong> — full working tests in <code>yoja-blueprint-kanban</code>:</p>
+      <ul>
+        <li><a target="_blank" rel="noopener" href="https://github.com/Easy-API-Style/yoja-blueprint-kanban/blob/main/src/test/java/yoja/blueprint/kanban/JsUnitDemoTest.java"><code>JsUnitDemoTest.java</code></a> — <code>testJsUnit</code> running named JS exports as individual steps</li>
+        <li><a target="_blank" rel="noopener" href="https://github.com/Easy-API-Style/yoja-blueprint-kanban/blob/main/src/test/java/yoja/blueprint/kanban/TestModuleDemoTest.java"><code>TestModuleDemoTest.java</code></a> — <code>testModule</code> / <code>testAsyncModule</code> / <code>repeatTestModuleUntil</code> against the live demo app</li>
+        <li><a target="_blank" rel="noopener" href="https://github.com/Easy-API-Style/yoja-blueprint-kanban/blob/main/src/test/java/yoja/blueprint/kanban/TaskAppTest.java"><code>TaskAppTest.java</code></a> — full end-to-end UI scenario (login, add / move / delete tasks, task detail)</li>
+      </ul>
+      <p>Browse them all under <a target="_blank" rel="noopener" href="https://github.com/Easy-API-Style/yoja-blueprint-kanban/tree/main/src/test/java/yoja/blueprint/kanban">src/test/java/yoja/blueprint/kanban</a>.</p>
+    </div>
+
     <h2 id="context">Test context</h2>
 
     <div class="api-class">
@@ -411,6 +436,67 @@
           <tr><td><code>build()</code></td><td class="ret"><code>HttpUrl</code></td><td class="desc">Build the full URL pointing at the embedded server</td></tr>
         </tbody>
       </table>
+    </div>
+
+    <h2 id="ywassert">ywAssert</h2>
+
+    <div class="api-class">
+      <h3><code>ywAssert</code> <span class="kind">browser-side assertions</span></h3>
+      <p><code>ywAssert.js</code> injects a small JUnit-style assertion library into the page as the global <code>window.ywAssert</code>. Call it from JS test modules run via <code>testModule</code> / <code>testAsyncModule</code> / <code>testJsUnit</code> — every failed assertion throws a JavaScript <code>Error</code> that Selenium propagates back to Java and surfaces as a failing test step.</p>
+      <p>It is <em>not</em> injected by default. Make it available three equivalent ways:</p>
+<pre><code><span class="c">// 1. as a script option when starting the page</span>
+builder.startYojaWeb(ScriptOption.apply().loadYwAssert());
+<span class="c">// 2. as a dedicated TestBuilder step (before any test that needs it)</span>
+builder.loadYwAssert();
+<span class="c">// 3. on demand from inside a test step</span>
+builder.test(<span class="s">"..."</span>, ctx -&gt; ctx.seleniumService().loadYwAssert());</code></pre>
+
+      <span class="api-table-group">API</span>
+      <table class="api-table">
+        <thead><tr><th>Method</th><th>Throws on failure</th></tr></thead>
+        <tbody>
+          <tr><td><code>fail(error)</code></td><td class="desc">Always throws <code>Error(error)</code></td></tr>
+          <tr><td><code>assertEquals(expected, actual, message?)</code></td><td class="desc">Throws unless <code>JSON.stringify(expected) === JSON.stringify(actual)</code> — deep equality for primitives, plain objects and arrays</td></tr>
+          <tr><td><code>assertArrayEquals(expected, actual, message?)</code></td><td class="desc">Both must be arrays of equal length; each element compared via <code>JSON.stringify</code>; the error names the failing index and dumps both arrays</td></tr>
+          <tr><td><code>assertTrue(value, message?)</code></td><td class="desc">Throws unless <code>value === true</code> (strict identity, not truthiness)</td></tr>
+          <tr><td><code>assertFalse(value, message?)</code></td><td class="desc">Throws unless <code>value === false</code> (strict)</td></tr>
+          <tr><td><code>assertNull(value, message?)</code></td><td class="desc">Throws unless <code>value === null</code></td></tr>
+          <tr><td><code>assertUndefined(value, message?)</code></td><td class="desc">Throws unless <code>value === undefined</code></td></tr>
+          <tr><td><code>assertNotNull(value, message?)</code></td><td class="desc">Throws if <code>value === null</code></td></tr>
+          <tr><td><code>assertNotUndefined(value, message?)</code></td><td class="desc">Throws if <code>value === undefined</code></td></tr>
+        </tbody>
+      </table>
+      <p>The optional <code>message</code> is prepended to the error with <code>" -&gt; "</code> for context.</p>
+
+      <span class="api-table-group">Behavior notes</span>
+      <table class="api-table">
+        <thead><tr><th>Note</th><th>Detail</th></tr></thead>
+        <tbody>
+          <tr><td class="desc">Strict equality only</td><td class="desc"><code>assertTrue</code> / <code>assertFalse</code> use <code>===</code>, not truthiness — <code>assertTrue(1)</code> <strong>fails</strong>; only the literal <code>true</code> passes. Same for the <code>null</code> / <code>undefined</code> checks.</td></tr>
+          <tr><td class="desc"><code>JSON.stringify</code> deep equality</td><td class="desc">Object key order matters (<code>{a:1,b:2}</code> ≠ <code>{b:2,a:1}</code>). Values that don't survive JSON (<code>undefined</code>, functions, <code>Date</code>, <code>Map</code>, <code>Set</code>, <code>Symbol</code>) are compared as their JSON form — convert them yourself first if precision matters.</td></tr>
+          <tr><td class="desc">Failure propagation</td><td class="desc">Each failure throws a plain <code>Error</code>. From an async module, catch it and forward via <code>reject(error.message)</code> so Selenium lifts it into a Java <code>SeleniumException</code> on the right step.</td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Example — async test module</span>
+<pre><code><span class="c">// /test/checkUserList.js</span>
+<span class="k">export default async function</span>(args, resolve, reject) {
+    <span class="k">try</span> {
+        <span class="k">const</span> res   = <span class="k">await</span> fetch(<span class="s">'/api/users'</span>)
+        <span class="k">const</span> users = <span class="k">await</span> res.json()
+
+        ywAssert.assertEquals(<span class="n">200</span>, res.status, <span class="s">'wrong HTTP status'</span>)
+        ywAssert.assertTrue(Array.isArray(users), <span class="s">'response should be an array'</span>)
+        ywAssert.assertArrayEquals(
+            [{ id: <span class="n">1</span>, name: <span class="s">'Alice'</span> }, { id: <span class="n">2</span>, name: <span class="s">'Bob'</span> }],
+            users,
+            <span class="s">'user list payload'</span>)
+        resolve()
+    }
+    <span class="k">catch</span> (e) {
+        reject(e.message)
+    }
+}</code></pre>
     </div>
 
     <h2 id="logs">Logs</h2>

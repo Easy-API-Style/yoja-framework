@@ -646,27 +646,27 @@ pre .a { color: #93c5fd; }
 }
 .api-members .api-group-label {
   font-family: var(--font-sans);
-  font-size: 0.68rem;
+  font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.09em;
   font-weight: 700;
-  color: var(--fg-muted);
-  padding: .9rem 0 .2rem;
-  border-bottom: 1px solid var(--border-soft);
+  color: var(--accent-strong);
+  padding: 1rem 0 .25rem;
+  border-bottom: 1px solid var(--border);
   margin-bottom: .15rem;
 }
 
 /* ---------- api table ---------- */
 .api-table-group {
   font-family: var(--font-sans);
-  font-size: 0.68rem;
+  font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.09em;
   font-weight: 700;
-  color: var(--fg-muted);
+  color: var(--accent-strong);
   display: block;
-  padding: 1rem 0 .3rem;
-  border-bottom: 1px solid var(--border-soft);
+  padding: 1.1rem 0 .35rem;
+  border-bottom: 1px solid var(--border);
   margin-bottom: .1rem;
 }
 .api-table-group:first-child { padding-top: .25rem; }
@@ -704,7 +704,7 @@ pre .a { color: #93c5fd; }
 }
 .api-table td.ret { white-space: nowrap; }
 .api-table td.ret code {
-  color: var(--accent-strong);
+  color: color-mix(in srgb, var(--accent) 70%, white);
   font-size: 0.82rem;
 }
 .api-table td.desc { color: var(--fg-muted); }
