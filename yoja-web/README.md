@@ -106,23 +106,28 @@ Include the framework script in your HTML. Point `yw-config-path` at a config fi
   - [yw-slot](#yw-slot)
   - [yw-include](#yw-include)
 - [yojaWeb — Global API](#yojaweb-global-api)
-- [yojaWebApi — Services Aggregator](#yojawebapi-services-aggregator)
+  - [Tag queries (crosses shadow DOM)](#tag-queries-crosses-shadow-dom)
+  - [Section tag queries (shallow)](#section-tag-queries-shallow--stops-at-section-boundaries)
+  - [Path resolution](#path-resolution)
+  - [Dynamic append](#dynamic-append)
+  - [Dynamic prepend](#dynamic-prepend)
+  - [Lifecycle & errors](#lifecycle--errors)
 - [Section — Component Lifecycle](#section-component-lifecycle)
   - [Tag Query Methods](#tag-query-methods)
   - [Section Navigation](#section-navigation)
   - [Controller Navigation](#controller-navigation)
   - [Lifecycle Hooks](#lifecycle-hooks)
   - [Logging](#logging)
-- [navigationService](#navigationservice)
-- [eventService](#eventservice)
-- [httpClient](#httpclient)
-- [storageService](#storageservice)
-- [webSocketService](#websocketservice)
-- [responsiveService](#responsiveservice)
-- [languageService](#languageservice)
-- [urlParameterService](#urlparameterservice)
-- [cssSheetService](#csssheetservice)
-- [Full Example](#full-example)
+- [yojaWebApi — Services Aggregator](#yojawebapi-services-aggregator)
+  - [navigationService](#navigationservice)
+  - [eventService](#eventservice)
+  - [httpClient](#httpclient)
+  - [storageService](#storageservice)
+  - [webSocketService](#websocketservice)
+  - [responsiveService](#responsiveservice)
+  - [languageService](#languageservice)
+  - [urlParameterService](#urlparameterservice)
+  - [cssSheetService](#csssheetservice)
 - [CSS and Shadow DOM](#css-and-shadow-dom)
   - [How it works](#how-it-works)
   - [Section-scoped CSS](#section-scoped-css)
@@ -132,6 +137,8 @@ Include the framework script in your HTML. Point `yw-config-path` at a config fi
   - [Media queries in CSS](#media-queries-in-css)
   - [section.shadowTag](#section-shadowtag)
   - [Debugging CSS](#debugging-css)
+- [Full Example](#full-example)
+- [Dependencies](#dependencies)
 
 ---
 
@@ -378,52 +385,52 @@ const fresh = window.yojaWeb.path('./data.json', { force: true });
 const api = window.yojaWeb.path('./lib.js', { apiVersion: true });
 ```
 
-#### Why you must wrap relative paths in `import.meta.resolve(...)`
+#### ⚠️ Why you must wrap relative paths in `import.meta.resolve(...)`
 
-Two worlds coexist for path resolution in yoja-web:
-
-**1. HTML directives — the framework anchors for you.**
-For `yw-controler`, `yw-css`, `yw-language`, `yw-include`, `yw-slot`, the framework parses the HTML, so it knows which file declared the directive. Internally it calls `formatPathFrom(path, fromPath)` to anchor the relative path against the **parent file's URL**. You write `./HeaderControler.js` next to `header.html` and it Just Works regardless of the document URL.
-
-**2. JS-call APIs — the framework only sees a string.**
-`yojaWeb.append`, `yojaWeb.prepend`, `httpClient.get/post/...` receive a path argument with no way to recover the calling module. They need an already-absolute URL.
-
-**The browser trap.** These APIs ultimately call `fetch()`. `fetch('./foo')` resolves `./foo` against `document.baseURI` — the **document URL**, not the URL of the JS module that made the call. A controller at `/sections/foo/FooControler.js` calling `fetch('./bar')` while the page sits at `/dashboard` ends up hitting `/bar`, never `/sections/foo/bar`. The same trap applies to `new URL('./foo')` (without a `base` argument) and `new Worker('./foo.js')`.
-
+> Two worlds coexist for path resolution in yoja-web:
+>
+> **1. HTML directives — the framework anchors for you.**
+> For `yw-controler`, `yw-css`, `yw-language`, `yw-include`, `yw-slot`, the framework parses the HTML, so it knows which file declared the directive. Internally it calls `formatPathFrom(path, fromPath)` to anchor the relative path against the **parent file's URL**. You write `./HeaderControler.js` next to `header.html` and it Just Works regardless of the document URL.
+>
+> **2. JS-call APIs — the framework only sees a string.**
+> `yojaWeb.append`, `yojaWeb.prepend`, `httpClient.get/post/...` receive a path argument with no way to recover the calling module. They need an already-absolute URL.
+>
+> **The browser trap.** These APIs ultimately call `fetch()`. `fetch('./foo')` resolves `./foo` against `document.baseURI` — the **document URL**, not the URL of the JS module that made the call. A controller at `/sections/foo/FooControler.js` calling `fetch('./bar')` while the page sits at `/dashboard` ends up hitting `/bar`, never `/sections/foo/bar`. The same trap applies to `new URL('./foo')` (without a `base` argument) and `new Worker('./foo.js')`.
+>
 > **Not affected:** `import('./foo.js')` — both static and dynamic — resolves against the importing module's URL by spec, so no wrapping is needed for ES module imports.
-
-**`import.meta.resolve(spec)` is the standard ESM escape hatch.** Every ES module exposes its own URL via `import.meta.url`, and `import.meta.resolve(spec)` returns an absolute URL by resolving `spec` against that URL — anchored to the **module that wrote the call**, which is exactly what you want.
-
-**Recommended pattern** for any relative path passed to a yojaWeb JS API:
-
-```js
-// In ./sections/foo/FooControler.js
-yojaWeb.prepend(
-    target,
-    import.meta.resolve(yojaWeb.path('./bar.html'))
-);
-//   ^^^^^^^^^^^^^^^^^^                    
-//   anchors to FooControler.js    
-//                      ^^^^^^^^^^^^^        
-//                      adds ?version=…
-```
-
-The two helpers compose: `yojaWeb.path` adds the cache-busting query string (it does **not** anchor), then `import.meta.resolve` anchors the result to the calling module. Order matters — `path` first, `import.meta.resolve` outermost.
-
-**Where to apply it** — any yojaWeb JS API that takes a path string and bottoms out in `fetch`:
-- `yojaWeb.append(tag, path)`
-- `yojaWeb.prepend(tag, path)`
-- `httpClient.get({url: path, ...})` and the other HTTP verbs
-- any helper of yours that ends up in `fetch` / `XHR` / `new URL`
-
-**Where it is unnecessary:**
-- absolute paths (`'/partials/foo.html'`) or full URLs
-- HTML directives — the framework anchors for you
-- `import('./foo.js')` (static or dynamic) — module-relative by spec
-
-**See it in action** in `yoja-blueprint-kanban`:
-- [`indexControler.js`](../yoja-blueprint-kanban/src/main/webapp/com/easygoingapi/yoja/example/webapp/indexControler.js) — wraps `yojaWeb.path('./sections/header/header.html')` for a `prepend` call.
-- [`LoginControler.js`](../yoja-blueprint-kanban/src/main/webapp/com/easygoingapi/yoja/example/webapp/sections/login/LoginControler.js) — wraps `yojaWeb.path('./login.xml')` for a language-file load.
+>
+> **`import.meta.resolve(spec)` is the standard ESM escape hatch.** Every ES module exposes its own URL via `import.meta.url`, and `import.meta.resolve(spec)` returns an absolute URL by resolving `spec` against that URL — anchored to the **module that wrote the call**, which is exactly what you want.
+>
+> **Recommended pattern** for any relative path passed to a yojaWeb JS API:
+>
+> ```js
+> // In ./sections/foo/FooControler.js
+> yojaWeb.prepend(
+>     target,
+>     import.meta.resolve(yojaWeb.path('./bar.html'))
+> );
+> //   ^^^^^^^^^^^^^^^^^^                    
+> //   anchors to FooControler.js    
+> //                      ^^^^^^^^^^^^^        
+> //                      adds ?version=…
+> ```
+>
+> The two helpers compose: `yojaWeb.path` adds the cache-busting query string (it does **not** anchor), then `import.meta.resolve` anchors the result to the calling module. Order matters — `path` first, `import.meta.resolve` outermost.
+>
+> **Where to apply it** — any yojaWeb JS API that takes a path string and bottoms out in `fetch`:
+> - `yojaWeb.append(tag, path)`
+> - `yojaWeb.prepend(tag, path)`
+> - `httpClient.get({url: path, ...})` and the other HTTP verbs
+> - any helper of yours that ends up in `fetch` / `XHR` / `new URL`
+>
+> **Where it is unnecessary:**
+> - absolute paths (`'/partials/foo.html'`) or full URLs
+> - HTML directives — the framework anchors for you
+> - `import('./foo.js')` (static or dynamic) — module-relative by spec
+>
+> **See it in action** in `yoja-blueprint-kanban`:
+> - [`indexControler.js`](../yoja-blueprint-kanban/src/main/webapp/com/easygoingapi/yoja/example/webapp/indexControler.js) — wraps `yojaWeb.path('./sections/header/header.html')` for a `prepend` call.
+> - [`LoginControler.js`](../yoja-blueprint-kanban/src/main/webapp/com/easygoingapi/yoja/example/webapp/sections/login/LoginControler.js) — wraps `yojaWeb.path('./login.xml')` for a language-file load.
 
 ### Dynamic append
 
@@ -472,30 +479,6 @@ window.yojaWeb.onError(error => {
     console.error('yoja error', error);
 });
 ```
-
----
-
-## yojaWebApi: Services Aggregator
-
-`window.yojaWebApi` groups all services for convenience.
-
-```js
-const {
-    sectionService,
-    controlerService,
-    eventService,
-    httpClient,
-    languageService,
-    navigationService,
-    responsiveService,
-    storageService,
-    urlParameterService,
-    webSocketService,
-    cssSheetService
-} = window.yojaWebApi;
-```
-
-Each service is also available as a named ES6 module import within controllers.
 
 ---
 
@@ -716,7 +699,29 @@ section.logCss();
 
 ---
 
-## navigationService
+## yojaWebApi: Services Aggregator
+
+`window.yojaWebApi` groups all services for convenience.
+
+```js
+const {
+    sectionService,
+    controlerService,
+    eventService,
+    httpClient,
+    languageService,
+    navigationService,
+    responsiveService,
+    storageService,
+    urlParameterService,
+    webSocketService,
+    cssSheetService
+} = window.yojaWebApi;
+```
+
+Each service is also available as a named ES6 module import within controllers.
+
+### navigationService
 
 Page navigation and URL introspection.
 
@@ -748,7 +753,7 @@ nav.urlParameter('tab'); // → "settings"
 
 ---
 
-## eventService
+### eventService
 
 Pub/sub event system with query-based filtering.
 
@@ -756,7 +761,7 @@ Pub/sub event system with query-based filtering.
 const events = window.yojaWebApi.eventService;
 ```
 
-### Subscribe
+#### Subscribe
 
 ```js
 // Listen for an exact event name
@@ -776,13 +781,13 @@ events.on({ startsWith: 'cart:' }, data => {
 // Query operators: startsWith, endsWith, contains, equals, matches (RegExp)
 ```
 
-### Publish
+#### Publish
 
 ```js
 events.trigger('user:login', { userId: 42 });
 ```
 
-### Manage listeners
+#### Manage listeners
 
 ```js
 // Pause (suppress) all triggers for an event
@@ -807,7 +812,7 @@ events.countAction('user:login'); // action count for one event
 
 ---
 
-## httpClient
+### httpClient
 
 `fetch` wrapper with automatic content-type detection, offline mode, and request/response interceptors.
 
@@ -815,7 +820,7 @@ events.countAction('user:login'); // action count for one event
 const http = window.yojaWebApi.httpClient;
 ```
 
-### GET
+#### GET
 
 ```js
 // Simple GET — returns { status, body, headers }
@@ -828,7 +833,7 @@ if (res.status === 200) {
 const res = await http.get({ url: '/api/users', parameters: { page: 1, size: 20 } });
 ```
 
-### `fetchAs` — force response parsing mode
+#### `fetchAs` — force response parsing mode
 
 By default the response body is parsed according to the `Content-Type` header returned by the server. Use `fetchAs` to override this and force a specific parsing mode regardless of the server's header.
 
@@ -875,7 +880,7 @@ const res = await http.post({ url: '/api/render', fetchAs: 'text' }, { template:
 console.log(res.body); // raw HTML string
 ```
 
-### POST
+#### POST
 
 The body is passed as the **second argument**, separate from the request object.
 
@@ -884,7 +889,7 @@ The body is passed as the **second argument**, separate from the request object.
 const res = await http.post({ url: '/api/users' }, { name: 'Alice' });
 ```
 
-#### Automatic `Content-Type` detection
+##### Automatic `Content-Type` detection
 
 When `contentType` is not specified, the body type is inferred automatically before sending:
 
@@ -909,7 +914,7 @@ await http.post({ url: '/api/log' }, 'plain text message');
 await http.post({ url: '/api/upload' }, new Blob([data]));
 ```
 
-#### `contentType` — override the request Content-Type
+##### `contentType` — override the request Content-Type
 
 Add `contentType` to the request object to force a specific MIME type instead of the auto-detected one. The body is still serialised with `JSON.stringify` (or kept as-is for `Blob`).
 
@@ -926,7 +931,7 @@ await http.post(
 );
 ```
 
-### load / fetch
+#### load / fetch
 
 ```js
 // load — always fetches as text, returns body string directly
@@ -936,7 +941,7 @@ const html = await http.load('/partials/card.html');
 const response = await http.fetch('/api/data');
 ```
 
-### Interceptors
+#### Interceptors
 
 ```js
 // Modify every outgoing request
@@ -953,7 +958,7 @@ http.onResponse((request, response) => {
 });
 ```
 
-### Offline handling
+#### Offline handling
 
 When the browser is offline all requests immediately return `{ status: 470 }` without hitting the network.
 
@@ -966,7 +971,7 @@ http.onOnline(() => console.log('back online'));
 http.onOffline(() => console.warn('gone offline'));
 ```
 
-### Custom content types
+#### Custom content types
 
 `addContentTypes` extends the mapping from response `Content-Type` header to `fetchAs` parsing mode. It accepts an object with up to four arrays of MIME type strings:
 
@@ -1004,15 +1009,31 @@ Default mappings (always active):
 
 ---
 
-## storageService
+### storageService
 
-Typed `localStorage` / `sessionStorage` wrapper with change events. All keys are namespaced with the prefix `yojaWebItemKey__`.
+Typed `localStorage` / `sessionStorage` wrapper with change events. Item keys are namespaced with the prefix `yojaWebItemKey__`; the per-scope index of keys is kept under `yojaWebItemKeys__local` / `yojaWebItemKeys__session`.
 
 ```js
 const storage = window.yojaWebApi.storageService;
 ```
 
-### Local storage
+#### Storable values
+
+Values are JSON-serialized with a small type tag, so the stored type is restored on read:
+
+| Stored value | Restored as |
+| --- | --- |
+| `Date` | a `Date` instance (revived from ISO) |
+| plain object / array | the same structure (deep, JSON copy) |
+| primitive — `string` / `number` / `boolean` / `null` | the same primitive |
+| `undefined` | stored as `null` |
+
+Caveats — values must be JSON-serializable:
+
+- Non-serializable values (`function`, `Map`, `Set`, `Symbol`, class instances) are dropped or flattened to `{}` by `JSON.stringify`.
+- A `Date` is only revived when it is the **top-level** value. A `Date` nested inside an object/array comes back as its ISO **string**, not a `Date`.
+
+#### Local storage
 
 ```js
 storage.setLocalItem('theme', 'dark');
@@ -1023,7 +1044,7 @@ storage.getLocalItemKeys();    // → ["theme", ...]
 storage.hasLocalItem('theme'); // → false
 ```
 
-### Session storage
+#### Session storage
 
 ```js
 storage.setSessionItem('token', 'eyJ...');
@@ -1034,28 +1055,35 @@ storage.getSessionItemKeys();
 storage.hasSessionItem('token');
 ```
 
-### Change events
+#### Change events
+
+Two subscription styles. `on(...)` targets one `scope` + `method` + `key`; the callback receives **only the value**. The recognised methods are `get`, `set`, `has`, `remove`.
 
 ```js
-// Listen to a specific key in local or session storage
-storage.on('local', 'set', 'theme', ({ key, value }) => {
+// scope: 'local' | 'session' ; method: 'get' | 'set' | 'has' | 'remove'
+storage.on('local', 'set', 'theme', value => {
     console.log('theme changed to', value);
 });
 
-// Methods: 'set', 'remove', 'clear'
-storage.on('session', 'remove', 'token', () => {
-    console.log('token removed');
-});
-
-// Listen to any storage event
-storage.onEvent(event => {
-    console.log(event.scope, event.method, event.key, event.value);
+storage.on('session', 'remove', 'token', value => {
+    console.log('token removed, was', value);
 });
 ```
 
+`onEvent(...)` is a global listener fired for every change. The callback receives **positional arguments** `(scope, method, key, value)` — not an object. Methods seen here also include `clear`.
+
+```js
+storage.onEvent((scope, method, key, value) => {
+    console.log(scope, method, key, value);
+    // e.g. 'local' 'set' 'theme' 'dark'
+});
+```
+
+> `clear` (from `clearLocal()` / `clearSession()`) is delivered to `onEvent` as `(scope, 'clear')` only — `key` and `value` are `undefined`. `clear` is **not** a valid `method` for the per-key `on(...)`, and clearing does not fire per-key `remove` handlers.
+
 ---
 
-## webSocketService
+### webSocketService
 
 WebSocket wrapper with state management and event hooks.
 
@@ -1099,7 +1127,7 @@ Connection timeout is 5 seconds. If the server does not respond within that wind
 
 ---
 
-## responsiveService
+### responsiveService
 
 Media-query breakpoints and resize callbacks. Breakpoints are configured via `mediaDescriptions` in the config file pointed to by `yw-config-path`. Each entry has a `name` and an optional `maxWidth` (pixels). The last entry without `maxWidth` matches everything above the previous breakpoint.
 
@@ -1129,7 +1157,7 @@ responsive.onResize(event => {
 });
 ```
 
-### Example in a controller
+#### Example in a controller
 
 ```js
 export default class AppControler {
@@ -1152,7 +1180,7 @@ export default class AppControler {
 
 ---
 
-## languageService
+### languageService
 
 Internationalisation with XML translation files and `yw-i18n` HTML attributes.
 
@@ -1160,7 +1188,7 @@ Internationalisation with XML translation files and `yw-i18n` HTML attributes.
 const lang = window.yojaWebApi.languageService;
 ```
 
-### HTML attributes
+#### HTML attributes
 
 ```html
 <!-- Translate element text content -->
@@ -1171,7 +1199,7 @@ const lang = window.yojaWebApi.languageService;
 <img  yw-i18n-alt="image.description" />
 ```
 
-### XML translation file
+#### XML translation file
 
 ```xml
 <!-- en/messages.xml -->
@@ -1182,7 +1210,7 @@ const lang = window.yojaWebApi.languageService;
 </messages>
 ```
 
-### API
+#### API
 
 ```js
 // Change the active language
@@ -1216,69 +1244,101 @@ lang.log();
 
 ---
 
-## urlParameterService
+### urlParameterService
 
-URL query parameter management backed by the browser History API.
+URL query parameter management backed by the browser History API. Mutations
+(`set` / `append` / `remove` / `clear` / `setHash`) update an **in-memory** model;
+the URL itself only changes when you call `push()` or `replace()`.
 
 ```js
 const params = window.yojaWebApi.urlParameterService;
 ```
 
-### Read
+#### Read
 
 ```js
 params.has('tab');             // → true
-params.keys();                 // → ["tab", "page"]
+params.has('tag', 'java');     // → true (key + specific value)
+params.keys();                 // → ["tab", "tag"]
 params.get('tab');             // → "settings"
 params.getAll('tag');          // → ["java", "vertx"]
-params.entries();              // → [["tab", "settings"], ["tag", "java"], ...]
+params.entries();              // → [{key: "tab", value: "settings"}, {key: "tag", value: "java"}, ...]
 params.toUrlQuery();           // → "tab=settings&tag=java"
-params.currentUrlParameter();  // → URLSearchParams instance
+params.currentUrlParameter();  // → UrlParameter (fresh snapshot from the live URL)
 ```
 
-### Write
+#### Write (in-memory until push/replace)
 
 ```js
-// Set a parameter (replaces existing)
-params.set('tab', 'profile');
-
-// Append without replacing
-params.append('tag', 'gradle');
-
-// Remove a parameter
-params.remove('tab');
-
-// Clear all parameters
-params.clear();
+params.set('tab', 'profile');    // set — replaces existing values for the key
+params.append('tag', 'gradle');  // add — keeps existing values
+params.remove('tab');            // remove a key (or remove(key, value) for one value)
+params.clear();                  // remove all params (also clears the hash)
 ```
 
-### History control
+#### Hash (fragment)
 
 ```js
-// Replace current history entry (no new back entry)
-params.replace();
-
-// Push a new history entry
-params.push();
-
-// Get or set the history state object
-params.state({ from: 'search' });
+params.setHash('section-2');     // stored without the leading '#'
+params.getHash();                // → "section-2"   (in-memory value)
+params.currentUrlHash();         // → cleaned live window.location.hash
+params.removeHash();             // clear the stored hash
 ```
 
-### Change events
+#### History control
 
 ```js
-params.onChange(updatedParams => {
-    console.log('params changed:', updatedParams.toUrlQuery());
+// Commit the in-memory params + hash to the URL:
+params.replace();                // replace the current history entry (no new back step)
+params.push();                   // push a new history entry
+
+// Attach a state payload, retrievable later via state():
+params.push({ from: 'search' });
+params.state();                  // → current window.history.state (getter, no argument)
+
+// Native navigation:
+params.back();
+params.forward();
+params.go(-2);                   // integer delta only; non-integers are ignored
+```
+
+#### Change events
+
+`onChange` fires with an **event object** describing what happened. Returning
+`false` from a `before-*` event **cancels** the operation (navigation guard).
+
+```js
+params.onChange(event => {
+    switch (event.event) {
+        case 'set':
+        case 'append':
+        case 'remove':
+            console.log('param changed:', params.toUrlQuery());
+            break;
+        case 'before-push':
+            if (!allowed) return false;   // veto the push
+            break;
+        case 'pop':                       // browser back / forward
+            console.log('navigated:', params.toUrlQuery());
+            break;
+    }
 });
 
-// Check if params were updated since last check
-params.isUpdated(); // → true / false
+// → true when the live URL is in sync with the in-memory params + hash
+//   (i.e. nothing left to push/replace)
+params.isUpdated();
+```
+
+Possible `event.event` values:
+
+```
+clear | append | set | remove | set-hash | remove-hash
+  | before-replace | after-replace | before-push | after-push | pop | load
 ```
 
 ---
 
-## cssSheetService
+### cssSheetService
 
 Inspect and update CSS custom properties (`--var`) across all section adopted stylesheets.
 
@@ -1304,16 +1364,6 @@ css.walkCssRule(rule => {
     console.log(rule.cssText);
 });
 ```
-
----
-
-## Full Example
-
-The [`yoja-blueprint-kanban`](https://github.com/Easy-API-Style/yoja-blueprint-kanban) module is a complete task management application built with yoja-web and yoja-http-server. It demonstrates the full stack in one project: authentication, WebSocket real-time updates, URL parameter navigation, i18n, responsive layout, and end-to-end Selenium tests.
-
-It is the recommended starting point to understand how all the pieces fit together in a real application.
-
----
 
 ## CSS and Shadow DOM
 
@@ -1520,6 +1570,14 @@ section.logCss();
 ```
 
 `section.logCss()` is especially useful for diagnosing why a style is not applied — it lists the active `adoptedStyleSheets` in the shadow root, their origin (own file or inherited), and any associated media queries.
+
+---
+
+## Full Example
+
+The [`yoja-blueprint-kanban`](https://github.com/Easy-API-Style/yoja-blueprint-kanban) module is a complete task management application built with yoja-web and yoja-http-server. It demonstrates the full stack in one project: authentication, WebSocket real-time updates, URL parameter navigation, i18n, responsive layout, and end-to-end Selenium tests.
+
+It is the recommended starting point to understand how all the pieces fit together in a real application.
 
 ---
 
