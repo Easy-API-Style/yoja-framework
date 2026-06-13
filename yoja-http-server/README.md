@@ -2,10 +2,10 @@
 
 [![Website](https://img.shields.io/badge/website-easygoingapi.com%2Fyoja--http--server-blue)](https://easygoingapi.com/modules/http-server.html) [![Email](https://img.shields.io/badge/email-easy.api.contact%40gmail.com-red)](mailto:easy.api.contact@gmail.com)
 
-[![Release](https://img.shields.io/badge/release-1.0.0-brightgreen)](https://github.com/Easy-API-Style/yoja-framework/releases/tag/1.0.0)
+[![Release](https://img.shields.io/badge/release-1.0.1-brightgreen)](https://github.com/Easy-API-Style/yoja-framework/releases/tag/1.0.1)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green)](https://github.com/Easy-API-Style/yoja-framework/blob/main/LICENSE)
 [![Java](https://img.shields.io/badge/java-25-orange)](https://openjdk.org/projects/jdk/25/)
-[![Maven Central](https://img.shields.io/badge/maven--central-com.easygoingapi%3Ayoja--http--server%3A1.0.0-blue)](https://central.sonatype.com/artifact/com.easygoingapi/yoja-http-server/1.0.0)
+[![Maven Central](https://img.shields.io/badge/maven--central-com.easygoingapi%3Ayoja--http--server%3A1.0.1-blue)](https://central.sonatype.com/artifact/com.easygoingapi/yoja-http-server/1.0.1)
 
 HTTP server module of the Yoja Framework. Provides a declarative API to build REST services, serve static web resources, manage sessions, and handle WebSocket connections — built on top of [Vert.x Web](https://vertx.io/docs/vertx-web/java/).
 

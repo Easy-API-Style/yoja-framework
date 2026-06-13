@@ -2,7 +2,7 @@
 
 [![Website](https://img.shields.io/badge/website-easygoingapi.com-blue)](https://easygoingapi.com/) [![Email](https://img.shields.io/badge/email-easy.api.contact%40gmail.com-red)](mailto:easy.api.contact@gmail.com)
 
-[![Release](https://img.shields.io/badge/release-1.0.0-brightgreen)](https://github.com/Easy-API-Style/yoja-framework/releases/tag/1.0.0)
+[![Release](https://img.shields.io/badge/release-1.0.1-brightgreen)](https://github.com/Easy-API-Style/yoja-framework/releases/tag/1.0.1)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green)](https://github.com/Easy-API-Style/yoja-framework/blob/main/LICENSE)
 [![Java](https://img.shields.io/badge/java-25-orange)](https://openjdk.org/projects/jdk/25/)
 
