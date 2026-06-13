@@ -90,7 +90,7 @@ Include the framework script in your HTML. Point `yw-config-path` at a config fi
 
 ```html
 <script type="module"
-        src="/com/easygoingapi/yoja/web/YojaWeb-1.0.0.js"
+        src="/com/easygoingapi/yoja/web/YojaWeb.js"
         yw-config-path="/YojaWeb.conf.js"></script>
 ```
 
@@ -148,7 +148,7 @@ The config file is declared via the `yw-config-path` attribute on the `<script>`
 
 ```html
 <script type="module"
-        src="/com/easygoingapi/yoja/web/YojaWeb-1.0.0.js"
+        src="/com/easygoingapi/yoja/web/YojaWeb.js"
         yw-config-path="/YojaWeb.conf.js"></script>
 ```
 
@@ -501,7 +501,7 @@ export default class MyControler {
 
 ### Where the class lives and what it's for
 
-The class is defined in [`YojaWeb-1.0.0.js`](src/main/webapp/com/easygoingapi/yoja/web/YojaWeb-1.0.0.js) (search for `class Section`). It is **not exported** as a public symbol — you never construct one yourself. The framework instantiates a `Section` for every DOM element that carries at least one section-creating directive (`yw-controler`, `yw-css`, `yw-language`, or `yw-slot`), and hands it to your controller's constructor as the single argument.
+The class is defined in [`YojaWeb.js`](src/main/webapp/com/easygoingapi/yoja/web/YojaWeb.js) (search for `class Section`). It is **not exported** as a public symbol — you never construct one yourself. The framework instantiates a `Section` for every DOM element that carries at least one section-creating directive (`yw-controler`, `yw-css`, `yw-language`, or `yw-slot`), and hands it to your controller's constructor as the single argument.
 
 A `Section` is the runtime façade of a component:
 

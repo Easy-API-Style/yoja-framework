@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 'use strict'
+const apiVersion = '1.0.1';
+console.info('yojaWeb apiVersion: ', apiVersion);
 const scriptTag = [...document.querySelectorAll('script[type="module"]')]
                        .find(s => s.src && new URL(s.src).href === import.meta.url);
-
-const apiVersion = '1.0.0';
 
 const sectionDescriptions = [];
 

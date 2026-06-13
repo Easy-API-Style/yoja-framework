@@ -202,7 +202,7 @@ builder.startYojaWeb(ScriptOption.apply()
                                  .loadYwAssert());
 ```
 
-The built-in page loads `YojaWeb-1.0.0.js` with `yw-config-path="/YojaWeb.conf.js"`. To configure yoja-web in tests, serve a `/YojaWeb.conf.js` file from the embedded server:
+The built-in page loads `YojaWeb.js` with `yw-config-path="/YojaWeb.conf.js"`. To configure yoja-web in tests, serve a `/YojaWeb.conf.js` file from the embedded server:
 
 ```java
 builder.webService(new WebService(HttpMethod.GET, 

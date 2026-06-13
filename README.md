@@ -229,7 +229,7 @@ In your `webapp/index.html`, include the `yoja-web` script and declare your firs
     <meta http-equiv="encoding" content="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
 
-    <script type="module" src="/com/easygoingapi/yoja/web/YojaWeb-1.0.0.js"></script>
+    <script type="module" src="/com/easygoingapi/yoja/web/YojaWeb.js"></script>
 </head>
 <body>
     <div yw-controler="./sections/UserList/UserListControler.js"
