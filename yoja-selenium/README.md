@@ -22,6 +22,10 @@ dependencies {
 ## Table of Contents
 
 - [Quick Start](#quick-start)
+  - [JUnit 6 — `@TestFactory`](#junit-6--testfactory)
+  - [Standalone execution (no JUnit)](#standalone-execution-no-junit)
+- [BrowserConfig](#browserconfig)
+- [Browser Mode Debugger](#browser-mode-debugger)
 - [TestBuilder — Fluent Test Runner](#testbuilder-fluent-test-runner)
   - [Browser configuration](#browser-configuration)
   - [Serving pages and resources](#serving-pages-and-resources)
@@ -32,7 +36,7 @@ dependencies {
   - [Utility steps](#utility-steps)
   - [WebSocket support](#websocket-support)
   - [Execution modes](#execution-modes)
-- [TestContext — In-test API](#testcontext-in-test-api)
+- [TestContext](#testcontext)
 - [SeleniumService — Browser Control](#seleniumservice-browser-control)
   - [JavaScript execution](#javascript-execution)
   - [DOM querying](#dom-querying)
@@ -40,12 +44,18 @@ dependencies {
   - [Browser storage](#browser-storage)
   - [Browser logs](#browser-logs)
   - [Utilities](#utilities)
-- [Browser and BrowserConfig](#browser-and-browserconfig)
 - [ScriptOption](#scriptoption)
 - [ywAssert — Browser-side Assertions](#ywassert-browser-side-assertions)
+  - [Loading](#loading)
+  - [API](#api)
+  - [Behavior notes](#behavior-notes)
+  - [Example — async test module](#example--async-test-module)
 - [Log](#log)
-- [HttpServerContext and HttpUrlBuilder](#httpservercontext-and-httpurlbuilder)
+- [HttpServerContext](#httpservercontext)
+- [HttpUrlBuilder](#httpurlbuilder)
 - [SeleniumException](#seleniumexception)
+- [Full Example](#full-example)
+- [Dependencies](#dependencies)
 
 ---
 
@@ -81,6 +91,71 @@ TestBuilder.builder()
            })
            .execute();
 ```
+
+---
+
+## BrowserConfig
+
+Configure which browser to use and how to launch it.
+
+```java
+Browser.Config config = Browser.builder(Browser.FIREFOX)   // FIREFOX | CHROME | EDGE
+    .mode(Browser.Mode.HEADLESS)                            // see table below
+    .timeout(Duration.ofSeconds(10))                        // default: 10s
+    .build();
+```
+
+**Available browsers:**
+
+| `Browser` | Driver |
+|---|---|
+| `FIREFOX` | `FirefoxDriver` |
+| `CHROME` | `ChromeDriver` |
+| `EDGE` | `EdgeDriver` |
+
+**Launch modes:**
+
+| `Browser.Mode` | Effect |
+|---|---|
+| `HEADFUL` | Opens a visible browser window *(default)* |
+| `HEADLESS` | Runs without a visible window (CI-friendly) |
+| `DEBUGGER` | Visible window with DevTools auto-opened, maximized (Firefox / Edge), and Selenium timeouts stretched to **1 hour** |
+
+```java
+// Typical CI setup
+Browser.Config ci = Browser.builder(Browser.CHROME)
+    .mode(Browser.Mode.HEADLESS)
+    .build();
+
+// Local interactive debugging
+Browser.Config debug = Browser.builder(Browser.FIREFOX)
+    .mode(Browser.Mode.DEBUGGER)
+    .build();
+```
+
+<a id="debugger-mode"></a>
+
+---
+
+## Browser Mode Debugger
+
+`Browser.Mode.DEBUGGER` mode flips three switches at browser-launch time:
+
+| Switch | Firefox | Chrome | Edge |
+|---|---|---|---|
+| DevTools opened on startup | `-devtools` arg | `--auto-open-devtools-for-tabs` arg | `--auto-open-devtools-for-tabs` arg |
+| Window maximized | yes (after 1 s warm-up) | no (currently disabled) | yes (after 2 s warm-up) |
+| Selenium `scriptTimeout` / `pageLoadTimeout` / `implicitlyWait` | `Duration.ofHours(1)` | same | same |
+
+The 1-hour timeouts matter most: without them, pausing at a Java breakpoint for more than the default 10 s would cause Selenium to abort the in-flight script and break the session. They give you the room to inspect state at length without losing the browser context.
+
+**It does not pause on its own** — it only prepares the environment. To actually pause, either set a Java breakpoint in your IDE on the line of interest, or insert `selenium.debugger()` / `builder.debugger()` as a marker. Once paused, use the browser's auto-opened DevTools to inspect the live DOM in parallel.
+
+**Which exception to break on.** `debugger()` works by throwing — and immediately swallowing — a `com.easygoingapi.yoja.selenium.Debugger` exception (a `RuntimeException`). It never propagates, so it can never fail your test; its only purpose is to be a stable target for the IDE. To make `selenium.debugger()` / `builder.debugger()` pause, add an **exception breakpoint on `com.easygoingapi.yoja.selenium.Debugger`** in your IDE:
+  - IntelliJ: *Run ▸ View Breakpoints ▸ + ▸ Java Exception Breakpoint → `com.easygoingapi.yoja.selenium.Debugger`*
+  - Eclipse: *Add Java Exception Breakpoint → `com.easygoingapi.yoja.selenium.Debugger`*
+
+Every `debugger()` call then suspends the JVM at that throw — no per-line breakpoint needed — while the browser stays alive thanks to the 1-hour timeouts above.
 
 ---
 
@@ -130,8 +205,9 @@ builder.startYojaWeb(ScriptOption.apply()
 The built-in page loads `YojaWeb-1.0.0.js` with `yw-config-path="/YojaWeb.conf.js"`. To configure yoja-web in tests, serve a `/YojaWeb.conf.js` file from the embedded server:
 
 ```java
-builder.webService(new WebService(HttpMethod.GET, "/YojaWeb.conf.js", routing ->
-    routing.response().sendFile("/path/to/YojaWeb.conf.js")));
+builder.webService(new WebService(HttpMethod.GET, 
+                                  "/YojaWeb.conf.js", 
+                                  routing -> routing.response().sendFile("/path/to/YojaWeb.conf.js")));
 ```
 
 **Start with a minimal HTML page** (no yoja-web dependency):
@@ -165,9 +241,12 @@ builder.webResource(webApp, "/assets/*");
 **Register REST endpoints:**
 
 ```java
-builder.webService(new WebService(HttpMethod.GET, "/api/data", routing -> {
-    routing.response().send(new JsonObject().put("key", "value"));
-}));
+builder.webService(new WebService(HttpMethod.GET,
+                                  "/api/data", 
+                                  routing -> {
+                                     routing.response().send(new JsonObject().put("key", "value"));
+                                  })
+                  );
 ```
 
 **Custom content-type mappings:**
@@ -249,7 +328,11 @@ builder.loadModule("/path/to/setup.js");
 builder.repeatTestModuleUntil(Duration.ofSeconds(20), "/path/to/waitFor.js");
 ```
 
-> 📂 **Runnable example** — [`TestModuleDemoTest.java`](../yoja-blueprint-kanban/src/test/java/com/easygoingapi/yoja/example/TestModuleDemoTest.java) in `yoja-blueprint-kanban` chains a `testModule` and a `testAsyncModule` against the live demo app. Companion JS modules: [`moduleSync.js`](../yoja-blueprint-kanban/src/test/resources/com/easygoingapi/yoja/example/webapp/moduleSync.js) (sync default export) and [`moduleAsync.js`](../yoja-blueprint-kanban/src/test/resources/com/easygoingapi/yoja/example/webapp/moduleAsync.js) (async default export with `await fetch`).
+> 📂 **Runnable example** — [`TestModuleDemoTest.java`](https://github.com/Easy-API-Style/yoja-blueprint-kanban/blob/main/src/test/java/yoja/blueprint/kanban/TestModuleDemoTest.java) in `yoja-blueprint-kanban` chains `testModule`, `testAsyncModule` and `repeatTestModuleUntil` against the live demo app. Companion JS modules:
+>
+> - [`moduleSyncTest.js`](https://github.com/Easy-API-Style/yoja-blueprint-kanban/blob/main/src/test/resources/yoja/blueprint/kanban/webapp/moduleSyncTest.js) — sync `default` export
+> - [`moduleAsyncTest.js`](https://github.com/Easy-API-Style/yoja-blueprint-kanban/blob/main/src/test/resources/yoja/blueprint/kanban/webapp/moduleAsyncTest.js) — async `default(args, resolve, reject)` with `await fetch`
+> - [`moduleRepeatTest.js`](https://github.com/Easy-API-Style/yoja-blueprint-kanban/blob/main/src/test/resources/yoja/blueprint/kanban/webapp/moduleRepeatTest.js) — polled `default(args, resolve, repeat)` until the form renders
 
 ### JS unit tests
 
@@ -297,7 +380,9 @@ builder.testJsUnit(
 
 Each named function is executed as a separate test step — it appears as its own entry in the JUnit report.
 
-> 📂 **Runnable example** — [`JsUnitDemoTest.java`](../yoja-blueprint-kanban/src/test/java/com/easygoingapi/yoja/example/JsUnitDemoTest.java) in `yoja-blueprint-kanban` shows `testJsUnit` (sync, multiple named exports) followed by `testAsyncModule` against the live demo app. Companion JS modules: [`jsUnitSyncTest.js`](../yoja-blueprint-kanban/src/test/resources/com/easygoingapi/yoja/example/webapp/jsUnitSyncTest.js) and [`jsUnitAsyncTest.js`](../yoja-blueprint-kanban/src/test/resources/com/easygoingapi/yoja/example/webapp/jsUnitAsyncTest.js).
+> 📂 **Runnable example** — [`JsUnitDemoTest.java`](https://github.com/Easy-API-Style/yoja-blueprint-kanban/blob/main/src/test/java/yoja/blueprint/kanban/JsUnitDemoTest.java) in `yoja-blueprint-kanban` runs `testJsUnit` (sync — each named export becomes its own test step) against the live demo app. Companion JS module:
+>
+> - [`jsUnitSyncTest.js`](https://github.com/Easy-API-Style/yoja-blueprint-kanban/blob/main/src/test/resources/yoja/blueprint/kanban/webapp/jsUnitSyncTest.js) — named exports `titleIsTaskManager` and `loginFormIsPresent`
 
 ### Utility steps
 
@@ -364,7 +449,7 @@ builder.execute(true);
 
 ---
 
-## TestContext: In-test API
+## TestContext
 
 `TestContext` is passed to every `.test(...)` lambda. It gives access to the browser, the server, and navigation helpers.
 
@@ -613,68 +698,6 @@ selenium.close();
 
 ---
 
-## Browser and BrowserConfig
-
-Configure which browser to use and how to launch it.
-
-```java
-Browser.Config config = Browser.builder(Browser.FIREFOX)   // FIREFOX | CHROME | EDGE
-    .mode(Browser.Mode.HEADLESS)                            // see table below
-    .timeout(Duration.ofSeconds(10))                        // default: 10s
-    .build();
-```
-
-**Available browsers:**
-
-| `Browser` | Driver |
-|---|---|
-| `FIREFOX` | `FirefoxDriver` |
-| `CHROME` | `ChromeDriver` |
-| `EDGE` | `EdgeDriver` |
-
-**Launch modes:**
-
-| `Browser.Mode` | Effect |
-|---|---|
-| `HEADFUL` | Opens a visible browser window *(default)* |
-| `HEADLESS` | Runs without a visible window (CI-friendly) |
-| `DEBUGGER` | Visible window with DevTools auto-opened, maximized (Firefox / Edge), and Selenium timeouts stretched to **1 hour** |
-
-> ### `DEBUGGER` mode in detail
->
-> Concretely the mode flips three switches at browser-launch time:
->
-> | Switch | Firefox | Chrome | Edge |
-> |---|---|---|---|
-> | DevTools opened on startup | `-devtools` arg | `--auto-open-devtools-for-tabs` arg | `--auto-open-devtools-for-tabs` arg |
-> | Window maximized | yes (after 1 s warm-up) | no (currently disabled) | yes (after 2 s warm-up) |
-> | Selenium `scriptTimeout` / `pageLoadTimeout` / `implicitlyWait` | `Duration.ofHours(1)` | same | same |
->
-> The 1-hour timeouts matter most: without them, pausing at a Java breakpoint
-> for more than the default 10 s would cause Selenium to abort the in-flight
-> script and break the session. They give you the room to inspect state at
-> length without losing the browser context.
->
-> `DEBUGGER` mode does **not** by itself pause execution — it only prepares the
-> environment. To actually pause, either set a Java breakpoint in your IDE on
-> the line of interest, or insert `selenium.debugger()` / `builder.debugger()`
-> as a marker (see `debugger()` notes above). Once paused, you can use the
-> browser's auto-opened DevTools to inspect the live DOM in parallel.
-
-```java
-// Typical CI setup
-Browser.Config ci = Browser.builder(Browser.CHROME)
-    .mode(Browser.Mode.HEADLESS)
-    .build();
-
-// Local interactive debugging
-Browser.Config debug = Browser.builder(Browser.FIREFOX)
-    .mode(Browser.Mode.DEBUGGER)
-    .build();
-```
-
----
-
 ## ScriptOption
 
 Controls which helper scripts are injected when loading a page.
@@ -800,7 +823,7 @@ for (Log log : logs) {
 
 ---
 
-## HttpServerContext and HttpUrlBuilder
+## HttpServerContext
 
 The embedded HTTP server used during tests. Accessible from `TestContext`.
 
@@ -811,7 +834,9 @@ String host = server.host();  // e.g. "localhost"
 int    port = server.port();  // auto-assigned, e.g. 8888
 ```
 
-### HttpUrlBuilder
+---
+
+## HttpUrlBuilder
 
 Builds URLs pointing to the embedded test server:
 
