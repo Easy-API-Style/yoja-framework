@@ -99,7 +99,19 @@
       <li><a href="#directives">HTML directives</a></li>
       <li><a href="#yojaweb">yojaWeb global</a></li>
       <li><a href="#section">Section</a></li>
-      <li><a href="#services">Services</a></li>
+      <li>
+        <a href="#services">YojaWebApi</a>
+        <ul class="nav-sub">
+          <li><a href="#httpclient">httpClient</a></li>
+          <li><a href="#storageservice">storageService</a></li>
+          <li><a href="#eventservice">eventService</a></li>
+          <li><a href="#websocketservice">webSocketService</a></li>
+          <li><a href="#navigationservice">navigationService</a></li>
+          <li><a href="#urlparameterservice">urlParameterService</a></li>
+          <li><a href="#languageservice">languageService</a></li>
+          <li><a href="#responsiveservice">responsiveService</a></li>
+        </ul>
+      </li>
     </ul>
   </aside>
 
@@ -168,33 +180,55 @@
 
     <h2 id="directives">HTML directives</h2>
 
+    <p>A tag becomes a <strong>section</strong> — a managed component boundary — as soon as it carries at least one of <code>yw-controler</code>, <code>yw-language</code>, <code>yw-css</code> or <code>yw-slot</code>. <code>yw-include</code> is separate: it grafts external HTML but does <em>not</em> create a section. Directive paths are resolved relative to the file that declares them.</p>
+
     <div class="api-class">
       <h3><code>yw-controler</code> <span class="kind">attribute</span></h3>
-      <p>Attach a JS class as the controller of an element. The class' constructor receives a <code>Section</code> handle.</p>
+      <p>Attach a JavaScript controller to the element (making it a section). The value is the path to an ES6 module whose <code>default</code> export is a class; its constructor receives the <code>Section</code> handle. (Note the single-<code>l</code> spelling <code>controler</code>.)</p>
 <pre><code><span class="k">&lt;section</span> <span class="a">yw-controler</span>=<span class="s">"./sections/header/HeaderControler.js"</span><span class="k">&gt;</span>
   <span class="c">&lt;!-- header markup --&gt;</span>
-<span class="k">&lt;/section&gt;</span></code></pre>
+<span class="k">&lt;/section&gt;</span>
+
+<span class="c">// HeaderControler.js</span>
+<span class="k">export default class</span> HeaderControler {
+    <span class="k">constructor</span>(section) {
+        section.controlerReady(() =&gt; { <span class="c">/* controller instantiated */</span> });
+        section.pageReady(() =&gt; { <span class="c">/* whole page loaded */</span> });
+    }
+}</code></pre>
     </div>
 
     <div class="api-class">
       <h3><code>yw-language</code> <span class="kind">attribute</span></h3>
-      <p>Bind a translator to the section. Points at an XML file with per-locale translations; values referenced via <code>translator('key')</code>.</p>
+      <p>Declare the XML translation file for the section's i18n (making it a section). Translations are applied to descendants via the <code>yw-i18n*</code> attributes and re-applied on language change. Combinable with the other directives.</p>
+<pre><code><span class="k">&lt;div</span> <span class="a">yw-controler</span>=<span class="s">"./AppControler.js"</span> <span class="a">yw-language</span>=<span class="s">"./i18n/en.xml"</span><span class="k">&gt;&lt;/div&gt;</span></code></pre>
     </div>
 
     <div class="api-class">
       <h3><code>yw-css</code> <span class="kind">attribute</span></h3>
-      <p>Attach a scoped stylesheet to the section (loaded into the section's shadow tree).</p>
+      <p>Attach a CSS file scoped to the section via <em>adopted stylesheets</em> (making it a section). An empty value (<code>yw-css</code> with no path) makes the section inherit its parent section's stylesheet instead of loading its own.</p>
+<pre><code><span class="c">&lt;!-- own scoped stylesheet --&gt;</span>
+<span class="k">&lt;div</span> <span class="a">yw-css</span>=<span class="s">"./card.css"</span><span class="k">&gt;&lt;/div&gt;</span>
+
+<span class="c">&lt;!-- inherit the parent section's stylesheet --&gt;</span>
+<span class="k">&lt;div</span> <span class="a">yw-controler</span>=<span class="s">"./CardControler.js"</span> <span class="a">yw-css</span><span class="k">&gt;&lt;/div&gt;</span></code></pre>
     </div>
 
     <div class="api-class">
       <h3><code>yw-slot</code> <span class="kind">attribute</span></h3>
-      <p>Mark an element as a slot for projected content from a parent section.</p>
+      <p>Point at an HTML template file used as the section's slot for content projected from a parent section (making it a section).</p>
+<pre><code><span class="k">&lt;div</span> <span class="a">yw-slot</span>=<span class="s">"./slot.html"</span><span class="k">&gt;&lt;/div&gt;</span></code></pre>
     </div>
 
     <div class="api-class">
       <h3><code>yw-include</code> <span class="kind">attribute</span></h3>
-      <p>Pull HTML fragments from external files inline; the included file's own <code>yw-*</code> directives are resolved relative to its location.</p>
-<pre><code><span class="k">&lt;div</span> <span class="a">yw-include</span>=<span class="s">"./sections/taskdetail/taskdetail.html"</span><span class="k">&gt;&lt;/div&gt;</span></code></pre>
+      <p>Graft an external HTML fragment onto the element. This does <em>not</em> create a section; the included file's own <code>yw-*</code> directives are wired up after grafting, relative to its own location.</p>
+<pre><code><span class="c">&lt;!-- outer (default): the host &lt;div&gt; is replaced by the loaded HTML --&gt;</span>
+<span class="k">&lt;div</span> <span class="a">yw-include</span>=<span class="s">"./sections/taskdetail/taskdetail.html"</span><span class="k">&gt;&lt;/div&gt;</span>
+
+<span class="c">&lt;!-- inner: the host &lt;div&gt; is kept, loaded HTML becomes its children --&gt;</span>
+<span class="k">&lt;div</span> <span class="a">yw-include</span>=<span class="s">"./sidebar.html"</span> <span class="a">yw-include-mode</span>=<span class="s">"inner"</span><span class="k">&gt;&lt;/div&gt;</span></code></pre>
+      <p><code>yw-include-mode</code> takes <code>outer</code> or <code>inner</code>; any other value — or omitting it — falls back to <code>outer</code>.</p>
     </div>
 
     <h2 id="yojaweb">yojaWeb: Global API</h2>
@@ -363,10 +397,10 @@
       </table>
     </div>
 
-    <h2 id="services">Services</h2>
+    <h2 id="services">YojaWebApi</h2>
 
     <div class="api-class">
-      <h3><code>httpClient</code> <span class="kind">service</span></h3>
+      <h3 id="httpclient"><code>httpClient</code> <span class="kind">service</span></h3>
       <p>Promise-based HTTP client. Content-Type is auto-detected from the body's runtime type. Exposes interceptors and an online/offline fallback.</p>
 
       <span class="api-table-group">Requests</span>
@@ -403,18 +437,29 @@
     </div>
 
     <div class="api-class">
-      <h3><code>storageService</code> <span class="kind">service</span></h3>
-      <p>Wrappers for <code>localStorage</code> and <code>sessionStorage</code> with typed accessors and change events.</p>
+      <h3 id="storageservice"><code>storageService</code> <span class="kind">service</span></h3>
+      <p>Wrappers for <code>localStorage</code> and <code>sessionStorage</code> with typed accessors and change events. Item keys are namespaced (<code>yojaWebItemKey__</code>) and a per-scope key index is maintained.</p>
+      <p>Values are JSON-serialized with a type tag so the type is restored on read:</p>
+      <table class="api-table">
+        <thead><tr><th>Stored value</th><th>Restored as</th></tr></thead>
+        <tbody>
+          <tr><td><code>Date</code></td><td class="desc">a <code>Date</code> instance (revived from ISO)</td></tr>
+          <tr><td>plain object / array</td><td class="desc">the same structure (deep JSON copy)</td></tr>
+          <tr><td>primitive — <code>string</code> / <code>number</code> / <code>boolean</code> / <code>null</code></td><td class="desc">the same primitive</td></tr>
+          <tr><td><code>undefined</code></td><td class="desc">stored as <code>null</code></td></tr>
+        </tbody>
+      </table>
+      <p>Values must be JSON-serializable — <code>function</code> / <code>Map</code> / <code>Set</code> / <code>Symbol</code> are dropped, and a <code>Date</code> nested inside an object is restored as its ISO string.</p>
 
       <span class="api-table-group">localStorage</span>
       <table class="api-table">
         <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td><code>hasLocalItem(key)</code></td><td class="ret"><code>boolean</code></td><td class="desc"></td></tr>
-          <tr><td><code>getLocalItem(key)</code></td><td class="ret"><code>any</code></td><td class="desc"></td></tr>
-          <tr><td><code>getLocalItemKeys(query)</code></td><td class="ret"><code>string[]</code></td><td class="desc">Keys matching the given query pattern</td></tr>
-          <tr><td><code>setLocalItem(key, value)</code></td><td class="ret"><code>void</code></td><td class="desc"></td></tr>
-          <tr><td><code>removeLocalItem(key)</code></td><td class="ret"><code>void</code></td><td class="desc"></td></tr>
+          <tr><td><code>hasLocalItem(key)</code></td><td class="ret"><code>boolean</code></td><td class="desc">Whether the key exists (distinguishes a stored falsy value from absent)</td></tr>
+          <tr><td><code>getLocalItem(key)</code></td><td class="ret"><code>any</code></td><td class="desc">Typed value, or <code>undefined</code> if absent</td></tr>
+          <tr><td><code>getLocalItemKeys(query)</code></td><td class="ret"><code>string[]</code></td><td class="desc">Sorted keys, optionally filtered by <code>query</code></td></tr>
+          <tr><td><code>setLocalItem(key, value)</code></td><td class="ret"><code>void</code></td><td class="desc">Store a JSON-serializable value (see above)</td></tr>
+          <tr><td><code>removeLocalItem(key)</code></td><td class="ret"><code>void</code></td><td class="desc">Remove a single entry</td></tr>
           <tr><td><code>clearLocal()</code></td><td class="ret"><code>void</code></td><td class="desc">Remove all local storage entries</td></tr>
         </tbody>
       </table>
@@ -423,11 +468,11 @@
       <table class="api-table">
         <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td><code>hasSessionItem(key)</code></td><td class="ret"><code>boolean</code></td><td class="desc"></td></tr>
-          <tr><td><code>getSessionItem(key)</code></td><td class="ret"><code>any</code></td><td class="desc"></td></tr>
-          <tr><td><code>getSessionItemKeys(query)</code></td><td class="ret"><code>string[]</code></td><td class="desc">Keys matching the given query pattern</td></tr>
-          <tr><td><code>setSessionItem(key, value)</code></td><td class="ret"><code>void</code></td><td class="desc"></td></tr>
-          <tr><td><code>removeSessionItem(key)</code></td><td class="ret"><code>void</code></td><td class="desc"></td></tr>
+          <tr><td><code>hasSessionItem(key)</code></td><td class="ret"><code>boolean</code></td><td class="desc">Whether the key exists (distinguishes a stored falsy value from absent)</td></tr>
+          <tr><td><code>getSessionItem(key)</code></td><td class="ret"><code>any</code></td><td class="desc">Typed value, or <code>undefined</code> if absent</td></tr>
+          <tr><td><code>getSessionItemKeys(query)</code></td><td class="ret"><code>string[]</code></td><td class="desc">Sorted keys, optionally filtered by <code>query</code></td></tr>
+          <tr><td><code>setSessionItem(key, value)</code></td><td class="ret"><code>void</code></td><td class="desc">Store a JSON-serializable value (see above)</td></tr>
+          <tr><td><code>removeSessionItem(key)</code></td><td class="ret"><code>void</code></td><td class="desc">Remove a single entry</td></tr>
           <tr><td><code>clearSession()</code></td><td class="ret"><code>void</code></td><td class="desc">Remove all session storage entries</td></tr>
         </tbody>
       </table>
@@ -436,14 +481,14 @@
       <table class="api-table">
         <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td><code>on(scope, method, key, callback)</code></td><td class="ret"><code>void</code></td><td class="desc">scope: <code>'local'|'session'</code>, method: <code>'set'|'remove'</code></td></tr>
-          <tr><td><code>onEvent(callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires on any storage change (all scopes and methods)</td></tr>
+          <tr><td><code>on(scope, method, key, callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Per-key listener. <code>scope</code>: <code>'local'|'session'</code>; <code>method</code>: <code>'get'|'set'|'has'|'remove'</code>. <code>callback(value)</code> receives the value only.</td></tr>
+          <tr><td><code>onEvent(callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Global listener. <code>callback(scope, method, key, value)</code> — positional args; <code>method</code> also includes <code>'clear'</code> (fired as <code>(scope, 'clear')</code>, no key/value).</td></tr>
         </tbody>
       </table>
     </div>
 
     <div class="api-class">
-      <h3><code>eventService</code> <span class="kind">service</span></h3>
+      <h3 id="eventservice"><code>eventService</code> <span class="kind">service</span></h3>
       <p>App-wide publish/subscribe bus. Events are identified by an <code>eventId</code> string; queries can target one or several events.</p>
 
       <span class="api-table-group">Subscribe / publish</span>
@@ -480,7 +525,7 @@
     </div>
 
     <div class="api-class">
-      <h3><code>webSocketService</code> <span class="kind">service</span></h3>
+      <h3 id="websocketservice"><code>webSocketService</code> <span class="kind">service</span></h3>
       <p>WebSocket client. <code>webSocket(request)</code> opens a new connection or returns the existing one for the same URL.</p>
 
       <span class="api-table-group">Connection</span>
@@ -507,7 +552,7 @@
     </div>
 
     <div class="api-class">
-      <h3><code>navigationService</code> <span class="kind">service</span></h3>
+      <h3 id="navigationservice"><code>navigationService</code> <span class="kind">service</span></h3>
       <p>Browser navigation and location helpers.</p>
 
       <span class="api-table-group">Navigation</span>
@@ -536,7 +581,7 @@
     </div>
 
     <div class="api-class">
-      <h3><code>urlParameterService</code> <span class="kind">service</span></h3>
+      <h3 id="urlparameterservice"><code>urlParameterService</code> <span class="kind">service</span></h3>
       <p>Read and write URL query parameters with history management.</p>
 
       <span class="api-table-group">Read</span>
@@ -550,7 +595,9 @@
           <tr><td><code>entries()</code></td><td class="ret"><code>Entry[]</code></td><td class="desc">All key/value entries</td></tr>
           <tr><td><code>currentUrlParameter()</code></td><td class="ret"><code>UrlParameter</code></td><td class="desc">Current parsed URL parameters snapshot</td></tr>
           <tr><td><code>toUrlQuery()</code></td><td class="ret"><code>string</code></td><td class="desc">Render current params as a raw query string</td></tr>
-          <tr><td><code>isUpdated()</code></td><td class="ret"><code>boolean</code></td><td class="desc"><code>true</code> if params changed since the last <code>push</code> or <code>replace</code></td></tr>
+          <tr><td><code>getHash()</code></td><td class="ret"><code>string</code></td><td class="desc">In-memory hash fragment (without the leading <code>#</code>)</td></tr>
+          <tr><td><code>currentUrlHash()</code></td><td class="ret"><code>string</code></td><td class="desc">Cleaned live <code>window.location.hash</code></td></tr>
+          <tr><td><code>isUpdated()</code></td><td class="ret"><code>boolean</code></td><td class="desc"><code>true</code> when the live URL is in sync with the in-memory params and hash (nothing left to <code>push</code>/<code>replace</code>)</td></tr>
           <tr><td><code>state()</code></td><td class="ret"><code>HistoryState</code></td><td class="desc">Current history state object</td></tr>
         </tbody>
       </table>
@@ -562,16 +609,74 @@
           <tr><td><code>set(key, value)</code></td><td class="ret"><code>void</code></td><td class="desc">Set (replace) a parameter value</td></tr>
           <tr><td><code>append(key, value)</code></td><td class="ret"><code>void</code></td><td class="desc">Add a value without removing existing ones</td></tr>
           <tr><td><code>remove(key [, value])</code></td><td class="ret"><code>void</code></td><td class="desc">Remove a parameter (or a specific value)</td></tr>
-          <tr><td><code>clear()</code></td><td class="ret"><code>void</code></td><td class="desc">Remove all parameters</td></tr>
-          <tr><td><code>push(data)</code></td><td class="ret"><code>void</code></td><td class="desc">Push current params to the history stack</td></tr>
-          <tr><td><code>replace(data)</code></td><td class="ret"><code>void</code></td><td class="desc">Replace the current history entry with updated params</td></tr>
-          <tr><td><code>onChange(callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires when URL parameters change (popstate or manual update)</td></tr>
+          <tr><td><code>clear()</code></td><td class="ret"><code>void</code></td><td class="desc">Remove all parameters (also clears the hash)</td></tr>
+          <tr><td><code>setHash(hash)</code></td><td class="ret"><code>void</code></td><td class="desc">Set the in-memory hash fragment (leading <code>#</code> stripped)</td></tr>
+          <tr><td><code>removeHash()</code></td><td class="ret"><code>void</code></td><td class="desc">Clear the in-memory hash fragment</td></tr>
+          <tr><td><code>push(data)</code></td><td class="ret"><code>void</code></td><td class="desc">Commit current params + hash to a new history entry (optional state <code>data</code>)</td></tr>
+          <tr><td><code>replace(data)</code></td><td class="ret"><code>void</code></td><td class="desc">Commit current params + hash to the current history entry (optional state <code>data</code>)</td></tr>
+          <tr><td><code>back()</code></td><td class="ret"><code>void</code></td><td class="desc">Native history back</td></tr>
+          <tr><td><code>forward()</code></td><td class="ret"><code>void</code></td><td class="desc">Native history forward</td></tr>
+          <tr><td><code>go(delta)</code></td><td class="ret"><code>void</code></td><td class="desc">Native history go — integer <code>delta</code> only</td></tr>
+          <tr><td><code>onChange(callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires with an event object on every change; return <code>false</code> from a <code>before-*</code> event to cancel it</td></tr>
         </tbody>
       </table>
     </div>
 
     <div class="api-class">
-      <h3><code>languageService</code> <span class="kind">service</span></h3>
+      <h3 id="urlparameter"><code>UrlParameter</code> <span class="kind">type</span></h3>
+      <p>Ordered, multi-valued query-string model returned by <code>currentUrlParameter()</code> and <code>navigationService.urlParameter()</code>. An <code>Entry</code> is <code>{ key: string, value: string }</code>; empty values are normalised to <code>null</code>.</p>
+<div class="uml-class">
+        <div class="uml-name">UrlParameter</div>
+        <div>
+          <div class="uml-row">- urlParameter : Entry[]</div>
+        </div>
+        <div>
+          <div class="uml-row">+ constructor(urlParameter)</div>
+          <div class="uml-row">+ has(key [, value]) : boolean</div>
+          <div class="uml-row">+ keys() : string[]</div>
+          <div class="uml-row">+ get(key) : string</div>
+          <div class="uml-row">+ getAll(key) : string[]</div>
+          <div class="uml-row">+ entries() : Entry[]</div>
+          <div class="uml-row">+ size() : number</div>
+          <div class="uml-row">+ toUrlQuery() : string</div>
+          <div class="uml-row">+ clear() : void</div>
+          <div class="uml-row">+ append(key, value) : void</div>
+          <div class="uml-row">+ set(key, value) : void</div>
+          <div class="uml-row">+ remove(key [, value]) : void</div>
+          <div class="uml-row">+ equals(other) : boolean</div>
+          <div class="uml-row">+ toJson() : object</div>
+          <div class="uml-row">+ clone() : UrlParameter</div>
+          <div class="uml-row">+ toString() : string</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="api-class">
+      <h3 id="historystate"><code>HistoryState</code> <span class="kind">type</span></h3>
+      <p>Immutable snapshot stored in the History API by <code>push()</code> / <code>replace()</code> and returned by <code>state()</code>. Holds the user <code>data</code> payload, a cloned <code>UrlParameter</code>, the hash fragment, and the resolved URL.</p>
+<div class="uml-class">
+        <div class="uml-name">HistoryState</div>
+        <div>
+          <div class="uml-row">- data : any</div>
+          <div class="uml-row">- urlParameter : UrlParameter</div>
+          <div class="uml-row">- hash : string</div>
+          <div class="uml-row">- url : string</div>
+        </div>
+        <div>
+          <div class="uml-row">+ constructor(data, urlParameter, hash, url)</div>
+          <div class="uml-row">+ get data() : any</div>
+          <div class="uml-row">+ get url() : string</div>
+          <div class="uml-row">+ get hash() : string</div>
+          <div class="uml-row">+ get urlParameter() : UrlParameter</div>
+          <div class="uml-row">+ clone() : HistoryState</div>
+          <div class="uml-row">+ toJson() : object</div>
+          <div class="uml-row">+ toString() : string</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="api-class">
+      <h3 id="languageservice"><code>languageService</code> <span class="kind">service</span></h3>
       <p>Internationalisation. Loads XML translation files and retranslates the page on language change.</p>
 
       <span class="api-table-group">Language</span>
@@ -591,7 +696,7 @@
     </div>
 
     <div class="api-class">
-      <h3><code>responsiveService</code> <span class="kind">service</span></h3>
+      <h3 id="responsiveservice"><code>responsiveService</code> <span class="kind">service</span></h3>
       <p>Viewport breakpoint detection. Breakpoints are declared in <code>YojaWeb.conf.js</code> via <code>initialize()</code>.</p>
 
       <span class="api-table-group">Methods</span>

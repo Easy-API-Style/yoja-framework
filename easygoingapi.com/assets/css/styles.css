@@ -169,9 +169,7 @@ html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
   background-color: var(--bg);
 }
 .main h3[id] {
-  padding-top: 56px;
-  margin-top: calc(2rem - 56px);
-  background-color: var(--bg);
+  scroll-margin-top: 72px;
 }
 body {
   margin: 0;
@@ -392,6 +390,28 @@ pre code {
   border-radius: 0;
   font-size: inherit;
 }
+/* UML class diagram — HTML/CSS box (font & line-height independent) */
+.uml-class {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-code);
+  color: var(--code-fg);
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+  margin: .25rem 0 .5rem;
+}
+.uml-class > div { padding: .4rem .9rem; }
+.uml-class > div + div { border-top: 1px solid var(--border); }
+.uml-class .uml-name {
+  text-align: center;
+  font-weight: 700;
+  color: var(--accent-strong);
+}
+.uml-class .uml-row { white-space: nowrap; }
 pre .c { color: var(--code-comment); font-style: italic; }
 pre .k { color: var(--code-keyword); }
 pre .s { color: var(--code-string); }
