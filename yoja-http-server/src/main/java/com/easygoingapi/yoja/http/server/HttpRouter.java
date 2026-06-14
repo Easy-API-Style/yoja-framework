@@ -290,7 +290,7 @@ public class HttpRouter {
         LOGGER.debug("load {}", path);
 
         final WebApp webApp = webResource.webApp();
-        LOGGER.debug("webApp {}", webApp);LOGGER.debug("webApp {}", webApp);LOGGER.debug("webApp {}", webApp);
+        LOGGER.debug("webApp {}", webApp);
         Object httpBody = read(webApp, path);
     	final HttpRoutingContext httpRoutingContext =
     		new HttpRoutingContext(WebService.Type.WebResource,

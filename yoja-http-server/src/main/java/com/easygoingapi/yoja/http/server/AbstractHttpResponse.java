@@ -208,7 +208,7 @@ public abstract class AbstractHttpResponse {
             final Set<HttpCookie> result = new TreeSet<>();
             cookieJar.forEach(c -> {
                 if (name.equals(c.getName())) {
-                    result.add(from((Cookie) c));
+                    result.add(from(c));
                 }
             });
             return result;
@@ -228,7 +228,7 @@ public abstract class AbstractHttpResponse {
                              final String domain,
                              final String path) {
         if (name != null) {
-            final Cookie cookie = (Cookie) cookieJar.get(name, domain, path);
+            final Cookie cookie = cookieJar.get(name, domain, path);
             return cookie != null ? from(cookie) : null;
         }
         return null;
@@ -241,7 +241,7 @@ public abstract class AbstractHttpResponse {
      */
     public Set<HttpCookie> cookies() {
         final Set<HttpCookie> result = new TreeSet<>();
-        cookieJar.forEach(c -> result.add(from((Cookie) c)));
+        cookieJar.forEach(c -> result.add(from(c)));
         return result;
     }
 
