@@ -41,33 +41,48 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 
 public class TestHttpSession {
-	
+
+    /** Session value: keyed by its class name. */
+    static record SessionContext(String value) {}
+
+    /** Session value read back by a later handler and across requests. */
+    static record LoginToken(String token) {}
+
+    /** Session value removed by a later handler (one-shot flash). */
+    static record Flash(String message) {}
+
+    /** Request-scoped value: lives in the routing data, not the session. */
+    static record RequestId(String id) {}
+
     @Test
     public void test_01() {
         final HttpClient httpClient = newHttpClient();
         final AtomicReference<HttpSession> httpSession = new AtomicReference<>();
-        final AtomicReference<String> dataValue = new AtomicReference<>();
-        final AtomicReference<String> value_5 = new AtomicReference<>();
-        
+        final AtomicReference<RequestId> requestId = new AtomicReference<>();
+        final AtomicReference<LoginToken> tokenInHandler2 = new AtomicReference<>();
+        final AtomicReference<Flash> removedFlash = new AtomicReference<>();
+
         final Handler<HttpRouting> httpRouting_1 = h -> {
             final HttpSession session = h.session();
             httpSession.set(session);
-            session.computeIfAbsent("key_1", value -> "value_1");
-            session.computeIfAbsent("key_1", value -> "value_11");
-            session.put("key_2", "value_2");
-            session.put("key_3", "value_3");
-            h.putData("key_4", "value_4");
-            session.put("key_5", "value_5");
+            // putIfAbsent: only the first write wins for a given class.
+            session.putIfAbsent(new SessionContext("first"));
+            session.putIfAbsent(new SessionContext("second"));
+            // put: keyed by class name, so distinct record types are distinct slots.
+            session.put(new LoginToken("keep-token"));
+            session.put(new Flash("one-shot"));
+            // Request-scoped data, not stored in the session.
+            h.putData(new RequestId("request-scoped"));
             h.nextHandler();
         };
         final Handler<HttpRouting> httpRouting_2 = h -> {
             final HttpSession session = h.session();
-            session.remove("key_2");
-            dataValue.set(h.getData("key_4"));
-            value_5.set(session.get("key_5"));
+            removedFlash.set(session.remove(Flash.class));
+            requestId.set(h.getData(RequestId.class));
+            tokenInHandler2.set(session.get(LoginToken.class));
             h.response().send();
         };
-        
+
         final WebService webService_1 = new WebService(HttpMethod.GET, 
                                                        "/webService_1", 
                                                        httpRouting_1,
@@ -87,13 +102,19 @@ public class TestHttpSession {
             final Future<HttpResponse> httpResponseFuture = httpClient.send(HttpGet.of("/webService_1"));
             final HttpResponse httpResponseClient = awaitValue(httpResponseFuture);
             assertEquals(200, httpResponseClient.statusCode());
-            assertEquals("value_1", httpSession.get().get("key_1"));
-            assertNull(httpSession.get().get("key_2"));
-            assertEquals("value_3", httpSession.get().get("key_3"));
-            assertNull(httpSession.get().get("key_4"));
-            assertEquals("value_4", dataValue.get());
-            assertEquals("value_5", value_5.get());
-            
+            // putIfAbsent kept the first value.
+            assertEquals(new SessionContext("first"), httpSession.get().get(SessionContext.class));
+            // Flash was removed by the second handler.
+            assertNull(httpSession.get().get(Flash.class));
+            // Token persists in the session.
+            assertEquals(new LoginToken("keep-token"), httpSession.get().get(LoginToken.class));
+            // Request-scoped data never reaches the session.
+            assertNull(httpSession.get().get(RequestId.class));
+            // Values observed by the second handler.
+            assertEquals(new Flash("one-shot"), removedFlash.get());
+            assertEquals(new RequestId("request-scoped"), requestId.get());
+            assertEquals(new LoginToken("keep-token"), tokenInHandler2.get());
+
             assertEquals(httpSessionStore, httpServer.httpSessionStore());
             
             final String id = httpSession.get().id();
@@ -104,7 +125,7 @@ public class TestHttpSession {
             HttpSession _httpSession = awaitValue(httpSessionStore.get(id));
             assertEquals(httpSession.get(), _httpSession);
             assertEquals(httpSession.get(), onHttpSession.get());
-            assertEquals("value_3", _httpSession.get("key_3"));
+            assertEquals(new LoginToken("keep-token"), _httpSession.get(LoginToken.class));
             
             String oldId = httpSession.get().oldId();
             assertEquals(null, oldId);

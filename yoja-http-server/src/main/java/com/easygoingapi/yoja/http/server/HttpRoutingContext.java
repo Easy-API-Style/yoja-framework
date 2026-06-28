@@ -200,25 +200,23 @@ public class HttpRoutingContext {
      */
     /**
      * Stores a value in the request-scoped data map, visible to subsequent
-     * handlers of the same exchange.
+     * handlers of the same exchange, keyed by its fully qualified class name..
      *
-     * @param key   data key
      * @param value any value (may be {@code null})
      */
-    public void putData(final String key,
-                        final Object value) {
-        routingContext.put(key, value);
+    public void putData(final Object value) {
+        routingContext.put(value.getClass().getName(), value);
     }
 
     /**
      * Returns the request-scoped value for the given key (unchecked cast), or {@code null} when absent.
      *
-     * @param key data key
+     * @param key class whose name identifies the stored value
      * @param <T> expected value type
      * @return the stored value (unchecked cast), or {@code null} when absent
      */
-    public <T> T getData(final String key) {
-        return routingContext.get(key);
+    public <T> T getData(final Class<?> key) {
+        return routingContext.get(key.getName());
     }
 
     /**

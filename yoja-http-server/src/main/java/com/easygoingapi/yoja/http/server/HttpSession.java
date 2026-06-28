@@ -18,22 +18,19 @@
 package com.easygoingapi.yoja.http.server;
 
 import java.time.Duration;
-import java.util.Map;
 import java.util.Objects;
-import java.util.TreeMap;
-import java.util.function.Function;
 
 import io.vertx.ext.web.Session;
 
 /**
  * Thin façade around a Vert.x Web {@link Session}.
  * <p>
- * Mirrors the underlying API (put/get/remove, computeIfAbsent, regenerate,
- * destroy, ...) but returns Yoja-typed values where it matters (e.g. a
- * {@link Duration} timeout rather than a raw millisecond count, a sorted
- * {@link TreeMap} snapshot rather than the live mutable map). Identity is
- * defined by the underlying session id, so {@link #equals(Object)} and
- * {@link #hashCode()} are stable across re-wrappings.
+ * Mirrors the underlying API (put/get/remove, regenerate, destroy, ...) but
+ * keys stored values by their class name and returns Yoja-typed values where
+ * it matters (e.g. a {@link Duration} timeout rather than a raw millisecond
+ * count). Identity is defined by the underlying session id, so
+ * {@link #equals(Object)} and {@link #hashCode()} are stable across
+ * re-wrappings.
  */
 public final class HttpSession {
 
@@ -60,72 +57,47 @@ public final class HttpSession {
     }
 
     /**
-     * Stores {@code obj} under {@code key} in the session.
+     * Stores {@code obj} in the session, keyed by its fully qualified class name.
      *
-     * @param key data key
      * @param obj value to store
      * @return the underlying Vert.x session (for chaining with the native API)
      */
-    public Session put(final String key,
-                       final Object obj) {
-        return session.put(key, obj);
+    public Session put(final Object obj) {
+        return session.put(obj.getClass().getName(), obj);
     }
 
     /**
-     * Stores {@code obj} under {@code key} only if no value is currently
-     * associated with that key.
+     * Stores {@code obj} keyed by its fully qualified class name, only if no
+     * value is currently associated with that class name.
      *
-     * @param key data key
      * @param obj value to store
      * @return the underlying Vert.x session
      */
-    public Session putIfAbsent(final String key,
-                               final Object obj) {
-        return session.putIfAbsent(key, obj);
+    public Session putIfAbsent(final Object obj) {
+        return session.putIfAbsent(obj.getClass().getName(), obj);
     }
-
+    
     /**
-     * Atomically computes a value for {@code key} when absent, using
-     * {@code mappingFunction}.
+     * Returns the value stored under the given class name (unchecked cast), or
+     * {@code null} when missing.
      *
-     * @param key             data key
-     * @param mappingFunction function producing the value when none is stored
-     * @return the underlying Vert.x session
-     */
-    public Session computeIfAbsent(final String key,
-                                   final Function<String, Object> mappingFunction) {
-        return session.computeIfAbsent(key, mappingFunction);
-    }
-
-    /**
-     * Returns the value stored under the given key (unchecked cast), or {@code null} when missing.
-     *
-     * @param key data key
+     * @param key class whose name identifies the stored value
      * @param <T> expected value type
      * @return the stored value (unchecked cast), or {@code null} when missing
      */
-    public <T> T get(final String key) {
-        return session.get(key);
+    public <T> T get(final Class<?> key) {
+        return session.get(key.getName());
     }
 
     /**
-     * Removes and returns the value stored under {@code key}.
+     * Removes and returns the value stored under the given class name.
      *
-     * @param key data key
+     * @param key class whose name identifies the stored value
      * @param <T> expected value type
      * @return the removed value (unchecked cast), or {@code null} when absent
      */
-    public <T> T remove(final String key) {
-        return session.remove(key);
-    }
-
-    /**
-     * Returns a sorted snapshot of the session contents.
-     *
-     * @return a sorted snapshot of the session contents
-     */
-    public Map<String, Object> data() {
-        return new TreeMap<>(session.data());
+    public <T> T remove(final Class<?> key) {
+        return session.remove(key.getName());
     }
 
     /**
@@ -198,12 +170,15 @@ public final class HttpSession {
      */
     @Override
     public boolean equals(Object obj) {
-        if (this == obj)
+        if (this == obj) {
             return true;
-        if (obj == null)
+        }
+        if (obj == null) {
             return false;
-        if (getClass() != obj.getClass())
+        }
+        if (getClass() != obj.getClass()) {
             return false;
+        }
         HttpSession other = (HttpSession) obj;
         return Objects.equals(session.id(), other.session.id());
     }
