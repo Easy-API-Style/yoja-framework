@@ -522,7 +522,20 @@ public class SeleniumService implements AutoCloseable {
      * TAG
      *
      */
-    public WebElement waitFor(final Duration until, String selector) {
+    /**
+     * Polls the page until a DOM element matching the given CSS selector
+     * appears, or the deadline elapses.
+     * <p>
+     * The "wait" counterpart of {@link #firstTag(String)}: it re-runs the
+     * lookup through {@link #repeatScript(Duration, String, Object...)} until
+     * the element is present (non-null) or {@code until} is reached.
+     *
+     * @param until    polling deadline
+     * @param selector CSS selector
+     * @return the first matching DOM element, or {@code null} when none appears
+     *         before the deadline
+     */
+    public WebElement waitFor(final Duration until, final String selector) {
         return repeatScript(until, """
                     const element = yojaWeb.firstTag(arguments[0]);
                     return element;
@@ -568,6 +581,7 @@ public class SeleniumService implements AutoCloseable {
      * @param cssSelector CSS selector
      * @return every DOM element matching {@code cssSelector}; empty when none
      */
+    @SuppressWarnings("unchecked")
     public List<WebElement> findTags(final String cssSelector) {
         final Object result = executeScript("""
             return yojaWeb.findTags(arguments[0])
@@ -584,6 +598,7 @@ public class SeleniumService implements AutoCloseable {
      * @param cssSelector CSS selector
      * @return every descendant of {@code formTag} matching {@code cssSelector}; empty when none
      */
+    @SuppressWarnings("unchecked")
     public List<WebElement> findTagsFrom(final WebElement formTag,
                                          final String cssSelector) {
         final Object result = executeScript("""
