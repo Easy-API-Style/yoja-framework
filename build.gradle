@@ -140,7 +140,7 @@ subprojects {
     // token generated at https://central.sonatype.com -> Account -> Generate User Token).
     //
     //   ./gradlew uploadToMavenCentral \
-    //       -PcentralUsername=<tokenUser> -PcentralPassword=<tokenPass> -PcentralPublishingType=<type>
+    //       -PmavenCentralUsername=<tokenUser> -PmavenCentralPassword=<tokenPass> -PcentralPublishingType=<type>
     //
     // Credentials fall back to env CENTRAL_USERNAME / CENTRAL_PASSWORD.
     // -PcentralPublishingType=AUTOMATIC publishes automatically once validation passes;
