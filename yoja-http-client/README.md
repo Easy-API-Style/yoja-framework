@@ -2,10 +2,10 @@
 
 [![Website](https://img.shields.io/badge/website-easygoingapi.com%2Fyoja--http--client-blue)](https://easygoingapi.com/modules/http-client.html) [![Email](https://img.shields.io/badge/email-easy.api.contact%40gmail.com-red)](mailto:easy.api.contact@gmail.com)
 
-[![Release](https://img.shields.io/badge/release-1.0.2-brightgreen)](https://github.com/Easy-API-Style/yoja-framework/releases/tag/1.0.2)
+[![Release](https://img.shields.io/badge/release-1.2.0-brightgreen)](https://github.com/Easy-API-Style/yoja-framework/releases/tag/1.2.0)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green)](https://github.com/Easy-API-Style/yoja-framework/blob/main/LICENSE)
 [![Java](https://img.shields.io/badge/java-25-orange)](https://openjdk.org/projects/jdk/25/)
-[![Maven Central](https://img.shields.io/badge/maven--central-com.easygoingapi%3Ayoja--http--client%3A1.0.2-blue)](https://central.sonatype.com/artifact/com.easygoingapi/yoja-http-client/1.0.2)
+[![Maven Central](https://img.shields.io/badge/maven--central-com.easygoingapi%3Ayoja--http--client%3A1.2.0-blue)](https://central.sonatype.com/artifact/com.easygoingapi/yoja-http-client/1.2.0)
 
 HTTP client module of the Yoja Framework. Provides a fluent API to send GET/POST requests and manage WebSocket connections — built on top of [Vert.x Web Client](https://vertx.io/docs/vertx-web-client/java/).
 
