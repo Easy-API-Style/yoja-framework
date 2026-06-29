@@ -456,8 +456,8 @@ builder.test(<span class="s">"..."</span>, ctx -&gt; ctx.seleniumService().loadY
         <thead><tr><th>Method</th><th>Throws on failure</th></tr></thead>
         <tbody>
           <tr><td><code>fail(error)</code></td><td class="desc">Always throws <code>Error(error)</code></td></tr>
-          <tr><td><code>assertEquals(expected, actual, message?)</code></td><td class="desc">Throws unless <code>JSON.stringify(expected) === JSON.stringify(actual)</code> — deep equality for primitives, plain objects and arrays</td></tr>
-          <tr><td><code>assertArrayEquals(expected, actual, message?)</code></td><td class="desc">Both must be arrays of equal length; each element compared via <code>JSON.stringify</code>; the error names the failing index and dumps both arrays</td></tr>
+          <tr><td><code>assertEquals(expected, actual, message?)</code></td><td class="desc">Throws unless <code>expected</code> and <code>actual</code> are deeply equal — recursive structural comparison handling primitives (incl. <code>NaN</code> and boxed wrappers like <code>new Number(99)</code>), plain objects (key order independent), arrays, <code>Date</code>, <code>RegExp</code>, <code>Map</code> and <code>Set</code></td></tr>
+          <tr><td><code>assertArrayEquals(expected, actual, message?)</code></td><td class="desc">Both must be arrays of equal length; each element compared with the same deep equality as <code>assertEquals</code>; the error names the failing index and dumps both arrays</td></tr>
           <tr><td><code>assertTrue(value, message?)</code></td><td class="desc">Throws unless <code>value === true</code> (strict identity, not truthiness)</td></tr>
           <tr><td><code>assertFalse(value, message?)</code></td><td class="desc">Throws unless <code>value === false</code> (strict)</td></tr>
           <tr><td><code>assertNull(value, message?)</code></td><td class="desc">Throws unless <code>value === null</code></td></tr>
@@ -473,7 +473,7 @@ builder.test(<span class="s">"..."</span>, ctx -&gt; ctx.seleniumService().loadY
         <thead><tr><th>Note</th><th>Detail</th></tr></thead>
         <tbody>
           <tr><td class="desc">Strict equality only</td><td class="desc"><code>assertTrue</code> / <code>assertFalse</code> use <code>===</code>, not truthiness — <code>assertTrue(1)</code> <strong>fails</strong>; only the literal <code>true</code> passes. Same for the <code>null</code> / <code>undefined</code> checks.</td></tr>
-          <tr><td class="desc"><code>JSON.stringify</code> deep equality</td><td class="desc">Object key order matters (<code>{a:1,b:2}</code> ≠ <code>{b:2,a:1}</code>). Values that don't survive JSON (<code>undefined</code>, functions, <code>Date</code>, <code>Map</code>, <code>Set</code>, <code>Symbol</code>) are compared as their JSON form — convert them yourself first if precision matters.</td></tr>
+          <tr><td class="desc">Structural deep equality</td><td class="desc">Object key order does <strong>not</strong> matter (<code>{a:1,b:2}</code> equals <code>{b:2,a:1}</code>). Comparison is recursive and value-aware: <code>NaN</code> equals <code>NaN</code>, boxed primitives equal their primitive (<code>99</code> equals <code>new Number(99)</code>), and <code>Date</code>, <code>RegExp</code>, <code>Map</code> and <code>Set</code> are compared by value. <code>+0</code> and <code>-0</code> are treated as distinct (<code>Object.is</code> semantics).</td></tr>
           <tr><td class="desc">Failure propagation</td><td class="desc">Each failure throws a plain <code>Error</code>. From an async module, catch it and forward via <code>reject(error.message)</code> so Selenium lifts it into a Java <code>SeleniumException</code> on the right step.</td></tr>
         </tbody>
       </table>

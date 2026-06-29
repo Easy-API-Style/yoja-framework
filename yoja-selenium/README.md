@@ -745,7 +745,7 @@ All methods hang off the global `window.ywAssert` singleton. The optional `messa
 | Method | Behavior on failure |
 |---|---|
 | `ywAssert.fail(error)` | Always throws `Error(error)` |
-| `ywAssert.assertEquals(expected, actual, message?)` | Throws if `JSON.stringify(expected) !== JSON.stringify(actual)` — deep equality for primitives, plain objects and arrays |
+| `ywAssert.assertEquals(expected, actual, message?)` | Throws unless `expected` and `actual` are deeply equal — recursive structural comparison handling primitives (incl. `NaN` and boxed wrappers like `new Number(99)`), plain objects (key order independent), arrays, `Date`, `RegExp`, `Map` and `Set` |
 | `ywAssert.assertTrue(value, message?)` | Throws unless `value === true` (strict identity, not truthiness) |
 | `ywAssert.assertFalse(value, message?)` | Throws unless `value === false` (strict) |
 | `ywAssert.assertNull(value, message?)` | Throws unless `value === null` |
