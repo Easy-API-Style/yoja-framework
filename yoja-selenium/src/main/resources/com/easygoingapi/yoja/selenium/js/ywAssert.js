@@ -25,6 +25,92 @@ function merge(message, errorMessage) {
     return result
 }
 
+function unwrapPrimitive(value) {
+    // Boxed primitives (new Number(99), new String("x"), new Boolean(true), ...)
+    // are compared by their primitive value, so 99 equals new Number(99).
+    if (value instanceof Number
+          || value instanceof String
+          || value instanceof Boolean
+          || value instanceof BigInt
+          || value instanceof Symbol) {
+        return value.valueOf()
+    }
+    return value
+}
+
+function deepEquals(expected, actual) {
+    expected = unwrapPrimitive(expected)
+    actual = unwrapPrimitive(actual)
+    // Same reference, or strictly equal primitives (also matches NaN === NaN).
+    if (Object.is(expected, actual)) {
+        return true
+    }
+    // From here at least one is a non-null object; bail out on any mismatch.
+    if (typeof expected !== "object"
+          || expected === null
+          || typeof actual !== "object" 
+          || actual === null) {
+        return false
+    }
+    // Compare by the same underlying type (Array, Date, RegExp, plain object, ...).
+    if (Object.prototype.toString.call(expected) !== Object.prototype.toString.call(actual)) {
+        return false
+    }
+    if (expected instanceof Date) {
+        return expected.getTime() === actual.getTime()
+    }
+    if (expected instanceof RegExp) {
+        return expected.source === actual.source
+                   && expected.flags === actual.flags
+    }
+    if (Array.isArray(expected)) {
+        if (expected.length !== actual.length) {
+            return false
+        }
+        for (let i = 0; i < expected.length; i++) {
+            if (!deepEquals(expected[i], actual[i])) {
+                return false
+            }
+        }
+        return true
+    }
+    if (expected instanceof Map) {
+        if (expected.size !== actual.size) {
+            return false
+        }
+        for (const [key, value] of expected) {
+            if (!actual.has(key) || !deepEquals(value, actual.get(key))) {
+                return false
+            }
+        }
+        return true
+    }
+    if (expected instanceof Set) {
+        if (expected.size !== actual.size) {
+            return false
+        }
+        for (const value of expected) {
+            if (!actual.has(value)) {
+                return false
+            }
+        }
+        return true
+    }
+    // Plain objects: same set of own enumerable keys, regardless of order.
+    const expectedKeys = Object.keys(expected)
+    const actualKeys = Object.keys(actual)
+    if (expectedKeys.length !== actualKeys.length) {
+        return false
+    }
+    for (const key of expectedKeys) {
+        if (!Object.prototype.hasOwnProperty.call(actual, key)
+               || !deepEquals(expected[key], actual[key])) {
+            return false
+        }
+    }
+    return true
+}
+
 class YojaWebAssert {
 
     constructor() {
@@ -35,7 +121,7 @@ class YojaWebAssert {
     }
 
     assertEquals(expected, actual, message) {
-        if (JSON.stringify(expected) !== JSON.stringify(actual)) {
+        if (!deepEquals(expected, actual)) {
             const errorMessage = "expected '" + JSON.stringify(expected) 
                                + "' but it was '" + JSON.stringify(actual) + "'"
             throw new Error(merge(message, errorMessage))
@@ -83,7 +169,7 @@ class YojaWebAssert {
             && Array.isArray(actual)) {
             if (expected.length === actual.length) {
                 for (let i = 0; i < expected.length; i++) {
-                    if (JSON.stringify(expected[i]) !== JSON.stringify(actual[i])) {
+                    if (!deepEquals(expected[i], actual[i])) {
                         const errorMessage = "index " + i
                                            + " expected '" + JSON.stringify(expected[i])
                                            + "' but it was '" + JSON.stringify(actual[i]) + "'"

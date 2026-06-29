@@ -18,18 +18,22 @@ class Person {
 export function test_01() {
     const tom = new Person('Tom')
     ywAssert.assertEquals("2011-10-05T14:48:00.000Z", jsUtil.stringify(new Date("05 October 2011 14:48 UTC")))
+    ywAssert.assertEquals(new Date("05 October 2011 14:48 UTC"), new Date("05 October 2011 14:48 UTC"))
     ywAssert.assertEquals("{\"name\":\"Tom\"}", jsUtil.stringify(tom))
+    ywAssert.assertEquals(tom, new Person('Tom'))
     ywAssert.assertEquals(33, jsUtil.stringify(33))
     ywAssert.assertEquals(99, jsUtil.stringify(new Number(99)))
+    ywAssert.assertEquals(99, new Number(99))
+    ywAssert.assertEquals('99', "99")
     ywAssert.assertEquals(true, jsUtil.stringify(true))
     ywAssert.assertEquals(true, jsUtil.stringify(new Boolean(true)))
     ywAssert.assertEquals("aaaa", jsUtil.stringify("aaaa"))
     ywAssert.assertEquals("aaaa", jsUtil.stringify(new String("aaaa")))
     ywAssert.assertEquals("{\"key_1\":\"value_1\",\"key_2\":\"value_2\"}",
-                        jsUtil.stringify({key_1: "value_1", key_2: "value_2" }))
+                          jsUtil.stringify({key_1: "value_1", key_2: "value_2" }))
     ywAssert.assertEquals("[{\"key_1\":\"value_1\",\"key_2\":\"value_2\"},{\"key_1\":\"value_1\",\"key_2\":\"value_2\"}]",
-                        jsUtil.stringify([{key_1: "value_1", key_2: "value_2" },
-                                          {key_1: "value_1", key_2: "value_2" }]))
+                          jsUtil.stringify([{key_1: "value_1", key_2: "value_2" },
+                                            {key_1: "value_1", key_2: "value_2" }]))
 }
 
 export function test_02() {
@@ -39,13 +43,13 @@ export function test_02() {
     ywAssert.assertEquals(33, jsUtil.parse(33))
     ywAssert.assertEquals("aaaa", jsUtil.parse("aaaa"))
     ywAssert.assertEquals({key_1: "value_1", key_2: "value_2"}, 
-                        jsUtil.parse({key_1: "value_1", key_2: "value_2" }))
+                          jsUtil.parse({key_1: "value_1", key_2: "value_2" }))
     ywAssert.assertEquals([{key_1: "value_1", key_2: "value_2" }, {key_1: "value_1", key_2: "value_2" }],
-                        jsUtil.parse([{key_1: "value_1", key_2: "value_2" }, {key_1: "value_1", key_2: "value_2" }]))
+                          jsUtil.parse([{key_1: "value_1", key_2: "value_2" }, {key_1: "value_1", key_2: "value_2" }]))
     ywAssert.assertEquals({key_1: "value_1", key_2: "value_2" },
-                        jsUtil.parse("{\"key_1\":\"value_1\",\"key_2\":\"value_2\"}"))
+                          jsUtil.parse("{\"key_1\":\"value_1\",\"key_2\":\"value_2\"}"))
     ywAssert.assertEquals([{key_1: "value_1", key_2: "value_2" }, {key_1: "value_1", key_2: "value_2" }], 
-                        jsUtil.parse("[{\"key_1\":\"value_1\",\"key_2\":\"value_2\"},{\"key_1\":\"value_1\",\"key_2\":\"value_2\"}]"))
+                          jsUtil.parse("[{\"key_1\":\"value_1\",\"key_2\":\"value_2\"},{\"key_1\":\"value_1\",\"key_2\":\"value_2\"}]"))
 }
 
 export function test_03() {

@@ -104,7 +104,11 @@ public class SeleniumService implements AutoCloseable {
         this.javascriptExecutor = (JavascriptExecutor) webDriver;
         this.debugMode = debugMode;
         this.timeout = timeout;
-        setTimeouts(timeout);
+        this.webDriver.manage()
+                      .timeouts()
+                      .scriptTimeout(timeout)
+                      .pageLoadTimeout(timeout)
+                      .implicitlyWait(timeout);
     }
 
     /*
@@ -136,8 +140,7 @@ public class SeleniumService implements AutoCloseable {
      *
      */
     /**
-     * Reads the script from the given file and executes it with the default
-     * timeout.
+     * Reads the script from the given file and executes it with the default timeout.
      *
      * @param script    path to the JS file
      * @param arguments arguments passed to the script
@@ -156,27 +159,6 @@ public class SeleniumService implements AutoCloseable {
     }
 
     /**
-     * Reads the script from the given file and executes it with the supplied
-     * timeout.
-     *
-     * @param duration  script timeout (may be {@code null} for the default)
-     * @param script    path to the JS file
-     * @param arguments arguments passed to the script
-     * @param <V>       return type
-     * @return the script's return value
-     */
-    public <V> V executeScript(final Duration duration,
-                               final Path script,
-                               final Object... arguments) {
-        try {
-            return executeScript(duration, Files.readString(script), arguments);
-        }
-        catch (final Exception e) {
-            throw new SeleniumException("execuate javascript failed", e);
-        }
-    }
-
-    /**
      * Executes the given script body with the default timeout.
      *
      * @param script    JavaScript source
@@ -186,24 +168,7 @@ public class SeleniumService implements AutoCloseable {
      */
     public <V> V executeScript(final String script,
                                final Object... arguments) {
-        return executeScript(null, script, arguments);
-    }
-
-    /**
-     * Executes the given script body with an explicit timeout.
-     *
-     * @param duration  script timeout (may be {@code null} for the default)
-     * @param script    JavaScript source
-     * @param arguments arguments accessible to the script as {@code arguments[0..]}
-     * @param <V>       return type
-     * @return the script's return value
-     */
-    @SuppressWarnings("unchecked")
-    public <V> V executeScript(final Duration duration,
-                               final String script,
-                               final Object... arguments) {
-        setTimeouts(duration);
-        return (V) _executeScript(script, arguments);
+        return _executeScript(script, arguments);
     }
 
     /**
@@ -222,19 +187,9 @@ public class SeleniumService implements AutoCloseable {
     public <V> V repeatScript(final Duration until,
                               final String script,
                               final Object... arguments) {
-//    	Object result = null;
-//    	for (int i = 0; i < 6; i++) {
-//    		result =  _executeScript(script, arguments);
-//    		if (result != null) {
-//    			break;
-//    		}
-//    	}
-//    	return (V) result;
-
-        final WebDriverWait webDriverWait = new WebDriverWait(webDriver, setTimeouts(until));
+        final WebDriverWait webDriverWait = new WebDriverWait(webDriver, timeout(until));
         return webDriverWait.until(c -> {
             try {
-//            	await(Duration.ofSeconds(4));
                 return (V) _executeScript(script, arguments);
             }
             catch (final Exception e) {
@@ -266,17 +221,17 @@ public class SeleniumService implements AutoCloseable {
      * Reads an async script from a file and executes it with an explicit
      * timeout.
      *
-     * @param duration  script timeout (may be {@code null} for the default)
+     * @param timeout   script timeout (may be {@code null} for the default)
      * @param script    path to the JS file
      * @param arguments arguments passed to the script
      * @param <V>       return type
      * @return the value the script handed to its callback
      */
-    public <V> V executeAsyncScript(final Duration duration,
+    public <V> V executeAsyncScript(final Duration timeout,
                                     final Path script,
                                     final Object... arguments) {
         try {
-            return executeAsyncScript(duration, Files.readString(script), arguments);
+            return executeAsyncScript(timeout, Files.readString(script), arguments);
         }
         catch (final Exception e) {
             throw new SeleniumException("execuate javascript failed", e);
@@ -299,18 +254,24 @@ public class SeleniumService implements AutoCloseable {
     /**
      * Executes the given async script body with an explicit timeout.
      *
-     * @param duration  script timeout (may be {@code null} for the default)
+     * @param timeout   script timeout (may be {@code null} for the default)
      * @param script    JavaScript source (must call its last argument as a callback)
      * @param arguments script arguments
      * @param <V>       return type
      * @return the value the script handed to its callback
      */
     @SuppressWarnings("unchecked")
-    public <V> V executeAsyncScript(final Duration duration,
+    public <V> V executeAsyncScript(final Duration timeout,
                                     final String script,
                                     final Object... arguments) {
-        setTimeouts(duration);
-        return (V) _executeAsyncScript(script, arguments);
+        webDriver.manage()
+                 .timeouts()
+                 .scriptTimeout(timeout(timeout));
+        final V result = (V) _executeAsyncScript(script, arguments);
+        webDriver.manage()
+                 .timeouts()
+                 .scriptTimeout(timeout(this.timeout));
+        return result;
     }
 
     /**
@@ -328,7 +289,7 @@ public class SeleniumService implements AutoCloseable {
     public <V> V repeatAsyncScript(final Duration until,
                                    final String script,
                                    final Object... arguments) {
-        final WebDriverWait webDriverWait = new WebDriverWait(webDriver, setTimeouts(until));
+        final WebDriverWait webDriverWait = new WebDriverWait(webDriver, timeout(until));
         return webDriverWait.until(c -> {
             try {
                 return (V) _executeAsyncScript(script, arguments);
@@ -339,7 +300,7 @@ public class SeleniumService implements AutoCloseable {
             }
         });
     }
-
+    
     /** JS template that wraps the user script into a {@code window.ywSeleniumExecuteScript} function. */
     private static String ywSeleniumExecuteScript = """
         window.ywSeleniumExecuteScript = function(arguments) {
@@ -561,6 +522,13 @@ public class SeleniumService implements AutoCloseable {
      * TAG
      *
      */
+    public WebElement waitFor(final Duration until, String selector) {
+        return repeatScript(until, """
+                    const element = yojaWeb.firstTag(arguments[0]);
+                    return element;
+               """, selector);
+    }
+    
     /**
      * Returns the first DOM element matching the given CSS selector, or {@code null}.
      *
@@ -568,19 +536,7 @@ public class SeleniumService implements AutoCloseable {
      * @return the first DOM element matching {@code cssSelector}, or {@code null}
      */
     public WebElement firstTag(final String cssSelector) {
-        return firstTag(null, cssSelector);
-    }
-
-    /**
-     * Returns the first DOM element matching the given CSS selector, waiting up to {@code duration}.
-     *
-     * @param duration    selector timeout (may be {@code null} for the default)
-     * @param cssSelector CSS selector
-     * @return the first DOM element matching {@code cssSelector}, or {@code null}
-     */
-    public WebElement firstTag(final Duration duration,
-                               final String cssSelector) {
-        final Object result = executeScript(duration, """
+        final Object result = executeScript("""
             return yojaWeb.firstTag(arguments[0])
         """, cssSelector);
         return result != null
@@ -597,21 +553,7 @@ public class SeleniumService implements AutoCloseable {
      */
     public WebElement firstTagFrom(final WebElement formTag,
                                    final String cssSelector) {
-        return firstTagFrom(null, formTag, cssSelector);
-    }
-
-    /**
-     * Returns the first descendant of {@code formTag} matching the given CSS selector, waiting up to {@code duration}.
-     *
-     * @param duration    selector timeout (may be {@code null} for the default)
-     * @param formTag     element to scope the search under
-     * @param cssSelector CSS selector
-     * @return the first descendant of {@code formTag} matching {@code cssSelector}, or {@code null}
-     */
-    public WebElement firstTagFrom(final Duration duration,
-                                   final WebElement formTag,
-                                   final String cssSelector) {
-        final Object result = executeScript(duration, """
+        final Object result = executeScript("""
             if (!arguments[0]) return null
             return yojaWeb.firstTag(arguments[1], arguments[0])
         """, formTag, cssSelector);
@@ -627,25 +569,12 @@ public class SeleniumService implements AutoCloseable {
      * @return every DOM element matching {@code cssSelector}; empty when none
      */
     public List<WebElement> findTags(final String cssSelector) {
-        return findTags(null, cssSelector);
-    }
-
-    /**
-     * Returns every DOM element matching the given CSS selector, waiting up to {@code duration}.
-     *
-     * @param duration    selector timeout (may be {@code null} for the default)
-     * @param cssSelector CSS selector
-     * @return every DOM element matching {@code cssSelector}; empty when none
-     */
-    @SuppressWarnings("unchecked")
-    public List<WebElement> findTags(final Duration duration,
-                                     final String cssSelector) {
-        final Object result = executeScript(duration, """
+        final Object result = executeScript("""
             return yojaWeb.findTags(arguments[0])
         """, cssSelector);
         return result instanceof List<?>
-                ? (List<WebElement>) result
-                : new ArrayList<>();
+                  ? (List<WebElement>) result
+                  : new ArrayList<>();
     }
 
     /**
@@ -657,22 +586,7 @@ public class SeleniumService implements AutoCloseable {
      */
     public List<WebElement> findTagsFrom(final WebElement formTag,
                                          final String cssSelector) {
-        return findTagsFrom(null, formTag, cssSelector);
-    }
-
-    /**
-     * Returns every descendant of {@code formTag} matching the given CSS selector, waiting up to {@code duration}.
-     *
-     * @param duration    selector timeout (may be {@code null} for the default)
-     * @param formTag     element to scope the search under
-     * @param cssSelector CSS selector
-     * @return every descendant of {@code formTag} matching {@code cssSelector}; empty when none
-     */
-    @SuppressWarnings("unchecked")
-    public List<WebElement> findTagsFrom(final Duration duration,
-                                         final WebElement formTag,
-                                         final String cssSelector) {
-        final Object result = executeScript(duration, """
+        final Object result = executeScript("""
             if (!arguments[0]) return null
             return yojaWeb.findTags(arguments[1], arguments[0])
         """, formTag, cssSelector);
@@ -698,12 +612,12 @@ public class SeleniumService implements AutoCloseable {
     /**
      * Navigates to the given {@link HttpUrl} with an explicit timeout.
      *
-     * @param duration page-load timeout (may be {@code null} for the default)
+     * @param timeout  page-load timeout (may be {@code null} for the default)
      * @param httpUrl  target URL
      */
-    public void getHttpPage(final Duration duration,
+    public void getHttpPage(final Duration timeout,
                             final HttpUrl httpUrl) {
-        getHttpPage(duration, httpUrl.url(Format.encoded));
+        getHttpPage(timeout, httpUrl.url(Format.encoded));
     }
 
     /**
@@ -721,24 +635,24 @@ public class SeleniumService implements AutoCloseable {
      * (or the page has no Yoja markers at all, in which case the wait
      * returns immediately).
      *
-     * @param duration page-load timeout (may be {@code null} for the default)
+     * @param timeout  page-load timeout (may be {@code null} for the default)
      * @param url      target URL
      */
-    public void getHttpPage(final Duration duration,
+    public void getHttpPage(final Duration timeout,
                             final String url) {
         webDriver.get(url);
         await(Duration.ofSeconds(1));
-        awaitYojaJsHttpPageReady(duration);
+        awaitYojaJsHttpPageReady(timeout);
     }
 
     /**
      * Polls the page through {@link #repeatScript} until the Yoja-Web runtime
      * reports it ready (or until the page exposes no Yoja markers at all).
      *
-     * @param duration polling deadline
+     * @param until polling deadline
      */
-    private void awaitYojaJsHttpPageReady(final Duration duration) {
-        repeatScript(duration, """
+    private void awaitYojaJsHttpPageReady(final Duration until) {
+        repeatScript(until, """
             const isReady = function() {
                 const hasYojaElements = document.querySelector('[yw-include],[yw-controler],[yw-css],[yw-language],[yw-slot]');
                 // console.info('yoja page Ready: ' + hasYojaElements)
@@ -816,25 +730,30 @@ public class SeleniumService implements AutoCloseable {
      * of debug mode, the supplied {@code duration} wins; when {@code null},
      * the constructor-time default is used.
      *
-     * @param duration requested timeout (may be {@code null})
+     * @param timeout  requested timeout (may be {@code null})
      * @return the effective timeout actually applied
      */
-    private Duration setTimeouts(final Duration duration) {
+//    private Duration setTimeouts(final Duration timeout) {
+//        final Duration result = timeout(timeout);
+//        webDriver.manage()
+//                 .timeouts()
+//                 .scriptTimeout(result)
+//                 .pageLoadTimeout(result)
+//                 .implicitlyWait(result);
+//        return result;
+//    }
+
+    private Duration timeout(final Duration timeout) {
         final Duration result;
         if (debugMode) {
             result = Duration.ofHours(1);
         }
-        else if (duration != null) {
-            result = duration;
-        }
-        else {
+        else if (timeout != null) {
             result = timeout;
         }
-        webDriver.manage()
-                 .timeouts()
-                 .scriptTimeout(result)
-                 .pageLoadTimeout(result)
-                 .implicitlyWait(result);
+        else {
+            result = this.timeout;
+        }
         return result;
     }
 
