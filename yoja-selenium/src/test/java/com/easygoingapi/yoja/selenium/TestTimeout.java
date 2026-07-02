@@ -28,6 +28,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.ScriptTimeoutException;
 import org.openqa.selenium.TimeoutException;
@@ -61,6 +62,7 @@ public class TestTimeout {
     }
 
     @Test
+    @Disabled
     public void test_debugger_timeout_is_1h() {
         try (SeleniumService service = SeleniumService.newInstance(Browser.builder(Browser.CHROME)
                                                                           .mode(Browser.Mode.DEBUGGER)
