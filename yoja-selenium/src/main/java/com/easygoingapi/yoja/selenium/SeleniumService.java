@@ -28,6 +28,7 @@ import java.util.Map;
 import org.openqa.selenium.Dimension;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebDriver.Timeouts;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
@@ -80,13 +81,18 @@ import com.easygoingapi.yoja.core.util.ResourceUtil;
 public class SeleniumService implements AutoCloseable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SeleniumService.class);
+    
+    /** Default timeout applied to script execution, page loads and implicit waits when none is configured. */
+    public static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(10);
+    /** Timeout used in {@code DEBUGGER} mode, long enough not to expire while single-stepping. */
+    public static final Duration DEBUGGER_TIMEOUT = Duration.ofHours(1);
 
     /** Underlying Selenium driver. */
     private final WebDriver webDriver;
     /** Same driver, exposed as a JavaScript executor (driver classes always implement both). */
     private final JavascriptExecutor javascriptExecutor;
 
-    /** When {@code true}, every {@link #setTimeouts(Duration)} call is overridden with one hour. */
+    /** When {@code true}, every resolved timeout (see {@link #timeout(Duration)}) is overridden with one hour. */
     private final boolean debugMode;
     /** Default timeout for script execution, page loads and implicit waits. */
     private final Duration timeout;
@@ -132,6 +138,16 @@ public class SeleniumService implements AutoCloseable {
      */
     public JavascriptExecutor javascriptExecutor() {
         return javascriptExecutor;
+    }
+    
+    /**
+     * Returns the driver's {@link Timeouts} handle (script / page-load /
+     * implicit-wait), for inspecting or adjusting the live timeouts.
+     *
+     * @return the driver's {@link Timeouts} handle
+     */
+    public Timeouts timeouts() {
+        return webDriver.manage().timeouts();
     }
 
     /*
@@ -218,8 +234,7 @@ public class SeleniumService implements AutoCloseable {
     }
 
     /**
-     * Reads an async script from a file and executes it with an explicit
-     * timeout.
+     * Reads an async script from a file and executes it with an explicit timeout.
      *
      * @param timeout   script timeout (may be {@code null} for the default)
      * @param script    path to the JS file
@@ -270,7 +285,7 @@ public class SeleniumService implements AutoCloseable {
         final V result = (V) _executeAsyncScript(script, arguments);
         webDriver.manage()
                  .timeouts()
-                 .scriptTimeout(timeout(this.timeout));
+                 .scriptTimeout(this.timeout);
         return result;
     }
 
@@ -655,9 +670,15 @@ public class SeleniumService implements AutoCloseable {
      */
     public void getHttpPage(final Duration timeout,
                             final String url) {
+        webDriver.manage()
+                 .timeouts()
+                 .pageLoadTimeout(timeout(timeout));
         webDriver.get(url);
         await(Duration.ofSeconds(1));
         awaitYojaJsHttpPageReady(timeout);
+        webDriver.manage()
+                 .timeouts()
+                 .pageLoadTimeout(this.timeout);
     }
 
     /**
@@ -748,20 +769,10 @@ public class SeleniumService implements AutoCloseable {
      * @param timeout  requested timeout (may be {@code null})
      * @return the effective timeout actually applied
      */
-//    private Duration setTimeouts(final Duration timeout) {
-//        final Duration result = timeout(timeout);
-//        webDriver.manage()
-//                 .timeouts()
-//                 .scriptTimeout(result)
-//                 .pageLoadTimeout(result)
-//                 .implicitlyWait(result);
-//        return result;
-//    }
-
     private Duration timeout(final Duration timeout) {
         final Duration result;
         if (debugMode) {
-            result = Duration.ofHours(1);
+            result = DEBUGGER_TIMEOUT;
         }
         else if (timeout != null) {
             result = timeout;
@@ -999,9 +1010,15 @@ public class SeleniumService implements AutoCloseable {
             throw new YojaAppException("need browser config (@see Browser.Config class)");
         }
         final boolean debugMode = Browser.Mode.DEBUGGER == browserConfig.getMode();
-        final Duration timeout = browserConfig.getTimeout() != null
-                                    ? browserConfig.getTimeout()
-                                    : Duration.ofSeconds(10);
+        final Duration timeout;
+        if (debugMode) {
+            timeout = DEBUGGER_TIMEOUT;
+        }
+        else {
+            timeout = browserConfig.getTimeout() != null
+                         ? browserConfig.getTimeout()
+                         : DEFAULT_TIMEOUT;
+        }
         return new SeleniumService(webDriver, debugMode, timeout);
     }
 

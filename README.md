@@ -2,7 +2,7 @@
 
 [![Website](https://img.shields.io/badge/website-easygoingapi.com-blue)](https://easygoingapi.com/) [![Email](https://img.shields.io/badge/email-easy.api.contact%40gmail.com-red)](mailto:easy.api.contact@gmail.com)
 
-[![Release](https://img.shields.io/badge/release-1.2.0-brightgreen)](https://github.com/Easy-API-Style/yoja-framework/releases/tag/1.2.0)
+[![Release](https://img.shields.io/badge/release-1.2.1-brightgreen)](https://github.com/Easy-API-Style/yoja-framework/releases/tag/1.2.1)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green)](https://github.com/Easy-API-Style/yoja-framework/blob/main/LICENSE)
 [![Java](https://img.shields.io/badge/java-25-orange)](https://openjdk.org/projects/jdk/25/)
 
@@ -229,7 +229,7 @@ In your `webapp/index.html`, include the `yoja-web` script and declare your firs
     <meta http-equiv="encoding" content="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
 
-    <script type="module" src="/com/easygoingapi/yoja/web/YojaWeb-1.0.2.js"></script>
+    <script type="module" src="/com/easygoingapi/yoja/web/YojaWeb-1.2.1.js"></script>
 </head>
 <body>
     <div yw-controler="./sections/UserList/UserListControler.js"
@@ -241,8 +241,6 @@ In your `webapp/index.html`, include the `yoja-web` script and declare your firs
 </body>
 </html>
 ```
-
-> **Note:** the version in `YojaWeb-1.0.2.js` versions the yoja-web JS runtime itself and is **independent of the framework release** (the `1.2.0` badge at the top). It only changes when the yoja-web browser API changes, so it can stay at `1.0.2` across several framework releases — reference the exact file name shipped in the artifact you use.
 
 Each section is an isolated component with its own HTML, CSS, and JavaScript file. CSS Flexbox works seamlessly — apply `display: flex` directly on the section container or any element inside it.
 

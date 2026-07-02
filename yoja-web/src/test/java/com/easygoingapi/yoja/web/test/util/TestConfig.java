@@ -17,6 +17,8 @@
  */
 package com.easygoingapi.yoja.web.test.util;
 
+import com.easygoingapi.yoja.http.server.WebApp;
+import com.easygoingapi.yoja.http.server.WebResource;
 import com.easygoingapi.yoja.selenium.Browser;
 import com.easygoingapi.yoja.selenium.TestBuilder;
 
@@ -25,6 +27,7 @@ public class TestConfig {
     public static String host = "localhost";
     
     public static TestBuilder initialize() {
+        WebApp yojaWebApp = WebApp.of(WebApp.Type.jar, "com.easygoingapi.yoja.web", "/yoja");
         return TestBuilder.builder()
                           .host(host)
                           .contentType("css", "text/css")
@@ -33,8 +36,10 @@ public class TestConfig {
                           .contentType("js", "application/javascript")
                           .contentType("txt", "text/plain")
 
-                          .webResource("com.easygoingapi.yoja.web", "/yoja")
-                          
+                          .webResource(yojaWebApp, "/*")
+                          .webResource(new WebResource(yojaWebApp, 
+                                                       "/YojaWeb-x.y.z.js",
+                                                       c -> c.redirect("/yoja/YojaWeb-1.2.1.js")))
                           .browser(Browser.builder(Browser.FIREFOX)
                                           .mode(Browser.Mode.HEADLESS)
                                           .build())                          

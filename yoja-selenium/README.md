@@ -2,10 +2,10 @@
 
 [![Website](https://img.shields.io/badge/website-easygoingapi.com%2Fyoja--selenium-blue)](https://easygoingapi.com/modules/selenium.html) [![Email](https://img.shields.io/badge/email-easy.api.contact%40gmail.com-red)](mailto:easy.api.contact@gmail.com)
 
-[![Release](https://img.shields.io/badge/release-1.2.0-brightgreen)](https://github.com/Easy-API-Style/yoja-framework/releases/tag/1.2.0)
+[![Release](https://img.shields.io/badge/release-1.2.1-brightgreen)](https://github.com/Easy-API-Style/yoja-framework/releases/tag/1.2.1)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green)](https://github.com/Easy-API-Style/yoja-framework/blob/main/LICENSE)
 [![Java](https://img.shields.io/badge/java-25-orange)](https://openjdk.org/projects/jdk/25/)
-[![Maven Central](https://img.shields.io/badge/maven--central-com.easygoingapi%3Ayoja--selenium%3A1.2.0-blue)](https://central.sonatype.com/artifact/com.easygoingapi/yoja-selenium/1.2.0)
+[![Maven Central](https://img.shields.io/badge/maven--central-com.easygoingapi%3Ayoja--selenium%3A1.2.1-blue)](https://central.sonatype.com/artifact/com.easygoingapi/yoja-selenium/1.2.1)
 
 Selenium testing module of the Yoja Framework. Provides a fluent API to write browser-driven tests with an **embedded HTTP server**, JavaScript module execution, browser log capture, and JUnit 6 integration.
 
@@ -202,7 +202,7 @@ builder.startYojaWeb(ScriptOption.apply()
                                  .loadYwAssert());
 ```
 
-The built-in page loads `YojaWeb-1.0.2.js` with `yw-config-path="/YojaWeb.conf.js"`. To configure yoja-web in tests, serve a `/YojaWeb.conf.js` file from the embedded server:
+The built-in page loads `YojaWeb-1.2.1.js` with `yw-config-path="/YojaWeb.conf.js"`. To configure yoja-web in tests, serve a `/YojaWeb.conf.js` file from the embedded server:
 
 ```java
 builder.webService(new WebService(HttpMethod.GET, 
