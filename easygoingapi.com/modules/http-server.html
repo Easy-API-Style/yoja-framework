@@ -142,7 +142,7 @@
             .build();
 
         HttpServer.builder(router, <span class="n">8080</span>)
-                  .sslSelfSigned()
+                  .ssl(Path.of(<span class="s">"key.pem"</span>), Path.of(<span class="s">"cert.pem"</span>))
                   .start();
     }
 }</code></pre>
@@ -159,7 +159,6 @@
         <tbody>
           <tr><td><code>static builder(HttpRouter, int port)</code></td><td class="ret"><code>Builder</code></td><td class="desc"></td></tr>
           <tr><td><code>Builder.ssl(Path keyPath, Path certPath)</code></td><td class="ret"><code>Builder</code></td><td class="desc">TLS with PEM files</td></tr>
-          <tr><td><code>Builder.sslSelfSigned()</code></td><td class="ret"><code>Builder</code></td><td class="desc">TLS with a self-signed certificate generated at start time</td></tr>
           <tr><td><code>Builder.webSocketService(WebSocketService)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Attach a WebSocket dispatcher</td></tr>
           <tr><td><code>Builder.options(HttpServerOptions)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Override the default Vert.x options</td></tr>
           <tr><td><code>Builder.start()</code></td><td class="ret"><code>Future&lt;HttpServer&gt;</code></td><td class="desc">Bind the listener</td></tr>

@@ -149,7 +149,6 @@ ReverseProxyServer.builder(<span class="n">8080</span>)
           <tr><td><code>static builder(int proxyPort)</code></td><td class="ret"><code>Builder</code></td><td class="desc"></td></tr>
           <tr><td><code>Builder.admin(int port, String token)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Enable the admin server on the given port, protected by token</td></tr>
           <tr><td><code>Builder.ssl(Path key, Path cert)</code></td><td class="ret"><code>Builder</code></td><td class="desc">TLS with PEM files</td></tr>
-          <tr><td><code>Builder.sslSelfSigned()</code></td><td class="ret"><code>Builder</code></td><td class="desc">TLS with an auto-generated self-signed certificate</td></tr>
           <tr><td><code>Builder.options(HttpServerOptions)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Override Vert.x options</td></tr>
           <tr><td><code>Builder.sslProxy(boolean)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Whether upstream-facing HTTP engines dial over TLS</td></tr>
           <tr><td><code>Builder.silent(boolean)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Drop unresolved requests silently instead of returning 404</td></tr>

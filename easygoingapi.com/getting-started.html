@@ -572,7 +572,7 @@ dependencies {
         the Yoja-Web runtime under <code>/yoja</code> and the example webapp at <code>/</code>.</li>
       <li>Auth, quote, and task routes wired in declaration order.</li>
       <li>A <strong>response hook</strong> that stamps <code>X-Powered-By: yoja</code> on every reply.</li>
-      <li>Optional <strong>TLS</strong> via a self-signed certificate.</li>
+      <li>Optional <strong>TLS</strong> via a PEM certificate.</li>
     </ul>
 <pre><code><span class="k">package</span> com.easygoingapi.yoja.example;
 
@@ -658,7 +658,7 @@ dependencies {
         <span class="c">// 8. Server</span>
         HttpServer.Builder builder = HttpServer.builder(router, port)
                                                .webSocketService(webSocketService);
-        <span class="k">if</span> (ssl) builder.sslSelfSigned();
+        <span class="k">if</span> (ssl) builder.ssl(Path.of(<span class="s">"key.pem"</span>), Path.of(<span class="s">"cert.pem"</span>));
         <span class="k">return</span> builder.start();
     }
 }</code></pre>

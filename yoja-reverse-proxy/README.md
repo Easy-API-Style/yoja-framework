@@ -420,15 +420,6 @@ ReverseProxyServer.builder(443)
                  .start();
 ```
 
-### Self-signed certificate (dev/test)
-
-```java
-ReverseProxyServer.builder(8443)
-                  .sslSelfSigned()
-                  .rule(rule)
-                  .start();
-```
-
 ### Hot-reload certificate (zero downtime)
 
 Updates both the proxy server and the admin server simultaneously:

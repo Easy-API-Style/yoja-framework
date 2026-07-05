@@ -21,7 +21,9 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import com.easygoingapi.yoja.core.YojaAppException;
@@ -66,13 +68,83 @@ public class ProcessUtil {
         }
     }
 
-    private static void stream(final InputStream inputStream, 
+    /**
+     * Executes an OS command, streaming its output to the provided consumers,
+     * and waits at most {@code timeout} for it to finish.
+     * <p>
+     * Output is drained on separate threads so the process cannot dead-lock on
+     * a full pipe while we wait. When the timeout elapses the process is
+     * forcibly destroyed and a {@link YojaAppException} is thrown.
+     *
+     * @param command the command and its arguments
+     * @param console consumer that receives each line of standard output
+     * @param error   consumer that receives each line of standard error
+     * @param timeout maximum time to wait for the process to complete
+     * @return the process exit code
+     * @throws YojaAppException if the process cannot be started, times out, or is interrupted
+     */
+    public static int execute(final List<String> command,
+                              final Consumer<String> console,
+                              final Consumer<String> error,
+                              final Duration timeout) {
+        Process process = null;
+        try {
+            process = new ProcessBuilder().command(command).start();
+
+            final Thread consoleThread = streamAsync(process.getInputStream(), console);
+            final Thread errorThread = streamAsync(process.getErrorStream(), error);
+
+            if (!process.waitFor(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
+                process.destroyForcibly();
+                throw new YojaAppException("execute command timed out after " + timeout
+                                         + ": " + String.join(" ", command));
+            }
+            // let the reader threads drain the remaining output
+            consoleThread.join(1000);
+            errorThread.join(1000);
+            return process.exitValue();
+        }
+        catch (final YojaAppException e) {
+            throw e;
+        }
+        catch (final InterruptedException e) {
+            if (process != null) {
+                process.destroyForcibly();
+            }
+            Thread.currentThread().interrupt();
+            throw new YojaAppException("execute command interrupted " + String.join(" ", command), e);
+        }
+        catch (final Exception e) {
+            throw new YojaAppException("execute command faided " + String.join(" ", command), e);
+        }
+    }
+
+    private static void stream(final InputStream inputStream,
                                final Consumer<String> handler) throws IOException {
         final BufferedReader consoleReader = new BufferedReader(new InputStreamReader(inputStream));
         String consoleLine;
         while ((consoleLine = consoleReader.readLine()) != null) {
             handler.accept(consoleLine);
         }
+    }
+
+    /**
+     * Drains {@code inputStream} on a dedicated daemon thread, forwarding each
+     * line to {@code handler} until the stream is closed.
+     */
+    private static Thread streamAsync(final InputStream inputStream,
+                                      final Consumer<String> handler) {
+        final Thread thread = new Thread(() -> {
+            try {
+                stream(inputStream, handler);
+            }
+            catch (final IOException e) {
+                // stream closed when the process ends: nothing left to read
+            }
+        });
+        thread.setDaemon(true);
+        thread.start();
+        return thread;
     }
 
 }

@@ -82,7 +82,7 @@ public class TestWebService_GET {
         final HttpServer httpServer = newHttpServer(ssl, port, httpRouter);
         try {
             if (ssl) {
-                assertEquals(HttpCertificate.SELF_SIGNED, httpServer.certificate());
+                assertEquals(HttpCertificate.SSL, httpServer.certificate());
             }
             else {
                 assertEquals(HttpCertificate.NONE, httpServer.certificate());

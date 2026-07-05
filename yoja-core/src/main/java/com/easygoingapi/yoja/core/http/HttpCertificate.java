@@ -26,11 +26,8 @@ public enum HttpCertificate {
     NONE,
 
     /** TLS enabled using externally provided PEM certificate and private key files. */
-    SSL,
+    SSL;
 
-    /** TLS enabled with a self-signed certificate generated automatically at startup. */
-    SELF_SIGNED;
-    
     /**
      * Returns {@code true} if this constant is the same as {@code httpCertificate}.
      *

@@ -376,7 +376,7 @@ The HTTP and WebSocket server. Built on Vert.x, it handles routing, middleware, 
 
 - `HttpServerApp` — declare routes (`GET`, `POST`, `PUT`, `DELETE`, `WebSocket`), middleware, and static resources
 - `HttpServer` — start and stop the server
-- `HttpCertificate` — `NONE`, `SSL`, `SELF_SIGNED`
+- `HttpCertificate` — `NONE`, `SSL`
 - Request/response interceptors — run logic before or after every request
 - Cookie management — read and write cookies with full `SameSite`, `HttpOnly`, `Secure` support
 

@@ -46,14 +46,13 @@ import com.easygoingapi.yoja.http.client.WebSocketClient;
 import com.easygoingapi.yoja.http.server.HttpRouter;
 import com.easygoingapi.yoja.http.server.HttpRouting;
 import com.easygoingapi.yoja.http.server.HttpServer;
+import com.easygoingapi.yoja.http.server.HttpServer.State;
 import com.easygoingapi.yoja.http.server.HttpSessionStore;
 import com.easygoingapi.yoja.http.server.WebService;
 import com.easygoingapi.yoja.http.server.WebSocket;
 import com.easygoingapi.yoja.http.server.WebSocketService;
-import com.easygoingapi.yoja.http.server.HttpServer.State;
-import com.easygoingapi.yoja.reverse.proxy.ReverseProxyRule;
-import com.easygoingapi.yoja.reverse.proxy.ReverseProxyServer;
 import com.easygoingapi.yoja.reverse.proxy.ReverseProxyRule.Url;
+import com.easygoingapi.yoja.reverse.proxy.util.TestUtil;
 import com.google.common.base.Strings;
 
 import io.vertx.core.Future;
@@ -532,7 +531,7 @@ public class TestReverseProxyServer {
     public static Future<HttpServer> server(final int number, 
                                             final int port,
                                             final WebSocketService webSocketService,
-                                            final boolean sslSelfSigned) {
+                                            final boolean ssl) {
         final Handler<HttpRouting> get = v -> {
             if (v.request().hasParameter("name")) {
                 v.response()
@@ -583,8 +582,9 @@ public class TestReverseProxyServer {
         if (webSocketService != null) {
             httpServerBuilder.webSocketService(webSocketService);
         }
-        if (sslSelfSigned) {
-            httpServerBuilder.sslSelfSigned();
+        if (ssl) {
+            httpServerBuilder.ssl(TestUtil.sslFolder.resolve("ssl-key.pem"), 
+                                  TestUtil.sslFolder.resolve("ssl-cert.pem"));
         }
         return httpServerBuilder.start();
     }

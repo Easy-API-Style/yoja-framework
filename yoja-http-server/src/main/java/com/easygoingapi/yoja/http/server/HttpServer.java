@@ -40,7 +40,6 @@ import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.http.HttpVersion;
 import io.vertx.core.net.PemKeyCertOptions;
 import io.vertx.core.net.PemTrustOptions;
-import io.vertx.core.net.SelfSignedCertificate;
 import io.vertx.core.net.ServerSSLOptions;
 import io.vertx.ext.web.client.WebClientOptions;
 
@@ -356,9 +355,8 @@ public class HttpServer implements Certificatable {
      * Fluent builder for {@link HttpServer}.
      * <p>
      * Defaults to plain HTTP with {@link HttpCertificate#NONE}; switch to TLS
-     * with {@link #ssl(Path, Path)} or {@link #sslSelfSigned()}. WebSocket
-     * support is enabled by attaching a {@link WebSocketService} via
-     * {@link #webSocketService(WebSocketService)}.
+     * with {@link #ssl(Path, Path)}. WebSocket support is enabled by attaching
+     * a {@link WebSocketService} via {@link #webSocketService(WebSocketService)}.
      */
     public static class Builder {
 
@@ -399,16 +397,6 @@ public class HttpServer implements Certificatable {
             this.certificate = HttpCertificate.SSL;
             this.sslKeyPath = sslKeyPath;
             this.sslCertPath = sslCertPath;
-            return this;
-        }
-
-        /**
-         * Enables TLS using a self-signed certificate generated at start time.
-         *
-         * @return this builder
-         */
-        public Builder sslSelfSigned() {
-            this.certificate = HttpCertificate.SELF_SIGNED;
             return this;
         }
 
@@ -463,9 +451,8 @@ public class HttpServer implements Certificatable {
      */
     /**
      * Builds default {@link HttpServerOptions} matching the given certificate
-     * strategy: HTTP/2 with ALPN fallback to HTTP/1.1 when TLS is enabled, and
-     * a self-signed certificate when {@link HttpCertificate#SELF_SIGNED} is
-     * selected.
+     * strategy: HTTP/2 with ALPN fallback to HTTP/1.1 when TLS is enabled via
+     * {@link HttpCertificate#SSL}.
      *
      * @param httpCertificate certificate strategy
      * @return ready-to-use Vert.x options
@@ -477,15 +464,6 @@ public class HttpServer implements Certificatable {
             httpServerOptions.setUseAlpn(true);
             httpServerOptions.setAlpnVersions(List.of(HttpVersion.HTTP_2,
                                                       HttpVersion.HTTP_1_1));
-        }
-        else if (HttpCertificate.SELF_SIGNED == httpCertificate) {
-            httpServerOptions.setSsl(true);
-            httpServerOptions.setUseAlpn(true);
-            httpServerOptions.setAlpnVersions(List.of(HttpVersion.HTTP_2,
-                                                      HttpVersion.HTTP_1_1));
-            final SelfSignedCertificate selfSignedCertificate = SelfSignedCertificate.create();
-            httpServerOptions.setKeyCertOptions(selfSignedCertificate.keyCertOptions());
-            httpServerOptions.setTrustOptions(selfSignedCertificate.trustOptions());
         }
         return httpServerOptions;
     }

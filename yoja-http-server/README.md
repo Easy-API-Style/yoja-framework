@@ -120,14 +120,6 @@ HttpServer.builder(router, 443)
     .start();
 ```
 
-### Self-signed certificate (dev/test)
-
-```java
-HttpServer.builder(router, 8443)
-    .sslSelfSigned()
-    .start();
-```
-
 ### Custom server options
 
 ```java
@@ -851,14 +843,6 @@ ObjectMapper current = Mapper.jsonMapper();
 HttpServer.builder(router, 443)
     .ssl(Path.of("/etc/letsencrypt/live/example.com/privkey.pem"),
          Path.of("/etc/letsencrypt/live/example.com/fullchain.pem"))
-    .start();
-```
-
-### Self-signed (development only)
-
-```java
-HttpServer.builder(router, 8443)
-    .sslSelfSigned()
     .start();
 ```
 

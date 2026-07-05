@@ -17,7 +17,6 @@
  */
 'use strict'
 const apiVersion = '1.2.1';
-debugger
 console.info('yojaWeb apiVersion: ', apiVersion);
 const scriptTags = [...document.querySelectorAll('script[type="module"]')];
 let scriptTag = scriptTags.find(s => s.src && new URL(s.src).href === import.meta.url);

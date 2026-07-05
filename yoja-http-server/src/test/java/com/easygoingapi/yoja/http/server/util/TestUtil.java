@@ -19,6 +19,7 @@ package com.easygoingapi.yoja.http.server.util;
 
 import static com.easygoingapi.yoja.core.util.FutureUtil.awaitValue;
 
+import java.nio.file.Path;
 import java.time.Duration;
 
 import org.slf4j.Logger;
@@ -37,6 +38,8 @@ import io.vertx.core.Future;
 public class TestUtil {
 
     private static Logger LOGGER = LoggerFactory.getLogger(TestUtil.class);
+    
+    public static final Path sslFolder = Path.of("src/test/resources/com/easygoingapi/yoja/http/server/ssl");
     
     public static final int port = 8888;
     public static final String host = "localhost";
@@ -106,7 +109,8 @@ public class TestUtil {
                                            final WebSocketService webSocketService) {
         final HttpServer.Builder httpServerBuilder = HttpServer.builder(httpRouter, port);
         if (ssl) {
-            httpServerBuilder.sslSelfSigned();
+            httpServerBuilder.ssl(sslFolder.resolve("ssl-key.pem"), 
+                                  sslFolder.resolve("ssl-cert.pem"));
         }
         if (webSocketService != null) {
             httpServerBuilder.webSocketService(webSocketService);

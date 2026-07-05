@@ -19,6 +19,7 @@ package com.easygoingapi.yoja.reverse.proxy.util;
 
 import static com.easygoingapi.yoja.core.util.FutureUtil.awaitValue;
 
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Set;
 
@@ -37,6 +38,8 @@ import io.vertx.core.Future;
 public class TestUtil {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TestUtil.class);
+    
+    public static final Path sslFolder = Path.of("src/test/resources/com/easygoingapi/yoja/http/server/ssl");
     
     private static HttpEngine httpEngine = new HttpEngine();
     private static WebSocketEngine webSocketEngine = new WebSocketEngine();
@@ -63,11 +66,12 @@ public class TestUtil {
 
     public static Future<ReverseProxyServer> startProxy(final int port, 
                                                         final Set<ReverseProxyRule> reverseProxyRules,
-                                                        final boolean sslSelfSigned,
+                                                        final boolean ssl,
                                                         final boolean sslProxy) {
         final ReverseProxyServer.Builder reverseProxyServer = ReverseProxyServer.builder(port);
-        if (sslSelfSigned) {
-            reverseProxyServer.sslSelfSigned();
+        if (ssl) {
+            reverseProxyServer.ssl(sslFolder.resolve("ssl-key.pem"), 
+                                   sslFolder.resolve("ssl-cert.pem"));
         }
         reverseProxyServer.sslProxy(sslProxy);
         return reverseProxyServer.rules(reverseProxyRules)
