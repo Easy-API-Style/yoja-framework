@@ -31,19 +31,19 @@ import io.vertx.core.json.JsonObject;
  */
 public class JsonArrayHelper {
 
-    /** Writer used for elements that are neither JSON structures nor scalars. */
+    /** Writer used to encode array elements (scalars and arbitrary POJOs). */
     private static final JsonWriter JSON_WRITER = JsonWriter.builder().build();
 
     /** Not instantiable. */
     private JsonArrayHelper() {}
 
-    /** Wraps {@code value} in double quotes. */
-    private static String pad(final String value) {
-        return "\"" + value + "\"";
-    }
-
     /**
      * Encodes the given array to a JSON string.
+     * <p>
+     * Nested {@link JsonObject}/{@link JsonArray} are encoded recursively;
+     * every other element (strings — properly escaped, numbers, booleans,
+     * {@code null}, arbitrary POJOs) is serialized with Jackson so it produces
+     * a valid JSON literal.
      *
      * @param jsonArray array to encode (a {@code null} array yields {@code "[]"})
      * @return the JSON string representation of {@code jsonArray}
@@ -59,15 +59,6 @@ public class JsonArrayHelper {
                 }
                 else if (value instanceof JsonObject v) {
                     values.add(v.encode());
-                }
-                else if (value instanceof Boolean v) {
-                    values.add(pad(v.toString()));
-                }
-                else if (value instanceof String v) {
-                    values.add(pad(v.toString()));
-                }
-                else if (value instanceof Number v) {
-                    values.add(pad(v.toString()));
                 }
                 else {
                     values.add(JSON_WRITER.write(value));
