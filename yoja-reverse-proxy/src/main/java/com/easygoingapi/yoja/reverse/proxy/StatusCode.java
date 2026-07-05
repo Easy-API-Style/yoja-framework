@@ -19,6 +19,7 @@ package com.easygoingapi.yoja.reverse.proxy;
 
 import java.util.Collection;
 
+import com.easygoingapi.yoja.core.util.JsonArrayHelper;
 import com.google.common.base.Throwables;
 
 import io.vertx.core.json.JsonArray;
@@ -51,7 +52,7 @@ public class StatusCode {
                                     final Collection<?> values) {
         routingContext.response().setStatusCode(200);
         routingContext.response().putHeader("Content-Type", "application/array-json");
-        routingContext.response().end(JsonArray.of(values.toArray()).encode());
+        routingContext.response().end(JsonArrayHelper.encode(JsonArray.of(values.toArray())));
     }
 
     /**

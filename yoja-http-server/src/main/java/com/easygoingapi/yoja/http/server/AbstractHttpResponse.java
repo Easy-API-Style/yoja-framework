@@ -23,6 +23,7 @@ import java.util.TreeSet;
 import com.easygoingapi.yoja.core.http.ContentType;
 import com.easygoingapi.yoja.core.http.HttpCookie;
 import com.easygoingapi.yoja.core.util.JavaReflectUtil;
+import com.easygoingapi.yoja.core.util.JsonArrayHelper;
 
 import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
@@ -49,7 +50,7 @@ import io.vertx.ext.web.RoutingContext;
  * public API exposes.
  */
 public abstract class AbstractHttpResponse {
-
+    
     /** Underlying Vert.x Web routing context. */
     private final RoutingContext routingContext;
     /** Convenience handle to the response side of the routing context. */
@@ -380,7 +381,7 @@ public abstract class AbstractHttpResponse {
 				httpServerResponse.putHeader(ContentType.key,
 						                     ContentType.jsonArray.value());
 			}
-			result = httpServerResponse.end(jsonArray.encode());
+			result = httpServerResponse.end(JsonArrayHelper.encode(jsonArray));
 		}
 		else if (body instanceof String string) {
 			if (!headers.contains(ContentType.key)) {

@@ -22,6 +22,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import com.easygoingapi.yoja.core.http.HttpCookie;
+import com.easygoingapi.yoja.core.util.JsonReader;
 import com.google.common.base.Objects;
 
 import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
@@ -42,7 +43,7 @@ import io.vertx.core.json.JsonObject;
  * via {@link #body(Class)}.
  */
 public class HttpResponse {
-
+    
     /** Wrapped Vert.x web-client response. */
     private final io.vertx.ext.web.client.HttpResponse<Buffer> httpResponse;
     /** Cookies decoded from the response's {@code Set-Cookie} headers. */
@@ -267,7 +268,7 @@ public class HttpResponse {
      * @return the decoded POJO
      */
     public <C> C body(final Class<C> clazz) {
-        return bodyAsJsonObject().mapTo(clazz);
+        return JsonReader.defaultReader().read(bodyAsJsonObject(), clazz);
     }
 
     @Override

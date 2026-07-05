@@ -17,7 +17,8 @@
  */
 package com.easygoingapi.yoja.http.server;
 
-import com.easygoingapi.yoja.http.server.json.JsonWriter;
+import com.easygoingapi.yoja.core.util.JsonReader;
+import com.easygoingapi.yoja.core.util.JsonWriter;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -160,7 +161,9 @@ public class HttpResponseEvent extends AbstractHttpResponse {
 	 * @return the decoded POJO
 	 */
 	public <C> C body(final Class<C> clazz) {
-		return ((JsonObject) body).mapTo(clazz);
+		return JsonReader.defaultReader()
+		                 .read(((JsonObject) body).encode(),
+		                       clazz);
 	}
 
 	/**
@@ -199,7 +202,8 @@ public class HttpResponseEvent extends AbstractHttpResponse {
      * @param body POJO to serialize
      */
     public void updateJsonBody(final Object body) {
-        updateBody(JsonObject.mapFrom(body));
+        updateBody(JsonWriter.defaultWriter()
+                             .writeAsJsonObject(body));
     }
 
 	/**

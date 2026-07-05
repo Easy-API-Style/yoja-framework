@@ -15,10 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.easygoingapi.yoja.http.server.json;
+package com.easygoingapi.yoja.core.util;
 
-import com.easygoingapi.yoja.http.server.HttpServerException;
-import com.fasterxml.jackson.databind.ObjectReader;
+import com.easygoingapi.yoja.core.YojaAppException;
+
+import io.vertx.core.json.JsonObject;
+import tools.jackson.databind.ObjectReader;
 
 /**
  * Thin wrapper around a Jackson {@link ObjectReader} that converts read
@@ -28,7 +30,7 @@ import com.fasterxml.jackson.databind.ObjectReader;
  * Jackson {@code @JsonView} via {@link Builder#view(Class)}.
  */
 public class JsonReader {
-
+    
 	/** The wrapped Jackson reader. */
 	private final ObjectReader objectReader;
 
@@ -54,27 +56,22 @@ public class JsonReader {
 			return objectReader.forType(clazz).readValue(json);
 		}
 		catch (final Exception e) {
-			throw new HttpServerException("read json failed", e);
+			throw new YojaAppException("read json failed", e);
 		}
 	}
 
+	public <O> O read(final JsonObject json,
+                      final Class<O> clazz) {
+	    return read(json.encode(), clazz);
+    }
+	
 	/*
 	 *
 	 * STATIC
 	 *
 	 */
-	/**
-	 * Convenience one-shot read: builds a default reader and decodes
-	 * {@code json} into a value of {@code clazz}.
-	 *
-	 * @param json  JSON document to parse
-	 * @param clazz target class
-	 * @param <O>   target type
-	 * @return the decoded value
-	 */
-	public static <O> O readValue(final String json,
-			                      final Class<O> clazz) {
-		return builder().build().read(json, clazz);
+	public static JsonReader defaultReader() {
+		return new JsonReader(Mapper.jsonMapper().reader());
 	}
 
 	/*

@@ -21,12 +21,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.easygoingapi.yoja.core.YojaApp;
-import com.easygoingapi.yoja.core.http.HttpUrl;
 import com.easygoingapi.yoja.core.http.HttpEncoding.Format;
+import com.easygoingapi.yoja.core.http.HttpUrl;
 import com.easygoingapi.yoja.core.worker.Worker;
 import com.easygoingapi.yoja.http.client.HttpEngine;
 import com.easygoingapi.yoja.http.client.WebSocketEngine;
@@ -62,8 +59,6 @@ import io.vertx.ext.web.handler.BodyHandler;
  * with {@code 500} and a textual stack trace.
  */
 public class ReverseProxySwitcherWebClient extends ReverseProxySwitcher {
-
-	private final static Logger LOGGER = LoggerFactory.getLogger(ReverseProxySwitcherWebClient.class);
 
 	/** HTTP engine used to dial the upstream. */
 	private final HttpEngine proxyHttpEngine;

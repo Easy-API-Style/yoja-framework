@@ -17,7 +17,9 @@
  */
 package com.easygoingapi.yoja.http.server;
 
-import com.easygoingapi.yoja.http.server.json.JsonWriter;
+import java.util.Collection;
+
+import com.easygoingapi.yoja.core.util.JsonWriter;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -34,7 +36,7 @@ import io.vertx.core.json.JsonObject;
  * (in which case the response is closed with status {@code 444}).
  */
 public class HttpResponse extends AbstractHttpResponse {
-
+    
 	/** Routing context that originated this response. */
 	private final HttpRoutingContext httpRoutingContext;
 
@@ -77,7 +79,11 @@ public class HttpResponse extends AbstractHttpResponse {
      * @return a future completing when the response is flushed
      */
     public Future<Void> sendJson(final Object body) {
-        return sendBody(JsonObject.mapFrom(body));
+        return sendBody(JsonWriter.defaultWriter().writeAsJsonObject(body));
+    }
+    
+    public Future<Void> sendJson(final Collection<Object> body) {
+        return sendBody(JsonWriter.defaultWriter().writeAsJsonArray(body));
     }
 
     /**
@@ -90,7 +96,7 @@ public class HttpResponse extends AbstractHttpResponse {
     public Future<Void> send(final JsonObject body) {
         return sendBody(body);
     }
-
+    
     /**
      * Sends a {@link JsonArray} body (Content-Type defaults to
      * {@code application/json}).

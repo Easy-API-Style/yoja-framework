@@ -15,17 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.easygoingapi.yoja.http.server.json;
+package com.easygoingapi.yoja.core.util;
 
 import java.util.Collection;
 
-import com.easygoingapi.yoja.http.server.HttpServerException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
-import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.easygoingapi.yoja.core.YojaAppException;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectWriter;
 
 /**
  * Thin wrapper around a Jackson {@link ObjectWriter} that converts write
@@ -41,11 +40,7 @@ import io.vertx.core.json.JsonObject;
  * the writer.
  */
 public class JsonWriter {
-
-	/** Private Jackson mapper used for every writer built from this class. */
-	private static final ObjectMapper JSON_OBJECT_MAPPER = JsonMapper.builder()
-                                                                     .build();
-
+    
 	/** The wrapped Jackson writer. */
 	private final ObjectWriter objectWriter;
 
@@ -67,7 +62,7 @@ public class JsonWriter {
 			return objectWriter.writeValueAsString(value);
 		}
 		catch (final Exception e) {
-			throw new HttpServerException("write json failed", e);
+			throw new YojaAppException("write json failed", e);
 		}
 	}
 
@@ -101,6 +96,10 @@ public class JsonWriter {
 	 * STATIC
 	 *
 	 */
+	public static JsonWriter defaultWriter() {
+        return new JsonWriter(Mapper.jsonMapper().writer());
+    }
+	
 	/**
 	 * Convenience one-shot write with a Jackson view.
 	 *
@@ -135,16 +134,6 @@ public class JsonWriter {
 	public static JsonArray writeValueAsJsonArray(final Collection<?> values,
                                                   final Class<?> view) {
 		return builder().view(view).build().writeAsJsonArray(values);
-	}
-
-	/**
-	 * Serializes {@code value} with default settings (no view, no pretty-print).
-	 *
-	 * @param value the object to serialize
-	 * @return the JSON string
-	 */
-	public static String writeValue(final Object value) {
-		return builder().build().write(value);
 	}
 
 	/*
@@ -203,7 +192,7 @@ public class JsonWriter {
 		 * @return the configured {@link JsonWriter}
 		 */
 		public JsonWriter build() {
-			ObjectWriter writer = JSON_OBJECT_MAPPER.writer();
+			ObjectWriter writer = Mapper.jsonMapper().writer();
 			if (pretty) {
 				writer = writer.withDefaultPrettyPrinter();
 			}

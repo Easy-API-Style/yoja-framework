@@ -15,10 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.easygoingapi.yoja.http.server.json;
+package com.easygoingapi.yoja.core.util;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Process-wide accessor for the Jackson {@link ObjectMapper} used by
@@ -31,9 +31,7 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 public class Mapper {
 
 	/** Shared Jackson mapper used by every {@link JsonReader} built from the package. */
-	private static ObjectMapper JSON_OBJECT_MAPPER =
-		JsonMapper.builder()
-                  .build();
+	private static ObjectMapper JSON_OBJECT_MAPPER = JsonMapper.builder().build();
 
 	/** Not instantiable; use the static methods. */
 	private Mapper() {}

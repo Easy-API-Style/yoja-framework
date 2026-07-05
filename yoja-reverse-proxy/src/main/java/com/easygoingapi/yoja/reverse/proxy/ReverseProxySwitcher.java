@@ -31,9 +31,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.easygoingapi.yoja.core.YojaApp;
+import com.easygoingapi.yoja.core.http.HttpEncoding.Format;
 import com.easygoingapi.yoja.core.http.HttpProtocole;
 import com.easygoingapi.yoja.core.http.HttpUrl;
-import com.easygoingapi.yoja.core.http.HttpEncoding.Format;
+import com.easygoingapi.yoja.core.util.JsonReader;
 import com.easygoingapi.yoja.core.util.PathUtil;
 import com.easygoingapi.yoja.core.worker.Worker;
 import com.easygoingapi.yoja.http.client.WebSocketEngine;
@@ -505,9 +506,9 @@ public class ReverseProxySwitcher {
         return routingContext -> {
             Worker.singleThread.once(workerId, () -> {
                 if (checkToken(routingContext)) {
-                    final ReverseProxyRule reverseProxyRule = routingContext.body()
-                                                                            .asJsonObject()
-                                                                            .mapTo(ReverseProxyRule.class);
+                    final ReverseProxyRule reverseProxyRule = JsonReader.defaultReader()
+                                                                        .read(routingContext.body().asString(), 
+                                                                              ReverseProxyRule.class);
                     if (reverseProxyRule != null) {
                         rules.put(reverseProxyRule.from().id(), reverseProxyRule);
                         StatusCode.ok(routingContext);
@@ -536,7 +537,9 @@ public class ReverseProxySwitcher {
                     if (jsonArray != null) {
                         for (final Object rule : jsonArray) {
                             if (rule instanceof JsonObject jsonObject) {
-                                final ReverseProxyRule reverseProxyRule = jsonObject.mapTo(ReverseProxyRule.class);
+                                final ReverseProxyRule reverseProxyRule = JsonReader.defaultReader()
+                                                                                    .read(jsonObject.encode(), 
+                                                                                          ReverseProxyRule.class);
                                 rules.put(reverseProxyRule.from().id(), reverseProxyRule);
                             }
                         }
@@ -563,9 +566,9 @@ public class ReverseProxySwitcher {
         return routingContext -> {
             Worker.singleThread.once(workerId, () -> {
                 if (checkToken(routingContext)) {
-                    final Url.From from = routingContext.body()
-                                                        .asJsonObject()
-                                                        .mapTo(Url.From.class);
+                    final Url.From from = JsonReader.defaultReader()
+                                                    .read(routingContext.body().asString(), 
+                                                          Url.From.class);
                     if (rules.remove(from.id()) != null) {
                         StatusCode.ok(routingContext);
                     }
@@ -593,7 +596,8 @@ public class ReverseProxySwitcher {
                     if (jsonArray != null) {
                         for (final Object rule : jsonArray) {
                             if (rule instanceof JsonObject jsonObject) {
-                                final Url.From from = jsonObject.mapTo(Url.From.class);
+                                final Url.From from = JsonReader.defaultReader()
+                                                                .read(jsonObject.encode(), Url.From.class);
                                 rules.remove(from.id());
                             }
                         }

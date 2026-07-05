@@ -33,6 +33,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 
 import com.easygoingapi.yoja.core.http.HttpMethod;
+import com.easygoingapi.yoja.core.util.JsonReader;
+import com.easygoingapi.yoja.core.util.JsonWriter;
 import com.easygoingapi.yoja.http.client.HttpClient;
 import com.easygoingapi.yoja.http.client.HttpGet;
 import com.easygoingapi.yoja.http.client.HttpPost;
@@ -50,7 +52,10 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 public class TestWebService_POST {
-
+    
+    private static JsonWriter jsonWriter = JsonWriter.defaultWriter();
+    private static JsonReader jsonReader = JsonReader.defaultReader();
+    
     @Test
     public void test_01() {
         final HttpClient httpClient = newHttpClient();
@@ -205,7 +210,7 @@ public class TestWebService_POST {
         final HttpServer httpServer = newHttpServer(httpRouter);
         try {
             final Body body = new Body("value_1", "value_2", "value_3");
-            final HttpPost httpPost = HttpPost.of("/webService_1", JsonObject.mapFrom(body));
+            final HttpPost httpPost = HttpPost.of("/webService_1", jsonWriter.writeAsJsonObject(body));
             final HttpResponse httpResponseClient = awaitValue(httpClient.send(httpPost));
             assertEquals("{\"value_3\":\"value_3\",\"value_2\":\"value_2\",\"value_1\":\"value_1\"}", httpResponseClient.bodyAsText());
             assertEquals("application/json", httpResponseClient.header("Content-Type"));
@@ -229,9 +234,9 @@ public class TestWebService_POST {
         final HttpServer httpServer = newHttpServer(httpRouter);
         try {
             final Body body = new Body("value_1", "value_2", "value_3");
-            final HttpPost httpPost = HttpPost.of("/webService_1", JsonObject.mapFrom(body));
+            final HttpPost httpPost = HttpPost.of("/webService_1", jsonWriter.writeAsJsonObject(body));
             final HttpResponse httpResponseClient = awaitValue(httpClient.send(httpPost));
-            assertEquals(JsonObject.mapFrom(body), 
+            assertEquals(jsonWriter.writeAsJsonObject(body), 
                          httpResponseClient.bodyAsJsonObject());
             assertEquals("application/json", httpResponseClient.header("Content-Type"));
         }
@@ -254,7 +259,7 @@ public class TestWebService_POST {
         final HttpServer httpServer = newHttpServer(httpRouter);
         try {
             final Body body = new Body("value_1", "value_2", "value_3");
-            final HttpPost httpPost = HttpPost.of("/webService_1", JsonObject.mapFrom(body));
+            final HttpPost httpPost = HttpPost.of("/webService_1", jsonWriter.writeAsJsonObject(body));
             final HttpResponse httpResponseClient = awaitValue(httpClient.send(httpPost));
             assertEquals("{\"value_3\":\"value_3\",\"value_2\":\"value_2\",\"value_1\":\"value_1\"}", new String(httpResponseClient.bodyAsBinary()));
             assertEquals("application/json", httpResponseClient.header("Content-Type"));
@@ -278,7 +283,7 @@ public class TestWebService_POST {
         final HttpServer httpServer = newHttpServer(httpRouter);
         try {
             final Body body = new Body("value_1", "value_2", "value_3");
-            final HttpPost httpPost = HttpPost.of("/webService_1", JsonObject.mapFrom(body));
+            final HttpPost httpPost = HttpPost.of("/webService_1", jsonWriter.writeAsJsonObject(body));
             final HttpResponse httpResponseClient = awaitValue(httpClient.send(httpPost));
             assertEquals(body, httpResponseClient.body(Body.class));
             assertEquals("application/json", httpResponseClient.header("Content-Type"));
@@ -330,8 +335,8 @@ public class TestWebService_POST {
             final HttpPost httpPost = HttpPost.of("/webService_1", 
                                                   JsonArray.of(body_1, body_2));
             final HttpResponse httpResponseClient = awaitValue(httpClient.send(httpPost));
-            assertEquals(body_1, httpResponseClient.bodyAsJsonArray().getJsonObject(0).mapTo(Body.class));
-            assertEquals(body_2, httpResponseClient.bodyAsJsonArray().getJsonObject(1).mapTo(Body.class));
+            assertEquals(body_1, jsonReader.read(httpResponseClient.bodyAsJsonArray().getJsonObject(0), Body.class));
+            assertEquals(body_2, jsonReader.read(httpResponseClient.bodyAsJsonArray().getJsonObject(1), Body.class));
             assertEquals("application/array-json", httpResponseClient.header("Content-Type"));
         }
         finally {
@@ -528,7 +533,7 @@ public class TestWebService_POST {
     public void test_16() {
         final HttpClient httpClient = newHttpClient();
         final Handler<HttpRouting> httpRouting_1 = v -> {
-            v.response().send(JsonObject.mapFrom(v.request().body(Body.class)));
+            v.response().send(jsonWriter.writeAsJsonObject(v.request().body(Body.class)));
         };
         final WebService webService_1 = new WebService(HttpMethod.POST, "/webService_1", httpRouting_1);
         final HttpRouter httpRouter = HttpRouter.builder()
@@ -536,7 +541,7 @@ public class TestWebService_POST {
                                                 .build();
         final HttpServer httpServer = newHttpServer(httpRouter);
         try {
-            final HttpPost httpPost = HttpPost.of("/webService_1", JsonObject.mapFrom(new Body("1", "2", "3")));
+            final HttpPost httpPost = HttpPost.of("/webService_1", jsonWriter.writeAsJsonObject(new Body("1", "2", "3")));
             final HttpResponse httpResponseClient = awaitValue(httpClient.send(httpPost));
             assertEquals("{\"value_3\":\"3\",\"value_2\":\"2\",\"value_1\":\"1\"}", httpResponseClient.bodyAsText());
         }

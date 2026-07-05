@@ -25,6 +25,7 @@ import java.util.TreeMap;
 import com.easygoingapi.yoja.core.http.HttpEncoding;
 import com.easygoingapi.yoja.core.http.HttpMethod;
 import com.easygoingapi.yoja.core.http.HttpParameter;
+import com.easygoingapi.yoja.core.util.JsonReader;
 
 import io.vertx.core.http.Cookie;
 import io.vertx.core.http.HttpServerRequest;
@@ -46,7 +47,7 @@ import io.vertx.ext.web.RoutingContext;
  * accessors do not iterate the underlying request on each call.
  */
 public class HttpRequest {
-
+    
     /** The underlying Vert.x Web routing context (kept for body and query helpers). */
     private final RoutingContext routingContext;
     /** Convenience handle to the routing context's request. */
@@ -348,8 +349,10 @@ public class HttpRequest {
      */
     public <C> C body(final Class<C> clazz) {
         if (clazz != null) {
-            return routingContext.body()
-                                 .asPojo(clazz);
+            return JsonReader.defaultReader()
+                             .read(routingContext.body()
+                                                 .asString(),
+                                   clazz);
         }
         return null;
     }

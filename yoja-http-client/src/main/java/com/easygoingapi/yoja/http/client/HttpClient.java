@@ -26,6 +26,7 @@ import java.util.Map.Entry;
 import com.easygoingapi.yoja.core.http.ContentType;
 import com.easygoingapi.yoja.core.http.HttpEncoding.Format;
 import com.easygoingapi.yoja.core.http.HttpParameter;
+import com.easygoingapi.yoja.core.util.JsonArrayHelper;
 
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.vertx.core.Future;
@@ -56,8 +57,6 @@ import io.vertx.ext.web.client.WebClient;
  * Any I/O failure is wrapped into an {@link HttpException}.
  */
 public class HttpClient {
-
-//    private static final Logger LOGGER = LoggerFactory.getLogger(HttpClient.class);
 
     /** Target host. */
     private String host;
@@ -173,7 +172,7 @@ public class HttpClient {
                 request.headers()
                        .set(ContentType.key,
                              ContentType.jsonArray.value());
-                result = request.sendBuffer(Buffer.buffer(jsonArray.encode()))
+                result = request.sendBuffer(Buffer.buffer(JsonArrayHelper.encode(jsonArray)))
                                 .map(v -> new HttpResponse(v));
             }
             else if (body instanceof String text) {

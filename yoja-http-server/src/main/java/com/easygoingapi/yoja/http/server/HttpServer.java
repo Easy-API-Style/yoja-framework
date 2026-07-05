@@ -86,10 +86,10 @@ public class HttpServer implements Certificatable {
     /** Vert.x options applied when starting the server. */
     private HttpServerOptions httpServerOptions;
 
-    /** TLS key path (when {@link HttpCertificate#SSL} is used). */
-    private Path sslKeyPath;
-    /** TLS certificate path (when {@link HttpCertificate#SSL} is used). */
-    private Path sslCertPath;
+    /** TLS key path (when {@link HttpCertificate#SSL} is used); updated by {@link #updateCertificate(Path, Path)}. */
+    private volatile Path sslKeyPath;
+    /** TLS certificate path (when {@link HttpCertificate#SSL} is used); updated by {@link #updateCertificate(Path, Path)}. */
+    private volatile Path sslCertPath;
 
     /** Thread-safe current state, defaulted to {@link State#stopped}. */
     private AtomicReference<State> state = new AtomicReference<>(State.stopped);
@@ -168,6 +168,8 @@ public class HttpServer implements Certificatable {
 
     /**
      * Hot-swaps the server's TLS material without restarting the listener.
+     * On success, {@link #keyPath()} and {@link #certificatePath()} are
+     * updated to reflect the new paths.
      *
      * @param keyPath  path to a PEM-encoded key
      * @param certPath path to a PEM-encoded certificate
@@ -186,7 +188,11 @@ public class HttpServer implements Certificatable {
         final ServerSSLOptions sslOptions = new ServerSSLOptions();
         sslOptions.setKeyCertOptions(pemKeyCertOptions);
         sslOptions.setTrustOptions(pemTrustOptions);
-        return httpServer.updateSSLOptions(sslOptions);
+        return httpServer.updateSSLOptions(sslOptions)
+                         .onSuccess(updated -> {
+                             this.sslKeyPath = keyPath;
+                             this.sslCertPath = certPath;
+                         });
     }
 
     /**
