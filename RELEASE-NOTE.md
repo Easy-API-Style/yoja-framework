@@ -3,6 +3,7 @@
 * remove Vert.x's deprecated `SelfSignedCertificate` -> no more `HttpCertificate.SELF_SIGNED`
 * create `SslUtil` (yoja-core) -> use openssl to create certificat files
 * improve `ProcessUtil` (yoja-core) -> add timeout
+* fix update certificate -> file paths updated
 
 ## 1.2.1
 * fix `SeleniumService` timeouts

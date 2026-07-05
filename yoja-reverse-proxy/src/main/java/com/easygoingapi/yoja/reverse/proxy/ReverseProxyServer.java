@@ -103,8 +103,8 @@ public class ReverseProxyServer implements Certificatable {
     /** Header name carrying the replacement token on {@code POST /update/token}. */
     private static String adminNewTokenHeader = "New-Reserve-Proxy-Token";
 
-    /** Captured server configuration, populated at start time. */
-    private ServerConfig proxyServerConfig;
+    /** Captured server configuration, populated at start time; TLS paths refreshed by {@link #updateCertificate(Path, Path)}. */
+    private volatile ServerConfig proxyServerConfig;
 
     /** Vert.x server backing the admin endpoints. */
     private HttpServer adminProxyServer;
@@ -184,7 +184,8 @@ public class ReverseProxyServer implements Certificatable {
 
     /**
      * Hot-swaps the TLS material on both the proxy and admin servers without
-     * restarting either listener.
+     * restarting either listener. On success, {@link #keyPath()} and
+     * {@link #certificatePath()} are updated to reflect the new paths.
      *
      * @param sslKeyPath  path to the PEM-encoded key
      * @param sslCertPath path to the PEM-encoded certificate
@@ -207,7 +208,14 @@ public class ReverseProxyServer implements Certificatable {
         futures.add(proxyServer.updateSSLOptions(sslOptions));
         futures.add(adminProxyServer.updateSSLOptions(sslOptions));
         return Future.all(futures)
-                     .map(h -> h.succeeded(0) && h.succeeded(1));
+                     .map(h -> h.succeeded(0) && h.succeeded(1))
+                     .onSuccess(updated -> this.proxyServerConfig =
+                             new ServerConfig(proxyServerConfig.port(),
+                                              proxyServerConfig.adminPort(),
+                                              proxyServerConfig.options(),
+                                              proxyServerConfig.certificate(),
+                                              sslKeyPath,
+                                              sslCertPath));
     }
 
     /**
@@ -597,6 +605,13 @@ public class ReverseProxyServer implements Certificatable {
 
         /**
          * Installs a fallback resolver consulted when no rule matches.
+         * <p>
+         * The resolver receives the full inbound {@link HttpUrl} (including its
+         * query string) and returns the target URL used <em>as-is</em>. Unlike
+         * rule-based resolution, the inbound query is <strong>not</strong>
+         * merged automatically: if you want to preserve it, copy it onto the
+         * returned URL, e.g.
+         * {@code .parameterQuery(inbound.parameterQuery(Format.decoded))}.
          *
          * @param resolver function mapping an inbound URL to a target URL (or
          *                 {@code null} to signal a miss)

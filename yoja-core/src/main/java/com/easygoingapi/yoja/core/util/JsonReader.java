@@ -24,7 +24,7 @@ import tools.jackson.databind.ObjectReader;
 
 /**
  * Thin wrapper around a Jackson {@link ObjectReader} that converts read
- * failures into {@link HttpServerException}.
+ * failures into {@link YojaAppException}.
  * <p>
  * Instances are built through {@link #builder()} and optionally bound to a
  * Jackson {@code @JsonView} via {@link Builder#view(Class)}.
@@ -48,7 +48,7 @@ public class JsonReader {
 	 * @param clazz target class
 	 * @param <O>   target type
 	 * @return the decoded value
-	 * @throws HttpServerException when Jackson fails to parse or bind
+	 * @throws YojaAppException when Jackson fails to parse or bind
 	 */
 	public <O> O read(final String json,
 			          final Class<O> clazz) {
@@ -60,15 +60,29 @@ public class JsonReader {
 		}
 	}
 
+	/**
+	 * Reads the given {@link JsonObject} into an instance of {@code clazz}.
+	 *
+	 * @param json  JSON object
+	 * @param clazz target class
+	 * @param <O>   target type
+	 * @return the decoded value
+	 * @throws YojaAppException when Jackson fails to parse or bind
+	 */
 	public <O> O read(final JsonObject json,
                       final Class<O> clazz) {
 	    return read(json.encode(), clazz);
     }
-	
+
 	/*
 	 *
 	 * STATIC
 	 *
+	 */
+	/**
+	 * Returns a reader using the shared default Jackson mapper.
+	 *
+	 * @return a reader using the shared default Jackson mapper
 	 */
 	public static JsonReader defaultReader() {
 		return new JsonReader(Mapper.jsonMapper().reader());

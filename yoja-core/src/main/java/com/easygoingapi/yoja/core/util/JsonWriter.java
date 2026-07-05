@@ -28,7 +28,7 @@ import tools.jackson.databind.ObjectWriter;
 
 /**
  * Thin wrapper around a Jackson {@link ObjectWriter} that converts write
- * failures into {@link HttpServerException}, plus helpers to materialize the
+ * failures into {@link YojaAppException}, plus helpers to materialize the
  * result as a Vert.x {@link JsonObject} or {@link JsonArray}.
  * <p>
  * Instances are built through {@link #builder()}; the builder supports pretty
@@ -55,7 +55,7 @@ public class JsonWriter {
 	 *
 	 * @param value the object to serialize
 	 * @return the JSON string
-	 * @throws HttpServerException when Jackson fails to serialize
+	 * @throws YojaAppException when Jackson fails to serialize
 	 */
 	public String write(final Object value) {
 		try {
@@ -95,6 +95,11 @@ public class JsonWriter {
 	 *
 	 * STATIC
 	 *
+	 */
+	/**
+	 * Returns a writer using the shared default Jackson mapper.
+	 *
+	 * @return a writer using the shared default Jackson mapper
 	 */
 	public static JsonWriter defaultWriter() {
         return new JsonWriter(Mapper.jsonMapper().writer());

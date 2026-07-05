@@ -82,6 +82,13 @@ public class HttpResponse extends AbstractHttpResponse {
         return sendBody(JsonWriter.defaultWriter().writeAsJsonObject(body));
     }
     
+    /**
+     * Serializes each element of {@code body} to JSON and sends the result as
+     * a {@link io.vertx.core.json.JsonArray}.
+     *
+     * @param body collection of POJOs to serialize
+     * @return a future completing when the response is flushed
+     */
     public Future<Void> sendJson(final Collection<Object> body) {
         return sendBody(JsonWriter.defaultWriter().writeAsJsonArray(body));
     }
