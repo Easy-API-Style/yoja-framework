@@ -2,9 +2,9 @@
 
 [![Website](https://img.shields.io/badge/website-easygoingapi.com%2Fyoja--web-blue)](https://easygoingapi.com/modules/web.html) [![Email](https://img.shields.io/badge/email-easy.api.contact%40gmail.com-red)](mailto:easy.api.contact@gmail.com)
 
-[![Release](https://img.shields.io/badge/release-1.2.1-brightgreen)](https://github.com/Easy-API-Style/yoja-framework/releases/tag/1.2.1)
+[![Release](https://img.shields.io/badge/release-1.3.0-brightgreen)](https://github.com/Easy-API-Style/yoja-framework/releases/tag/1.3.0)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green)](https://github.com/Easy-API-Style/yoja-framework/blob/main/LICENSE)
-[![Maven Central](https://img.shields.io/badge/maven--central-com.easygoingapi%3Ayoja--web%3A1.2.1-blue)](https://central.sonatype.com/artifact/com.easygoingapi/yoja-web/1.2.1)
+[![Maven Central](https://img.shields.io/badge/maven--central-com.easygoingapi%3Ayoja--web%3A1.3.0-blue)](https://central.sonatype.com/artifact/com.easygoingapi/yoja-web/1.3.0)
 
 **JavaScript / CSS / HTML** frontend framework for the Yoja full-stack suite (backend in pure Java). Follows the **React component pattern** — each section of the page is bound to an ES6 controller class — but with no virtual DOM, no build step, and no transpiler. Provides section-based component architecture, routing, i18n, HTTP, WebSocket, and storage utilities built entirely on native ES6 modules.
 
@@ -90,7 +90,7 @@ Include the framework script in your HTML. Point `yw-config-path` at a config fi
 
 ```html
 <script type="module"
-        src="/com/easygoingapi/yoja/web/YojaWeb-1.2.1.js"
+        src="/com/easygoingapi/yoja/web/YojaWeb-1.3.0.js"
         yw-config-path="/YojaWeb.conf.js"></script>
 ```
 
@@ -148,7 +148,7 @@ The config file is declared via the `yw-config-path` attribute on the `<script>`
 
 ```html
 <script type="module"
-        src="/com/easygoingapi/yoja/web/YojaWeb-1.2.1.js"
+        src="/com/easygoingapi/yoja/web/YojaWeb-1.3.0.js"
         yw-config-path="/YojaWeb.conf.js"></script>
 ```
 
@@ -501,7 +501,7 @@ export default class MyControler {
 
 ### Where the class lives and what it's for
 
-The class is defined in [`YojaWeb-1.2.1.js`](src/main/webapp/com/easygoingapi/yoja/web/YojaWeb-1.2.1.js) (search for `class Section`). It is **not exported** as a public symbol — you never construct one yourself. The framework instantiates a `Section` for every DOM element that carries at least one section-creating directive (`yw-controler`, `yw-css`, `yw-language`, or `yw-slot`), and hands it to your controller's constructor as the single argument.
+The class is defined in [`YojaWeb-1.3.0.js`](src/main/webapp/com/easygoingapi/yoja/web/YojaWeb-1.3.0.js) (search for `class Section`). It is **not exported** as a public symbol — you never construct one yourself. The framework instantiates a `Section` for every DOM element that carries at least one section-creating directive (`yw-controler`, `yw-css`, `yw-language`, or `yw-slot`), and hands it to your controller's constructor as the single argument.
 
 A `Section` is the runtime façade of a component:
 

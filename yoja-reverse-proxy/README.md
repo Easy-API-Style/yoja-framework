@@ -2,10 +2,10 @@
 
 [![Website](https://img.shields.io/badge/website-easygoingapi.com%2Fyoja--reverse--proxy-blue)](https://easygoingapi.com/modules/reverse-proxy.html) [![Email](https://img.shields.io/badge/email-easy.api.contact%40gmail.com-red)](mailto:easy.api.contact@gmail.com)
 
-[![Release](https://img.shields.io/badge/release-1.2.1-brightgreen)](https://github.com/Easy-API-Style/yoja-framework/releases/tag/1.2.1)
+[![Release](https://img.shields.io/badge/release-1.3.0-brightgreen)](https://github.com/Easy-API-Style/yoja-framework/releases/tag/1.3.0)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green)](https://github.com/Easy-API-Style/yoja-framework/blob/main/LICENSE)
 [![Java](https://img.shields.io/badge/java-25-orange)](https://openjdk.org/projects/jdk/25/)
-[![Maven Central](https://img.shields.io/badge/maven--central-com.easygoingapi%3Ayoja--reverse--proxy%3A1.2.1-blue)](https://central.sonatype.com/artifact/com.easygoingapi/yoja-reverse-proxy/1.2.1)
+[![Maven Central](https://img.shields.io/badge/maven--central-com.easygoingapi%3Ayoja--reverse--proxy%3A1.3.0-blue)](https://central.sonatype.com/artifact/com.easygoingapi/yoja-reverse-proxy/1.3.0)
 
 Reverse proxy module of the Yoja Framework. Routes incoming HTTP and WebSocket traffic to backend services based on host/path rules, with optional load balancing, path rewriting, SSL termination, and a live admin API.
 

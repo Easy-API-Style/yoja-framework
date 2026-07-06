@@ -6,12 +6,12 @@ sourceSets {
     }
 }
 dependencies {
-    api 'org.seleniumhq.selenium:selenium-java:4.43.0'
+    api 'org.seleniumhq.selenium:selenium-java:4.45.0'
     
-    api 'org.junit.jupiter:junit-jupiter-api:6.0.3'
-    api 'org.junit.jupiter:junit-jupiter-engine:6.0.3'
-    api 'org.junit.vintage:junit-vintage-engine:6.0.3'
-    api 'org.junit.platform:junit-platform-launcher:6.0.3'
+    api 'org.junit.jupiter:junit-jupiter-api:6.1.1'
+    api 'org.junit.jupiter:junit-jupiter-engine:6.1.1'
+    api 'org.junit.vintage:junit-vintage-engine:6.1.1'
+    api 'org.junit.platform:junit-platform-launcher:6.1.1'
     
     api project(':yoja-core')
     api project(':yoja-http-server')
