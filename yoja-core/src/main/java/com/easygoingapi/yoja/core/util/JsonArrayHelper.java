@@ -31,9 +31,6 @@ import io.vertx.core.json.JsonObject;
  */
 public class JsonArrayHelper {
 
-    /** Writer used to encode array elements (scalars and arbitrary POJOs). */
-    private static final JsonWriter JSON_WRITER = JsonWriter.builder().build();
-
     /** Not instantiable. */
     private JsonArrayHelper() {}
 
@@ -61,7 +58,7 @@ public class JsonArrayHelper {
                     values.add(v.encode());
                 }
                 else {
-                    values.add(JSON_WRITER.write(value));
+                    values.add(JsonWriter.defaultWriter().write(value));
                 }
             }
         }

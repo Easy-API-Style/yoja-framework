@@ -355,55 +355,44 @@ class HttpClient {
         return new Promise((resolve, reject) => {
             this.#doFetch(request)
                 .then(response => {
-                    if (response.ok) {
-                        let contentType = null;
-                        const fetchMode = this.#getFetchMode(request, response);
-                        let responseFuture;
-                        if (fetchMode == 'json') {
-                            responseFuture = response.json();
-                        }
-                        else if (fetchMode == 'text') {
-                            responseFuture = response.text();
-                        }
-                        else if (fetchMode == 'base64') {
-                            responseFuture = response.text()
-                                                     .then(v => { 
-                                                        const blob = javascriptUtil.base64ToBlob(v);
-                                                        if (blob.type) {
-                                                            contentType = blob.type;
-                                                        }
-                                                        return blob.arrayBuffer();
-                                                     }) 
-                        }
-                        else if (fetchMode == 'blob') {
-                            responseFuture = response.text()
-                                                     .then(v => javascriptUtil.base64ToBlob(v));
-                        }
-                        else if (fetchMode == 'arrayBuffer') {
-                            if (!response.headers
-                                   || !response.headers.has('content-type')) {
-                                contentType = 'application/octet-stream';
-                            }
-                            responseFuture = response.arrayBuffer();
-                        }
-                        responseFuture.then(body => {
-                            const result = this.#toResult(response, body, contentType);
-                            this.#applyOnResponse(request, result);
-                            if (callback) {
-                                callback(result);
-                            }
-                            resolve(result);
-                        })
+                    let contentType = null;
+                    const fetchMode = this.#getFetchMode(request, response);
+                    let responseFuture;
+                    if (fetchMode == 'json') {
+                        responseFuture = response.json();
                     }
-                    else {
-                        this.#fail(response);
-                        const result = this.#toResult(response);
+                    else if (fetchMode == 'text') {
+                        responseFuture = response.text();
+                    }
+                    else if (fetchMode == 'base64') {
+                        responseFuture = response.text()
+                                                 .then(v => { 
+                                                    const blob = javascriptUtil.base64ToBlob(v);
+                                                    if (blob.type) {
+                                                        contentType = blob.type;
+                                                    }
+                                                    return blob.arrayBuffer();
+                                                 }) 
+                    }
+                    else if (fetchMode == 'blob') {
+                        responseFuture = response.text()
+                                                 .then(v => javascriptUtil.base64ToBlob(v));
+                    }
+                    else if (fetchMode == 'arrayBuffer') {
+                        if (!response.headers
+                               || !response.headers.has('content-type')) {
+                            contentType = 'application/octet-stream';
+                        }
+                        responseFuture = response.arrayBuffer();
+                    }
+                    responseFuture.then(body => {
+                        const result = this.#toResult(response, body, contentType);
                         this.#applyOnResponse(request, result);
                         if (callback) {
                             callback(result);
                         }
                         resolve(result);
-                    }
+                    })
                 })
                 .catch(error => {
                     reject({error: error, 
