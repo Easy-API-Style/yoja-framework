@@ -1,3 +1,7 @@
+## 1.4.0
+* fix http response of httpClient.js 
+* add after/before browser hooks -> yoja-selenium
+
 ## 1.3.0
 * use Vert.x 5.1.3
 * remove Vert.x's deprecated `SelfSignedCertificate` -> no more `HttpCertificate.SELF_SIGNED`

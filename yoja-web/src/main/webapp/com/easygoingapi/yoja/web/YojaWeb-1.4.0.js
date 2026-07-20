@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 'use strict'
-const apiVersion = '1.3.0';
+const apiVersion = '1.4.0';
 console.info('yojaWeb apiVersion: ', apiVersion);
 const scriptTags = [...document.querySelectorAll('script[type="module"]')];
 let scriptTag = scriptTags.find(s => s.src && new URL(s.src).href === import.meta.url);

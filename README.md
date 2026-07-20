@@ -2,7 +2,7 @@
 
 [![Website](https://img.shields.io/badge/website-easygoingapi.com-blue)](https://easygoingapi.com/) [![Email](https://img.shields.io/badge/email-easy.api.contact%40gmail.com-red)](mailto:easy.api.contact@gmail.com)
 
-[![Release](https://img.shields.io/badge/release-1.3.0-brightgreen)](https://github.com/Easy-API-Style/yoja-framework/releases/tag/1.3.0)
+[![Release](https://img.shields.io/badge/release-1.4.0-brightgreen)](https://github.com/Easy-API-Style/yoja-framework/releases/tag/1.4.0)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green)](https://github.com/Easy-API-Style/yoja-framework/blob/main/LICENSE)
 [![Java](https://img.shields.io/badge/java-25-orange)](https://openjdk.org/projects/jdk/25/)
 
@@ -229,7 +229,7 @@ In your `webapp/index.html`, include the `yoja-web` script and declare your firs
     <meta http-equiv="encoding" content="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
 
-    <script type="module" src="/com/easygoingapi/yoja/web/YojaWeb-1.3.0.js"></script>
+    <script type="module" src="/com/easygoingapi/yoja/web/YojaWeb-1.4.0.js"></script>
 </head>
 <body>
     <div yw-controler="./sections/UserList/UserListControler.js"

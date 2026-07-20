@@ -39,7 +39,7 @@ public class TestConfig {
                           .webResource(yojaWebApp, "/*")
                           .webResource(new WebResource(yojaWebApp, 
                                                        "/YojaWeb-x.y.z.js",
-                                                       c -> c.redirect("/yoja/YojaWeb-1.3.0.js")))
+                                                       c -> c.redirect("/yoja/YojaWeb-1.4.0.js")))
                           .browser(Browser.builder(Browser.FIREFOX)
                                           .mode(Browser.Mode.HEADLESS)
                                           .build())                          
