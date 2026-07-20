@@ -26,11 +26,11 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.DynamicNode;
 import org.junit.jupiter.api.TestFactory;
 
-import com.easygoingapi.yoja.selenium.TestContext;
+import com.easygoingapi.yoja.selenium.YojaTestContext;
 
 public class Test_app_04 {
 
-    public static Consumer<TestContext> test_config = testContext -> {
+    public static Consumer<YojaTestContext> test_config = testContext -> {
         final String result = testContext.seleniumService()
                                          .executeScript(""" 
             return JSON.stringify(yojaWeb.config)
@@ -39,7 +39,7 @@ public class Test_app_04 {
                      result);
     };
     
-    public static Consumer<TestContext> test_controlers = testContext -> {
+    public static Consumer<YojaTestContext> test_controlers = testContext -> {
         final List<String> result = testContext.seleniumService()
                                                .executeScript(""" 
             return yojaWeb.controlerService.find()
@@ -48,7 +48,7 @@ public class Test_app_04 {
         assertEquals(List.of("HomeControler", "UserControler_1", "UserControler_2"), result);
     };
     
-    public static Consumer<TestContext> test_controler_1 = testContext -> {
+    public static Consumer<YojaTestContext> test_controler_1 = testContext -> {
         final List<String> result = testContext.seleniumService()
                                                .executeScript(""" 
             return yojaWeb.controlerService.find({predicate: c => c.constructor.name === 'UserControler_1'})
@@ -57,7 +57,7 @@ public class Test_app_04 {
         assertEquals(List.of("UserControler_1"), result);
     };
     
-    public static Consumer<TestContext> test_controler_2 = testContext -> {
+    public static Consumer<YojaTestContext> test_controler_2 = testContext -> {
         final List<String> result = testContext.seleniumService()
                                                .executeScript(""" 
             return yojaWeb.controlerService.find({predicate: c => c.constructor.name === 'UserControler_2'})
@@ -67,7 +67,7 @@ public class Test_app_04 {
     };
     
     
-    public static Consumer<TestContext> test_user_1_label_id = testContext -> {
+    public static Consumer<YojaTestContext> test_user_1_label_id = testContext -> {
         final List<String> result = testContext.seleniumService()
                                                .executeScript(""" 
             return yojaWeb.findTags('.user-1 .id-section label')
@@ -76,7 +76,7 @@ public class Test_app_04 {
         assertEquals(List.of("rgb(0, 255, 0)", "rgb(0, 255, 0)"), result);
     };
 
-    public static Consumer<TestContext> test_user_1_label_address = testContext -> {
+    public static Consumer<YojaTestContext> test_user_1_label_address = testContext -> {
         final List<String> result = testContext.seleniumService()
                                                .executeScript(""" 
             return yojaWeb.findTags('.user-1 .address-section label')
@@ -85,7 +85,7 @@ public class Test_app_04 {
         assertEquals(List.of("rgb(255, 165, 0)", "rgb(255, 165, 0)", "rgb(255, 165, 0)"), result);
     };
     
-    public static Consumer<TestContext> test_user_2_label_id = testContext -> {
+    public static Consumer<YojaTestContext> test_user_2_label_id = testContext -> {
         final List<String> result = testContext.seleniumService()
                                                .executeScript(""" 
             return yojaWeb.findTags('.user-2 .id-section label')
@@ -94,7 +94,7 @@ public class Test_app_04 {
         assertEquals(List.of("rgb(255, 192, 203)", "rgb(255, 192, 203)"), result);
     };
 
-    public static Consumer<TestContext> test_user_2_label_address = testContext -> {
+    public static Consumer<YojaTestContext> test_user_2_label_address = testContext -> {
         final List<String> result = testContext.seleniumService()
                                                .executeScript(""" 
             return yojaWeb.findTags('.user-2 .address-section label')

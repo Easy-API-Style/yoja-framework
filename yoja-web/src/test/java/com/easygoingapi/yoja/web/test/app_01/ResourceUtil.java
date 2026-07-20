@@ -24,13 +24,13 @@ import java.time.Duration;
 import java.util.function.Consumer;
 
 import com.easygoingapi.yoja.core.http.HttpUrl;
-import com.easygoingapi.yoja.selenium.TestBuilder;
-import com.easygoingapi.yoja.selenium.TestContext;
+import com.easygoingapi.yoja.selenium.YojaSeleniumBuilder;
+import com.easygoingapi.yoja.selenium.YojaTestContext;
 import com.easygoingapi.yoja.web.test.util.TestConfig;
 
 public class ResourceUtil {
     
-    public static TestBuilder initialize_app() {
+    public static YojaSeleniumBuilder initialize_app() {
         return TestConfig.initialize()
                          .webResource("com.easygoingapi.yoja.web.test.app_01")
                          .test("getYojaWebPage", getYojaWebPage)
@@ -39,14 +39,14 @@ public class ResourceUtil {
                          .loadYwAssert();
     }
 
-    public static Consumer<TestContext> getYojaWebPage = testContext -> {
+    public static Consumer<YojaTestContext> getYojaWebPage = testContext -> {
         final HttpUrl httpUrl = testContext.httpUrlBuilder()
                                            .path("/home.html")
                                            .build(); 
         testContext.getHttpPage(Duration.ofSeconds(10), httpUrl);
     };
 
-    public static Consumer<TestContext> appendUser = testContext -> {
+    public static Consumer<YojaTestContext> appendUser = testContext -> {
         final Long childrenLength = testContext.seleniumService()
                                                .executeAsyncScript(Duration.ofSeconds(10), """ 
             const callback = arguments[arguments.length - 1]
@@ -59,7 +59,7 @@ public class ResourceUtil {
         assertEquals(1, childrenLength);
     };
 
-    public static Consumer<TestContext> addArticle = testContext -> {
+    public static Consumer<YojaTestContext> addArticle = testContext -> {
         final Boolean result = testContext.seleniumService()
                                           .executeAsyncScript(Duration.ofSeconds(10), """ 
             const callback = arguments[arguments.length - 1]
@@ -74,7 +74,7 @@ public class ResourceUtil {
         assertTrue(result);
     };
     
-    public static Consumer<TestContext> append(final String selector,
+    public static Consumer<YojaTestContext> append(final String selector,
                                                final String path) {
         return testContext -> {
             final Boolean done = testContext.seleniumService()

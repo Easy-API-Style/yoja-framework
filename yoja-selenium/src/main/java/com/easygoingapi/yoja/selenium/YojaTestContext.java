@@ -22,29 +22,29 @@ import java.util.List;
 
 import com.easygoingapi.yoja.core.http.HttpUrl;
 import com.easygoingapi.yoja.core.http.HttpEncoding.Format;
-import com.easygoingapi.yoja.selenium.HttpServerContext.HttpUrlBuilder;
+import com.easygoingapi.yoja.selenium.YojaHttpServerContext.HttpUrlBuilder;
 
 /**
  * Per-test context handed to every {@code Consumer<TestContext>} registered
- * through {@link TestBuilder#test}.
+ * through {@link YojaSeleniumBuilder#test}.
  * <p>
  * Bundles together the {@link Browser.Config} the test is running against,
- * the embedded {@link HttpServerContext} serving the test fixtures, and the
- * {@link SeleniumService} driving the browser. Most methods are thin
+ * the embedded {@link YojaHttpServerContext} serving the test fixtures, and the
+ * {@link YojaSeleniumService} driving the browser. Most methods are thin
  * delegators that hide the indirection — {@code getHttpPage} forwards to
- * {@link SeleniumService#getHttpPage(Duration, String)} for instance.
+ * {@link YojaSeleniumService#getHttpPage(Duration, String)} for instance.
  * <p>
  * Implements {@link AutoCloseable}: closing the context closes both the
  * embedded server and the WebDriver session.
  */
-public class TestContext implements AutoCloseable {
+public class YojaTestContext implements AutoCloseable {
 
     /** Browser configuration the running test is exercising. */
     private final Browser.Config browserConfig;
     /** Embedded HTTP server serving the fixtures. */
-    private final HttpServerContext httpServerContext;
+    private final YojaHttpServerContext httpServerContext;
     /** Active Selenium driver wrapper. */
-    private final SeleniumService seleniumService;
+    private final YojaSeleniumService seleniumService;
 
     /**
      * Constructs a test context for the given browser, server, and Selenium service.
@@ -53,9 +53,9 @@ public class TestContext implements AutoCloseable {
      * @param httpServerContext embedded server serving the fixtures
      * @param seleniumService   active Selenium wrapper
      */
-    public TestContext(final Browser.Config browserConfig,
-                       final HttpServerContext httpServerContext,
-                       final SeleniumService seleniumService) {
+    public YojaTestContext(final Browser.Config browserConfig,
+                       final YojaHttpServerContext httpServerContext,
+                       final YojaSeleniumService seleniumService) {
         super();
         this.browserConfig = browserConfig;
         this.httpServerContext = httpServerContext;
@@ -76,7 +76,7 @@ public class TestContext implements AutoCloseable {
      *
      * @return the embedded HTTP server context
      */
-    public HttpServerContext httpServerContext() {
+    public YojaHttpServerContext httpServerContext() {
         return httpServerContext;
     }
 
@@ -92,7 +92,7 @@ public class TestContext implements AutoCloseable {
     /**
      * Returns the browser-side logs collected so far.
      *
-     * @return the browser-side logs collected so far (delegates to {@link SeleniumService#logs()})
+     * @return the browser-side logs collected so far (delegates to {@link YojaSeleniumService#logs()})
      */
     public List<Log> logs() {
         return seleniumService.logs();
@@ -103,7 +103,7 @@ public class TestContext implements AutoCloseable {
      *
      * @return the underlying Selenium service
      */
-    public SeleniumService seleniumService() {
+    public YojaSeleniumService seleniumService() {
         return seleniumService;
     }
 

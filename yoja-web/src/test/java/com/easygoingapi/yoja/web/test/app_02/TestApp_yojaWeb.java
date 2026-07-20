@@ -27,12 +27,12 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.DynamicNode;
 import org.junit.jupiter.api.TestFactory;
 
-import com.easygoingapi.yoja.selenium.TestContext;
-import com.easygoingapi.yoja.selenium.SeleniumService.Storage;
+import com.easygoingapi.yoja.selenium.YojaTestContext;
+import com.easygoingapi.yoja.selenium.YojaSeleniumService.Storage;
 
 public class TestApp_yojaWeb {
     
-    public static Consumer<TestContext> test_config = testContext -> {
+    public static Consumer<YojaTestContext> test_config = testContext -> {
         final String result = testContext.seleniumService()
                                          .executeScript(""" 
             return JSON.stringify(yojaWeb.config)
@@ -41,7 +41,7 @@ public class TestApp_yojaWeb {
                      result);
     };
     
-    public static Consumer<TestContext> test_controlerService = testContext -> {
+    public static Consumer<YojaTestContext> test_controlerService = testContext -> {
         final Boolean result = testContext.seleniumService()
                                           .executeScript(""" 
             return yojaWeb.controlerService.constructor.name === 'ControlerService'
@@ -49,7 +49,7 @@ public class TestApp_yojaWeb {
         assertTrue(result);
     };
     
-    public static Consumer<TestContext> test_sectionService = testContext -> {
+    public static Consumer<YojaTestContext> test_sectionService = testContext -> {
         final Boolean result = testContext.seleniumService()
                                           .executeScript(""" 
             return yojaWeb.sectionService.constructor.name === 'SectionService'
@@ -57,7 +57,7 @@ public class TestApp_yojaWeb {
         assertTrue(result);
     };
 
-    public static Consumer<TestContext> test_cssSheetService = testContext -> {
+    public static Consumer<YojaTestContext> test_cssSheetService = testContext -> {
         final Boolean result = testContext.seleniumService()
                                           .executeScript(""" 
             return yojaWebApi.cssSheetService !== null
@@ -65,7 +65,7 @@ public class TestApp_yojaWeb {
         assertTrue(result);
     };
     
-    public static Consumer<TestContext> test_walkTag = testContext -> {
+    public static Consumer<YojaTestContext> test_walkTag = testContext -> {
         final List<String> result = testContext.seleniumService()
                                                .executeScript(""" 
             const result = []
@@ -88,7 +88,7 @@ public class TestApp_yojaWeb {
                      result);
     };
 
-    public static Consumer<TestContext> test_walkSectionTag_01 = testContext -> {
+    public static Consumer<YojaTestContext> test_walkSectionTag_01 = testContext -> {
         final List<String> result = testContext.seleniumService()
                                                .executeScript(""" 
             const result = []
@@ -101,7 +101,7 @@ public class TestApp_yojaWeb {
                      result);
     };
     
-    public static Consumer<TestContext> test_walkSectionTag_02 = testContext -> {
+    public static Consumer<YojaTestContext> test_walkSectionTag_02 = testContext -> {
         final List<String> result = testContext.seleniumService()
                                                .executeScript(""" 
             const tag = yojaWeb.firstTag('.order-section')
@@ -113,14 +113,14 @@ public class TestApp_yojaWeb {
                      result);
     };
     
-    public static Consumer<TestContext> test_localStorage = testContext -> {
+    public static Consumer<YojaTestContext> test_localStorage = testContext -> {
         final Boolean result = testContext.seleniumService()
                                           .localStorage("documentReadyDone", 
                                                         Storage.value);
         assertTrue(result);
     };
     
-    public static Consumer<TestContext> test_sessionStorage = testContext -> {
+    public static Consumer<YojaTestContext> test_sessionStorage = testContext -> {
         final List<String> result = testContext.seleniumService()
                                                .sessionStorage("tagReadyClassNames", 
                                                                Storage.value);

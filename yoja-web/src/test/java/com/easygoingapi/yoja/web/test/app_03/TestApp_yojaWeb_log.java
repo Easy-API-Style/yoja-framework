@@ -27,7 +27,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.DynamicNode;
 import org.junit.jupiter.api.TestFactory;
 
-import com.easygoingapi.yoja.selenium.TestContext;
+import com.easygoingapi.yoja.selenium.YojaTestContext;
 
 public class TestApp_yojaWeb_log {
 	
@@ -81,7 +81,7 @@ public class TestApp_yojaWeb_log {
 		expected.add("</yw-section>");
 	}
     
-	public static Consumer<TestContext> test_log = testContext -> {
+	public static Consumer<YojaTestContext> test_log = testContext -> {
 		testContext.seleniumService().executeScript("""
 		     yojaWeb.sectionService.walk(document, s => {
 		         console.log("------")

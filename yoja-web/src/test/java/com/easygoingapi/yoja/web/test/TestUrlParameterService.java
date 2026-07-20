@@ -32,12 +32,12 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 
 import com.easygoingapi.yoja.selenium.ScriptOption;
-import com.easygoingapi.yoja.selenium.TestBuilder;
+import com.easygoingapi.yoja.selenium.YojaSeleniumBuilder;
 import com.easygoingapi.yoja.web.test.util.TestConfig;
 
 public class TestUrlParameterService {
 
-    public static TestBuilder test_01 =    
+    public static YojaSeleniumBuilder test_01 =    
         TestConfig.initialize()
                   .webResource("com.easygoingapi.yoja.web.test.url.parameter")
                   .test("load page 1", c -> c.getHttpPage(Duration.ofSeconds(2), 

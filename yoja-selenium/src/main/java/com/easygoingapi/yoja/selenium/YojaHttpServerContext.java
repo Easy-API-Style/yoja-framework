@@ -46,13 +46,13 @@ import com.easygoingapi.yoja.http.server.HttpServer.State;
  * sequence (starting at 8888) so multiple contexts can run in parallel
  * without colliding. {@link #start()} synchronously waits until the
  * underlying Vert.x server has bound; {@link #stop()} blocks until it has
- * closed. Both helpers throw a {@link SeleniumException} on failure.
+ * closed. Both helpers throw a {@link YojaSeleniumException} on failure.
  * <p>
  * A nested {@link HttpUrlBuilder} produces {@link HttpUrl} values pointing at
  * the running server, ready to be passed to
- * {@link SeleniumService#getHttpPage(HttpUrl)}.
+ * {@link YojaSeleniumService#getHttpPage(HttpUrl)}.
  */
-public class HttpServerContext implements AutoCloseable {
+public class YojaHttpServerContext implements AutoCloseable {
 
     /** Shared port allocator across every instance. */
     private static final AtomicInteger PORT_SEQUENCE = new AtomicInteger(8888);
@@ -83,7 +83,7 @@ public class HttpServerContext implements AutoCloseable {
      * @param webSocketService WebSocket endpoints; may be empty
      * @param contentTypes     extension → Content-Type mapping
      */
-    protected HttpServerContext(final String host,
+    protected YojaHttpServerContext(final String host,
                                 final List<WebApp> jsUnitWebApps,
                                 final List<WebService> webServices,
                                 final WebSocketService webSocketService,
@@ -142,7 +142,7 @@ public class HttpServerContext implements AutoCloseable {
      * starts the Vert.x server and blocks until the listener is bound (polling
      * every 100&nbsp;ms). No-op when the server is already started.
      *
-     * @throws SeleniumException when the bind fails
+     * @throws YojaSeleniumException when the bind fails
      */
     protected void start() {
         if (State.stopped == httpServerState()) {
@@ -172,7 +172,7 @@ public class HttpServerContext implements AutoCloseable {
                           .webSocketService(webSocketService)
                           .start()
                           .onFailure(e -> {
-                              throw new SeleniumException(e);
+                              throw new YojaSeleniumException(e);
                           })
                           .onComplete(h -> {
                               this.httpServer = h.result();
@@ -182,7 +182,7 @@ public class HttpServerContext implements AutoCloseable {
                 while (await.get());
             }
             catch (final Exception e) {
-                throw new SeleniumException("start package http server failed", e);
+                throw new YojaSeleniumException("start package http server failed", e);
             }
         }
     }
@@ -190,7 +190,7 @@ public class HttpServerContext implements AutoCloseable {
     /**
      * Closes the underlying server and blocks until it reports stopped.
      *
-     * @throws SeleniumException when the close fails
+     * @throws YojaSeleniumException when the close fails
      */
     protected void stop() {
         try {
@@ -203,7 +203,7 @@ public class HttpServerContext implements AutoCloseable {
             }
         }
         catch (final Exception e) {
-            throw new SeleniumException("stop package http server failed", e);
+            throw new YojaSeleniumException("stop package http server failed", e);
         }
     }
 
@@ -216,7 +216,7 @@ public class HttpServerContext implements AutoCloseable {
     @Override
     public String toString() {
         final StringBuilder result = new StringBuilder();
-        result.append(HttpServerContext.class.getSimpleName());
+        result.append(YojaHttpServerContext.class.getSimpleName());
         result.append(" [httpServer=");
         result.append(httpServer.state());
         result.append("]");
@@ -230,7 +230,7 @@ public class HttpServerContext implements AutoCloseable {
      */
     /**
      * Builder producing {@link HttpUrl} instances that target a running
-     * {@link HttpServerContext}.
+     * {@link YojaHttpServerContext}.
      * <p>
      * The host and port come from the context; the caller supplies the path,
      * query and fragment. The protocol is always {@link HttpProtocole#http}.

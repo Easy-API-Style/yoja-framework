@@ -78,9 +78,9 @@ import com.easygoingapi.yoja.core.util.ResourceUtil;
  * Implements {@link AutoCloseable}: closing the service calls
  * {@link WebDriver#quit()} and releases the browser.
  */
-public class SeleniumService implements AutoCloseable {
+public class YojaSeleniumService implements AutoCloseable {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(SeleniumService.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(YojaSeleniumService.class);
     
     /** Default timeout applied to script execution, page loads and implicit waits when none is configured. */
     public static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(10);
@@ -102,7 +102,7 @@ public class SeleniumService implements AutoCloseable {
      * @param debugMode whether to pin every timeout to one hour
      * @param timeout   default timeout for script execution and page loads
      */
-    private SeleniumService(final WebDriver webDriver,
+    private YojaSeleniumService(final WebDriver webDriver,
                             final boolean debugMode,
                             final Duration timeout) {
         super();
@@ -162,7 +162,7 @@ public class SeleniumService implements AutoCloseable {
      * @param arguments arguments passed to the script
      * @param <V>       return type
      * @return the script's return value
-     * @throws SeleniumException when the file cannot be read or the script fails
+     * @throws YojaSeleniumException when the file cannot be read or the script fails
      */
     public <V> V executeScript(final Path script,
                                final Object... arguments) {
@@ -170,7 +170,7 @@ public class SeleniumService implements AutoCloseable {
             return executeScript(Files.readString(script), arguments);
         }
         catch (final Exception e) {
-            throw new SeleniumException("execuate javascript failed", e);
+            throw new YojaSeleniumException("execuate javascript failed", e);
         }
     }
 
@@ -229,7 +229,7 @@ public class SeleniumService implements AutoCloseable {
             return executeAsyncScript(Files.readString(script), arguments);
         }
         catch (final Exception e) {
-            throw new SeleniumException("execuate javascript failed", e);
+            throw new YojaSeleniumException("execuate javascript failed", e);
         }
     }
 
@@ -249,7 +249,7 @@ public class SeleniumService implements AutoCloseable {
             return executeAsyncScript(timeout, Files.readString(script), arguments);
         }
         catch (final Exception e) {
-            throw new SeleniumException("execuate javascript failed", e);
+            throw new YojaSeleniumException("execuate javascript failed", e);
         }
     }
 
@@ -729,7 +729,7 @@ public class SeleniumService implements AutoCloseable {
 
     /**
      * Sleeps for {@code duration} on the test thread. Any
-     * {@link InterruptedException} is wrapped in a {@link SeleniumException}.
+     * {@link InterruptedException} is wrapped in a {@link YojaSeleniumException}.
      *
      * @param duration how long to sleep
      */
@@ -738,7 +738,7 @@ public class SeleniumService implements AutoCloseable {
             Thread.sleep(duration);
         }
         catch (final InterruptedException e) {
-            throw new SeleniumException(e);
+            throw new YojaSeleniumException(e);
         }
     }
 
@@ -951,7 +951,7 @@ public class SeleniumService implements AutoCloseable {
      * @return a Selenium service driving the freshly-launched browser
      * @throws YojaAppException when the browser is missing from the configuration
      */
-    public static SeleniumService newInstance(final Browser.Config browserConfig) {
+    public static YojaSeleniumService newInstance(final Browser.Config browserConfig) {
         final WebDriver webDriver;
         if (browserConfig.getBrowser() == Browser.FIREFOX) {
             final FirefoxOptions firefoxOptions = new FirefoxOptions();
@@ -1019,7 +1019,7 @@ public class SeleniumService implements AutoCloseable {
                          ? browserConfig.getTimeout()
                          : DEFAULT_TIMEOUT;
         }
-        return new SeleniumService(webDriver, debugMode, timeout);
+        return new YojaSeleniumService(webDriver, debugMode, timeout);
     }
 
 }

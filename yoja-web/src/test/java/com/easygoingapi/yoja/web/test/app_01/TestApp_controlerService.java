@@ -28,11 +28,11 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.DynamicNode;
 import org.junit.jupiter.api.TestFactory;
 
-import com.easygoingapi.yoja.selenium.TestContext;
+import com.easygoingapi.yoja.selenium.YojaTestContext;
 
 public class TestApp_controlerService {
     
-    public static Consumer<TestContext> test_first_01 = testContext -> {
+    public static Consumer<YojaTestContext> test_first_01 = testContext -> {
         final String result = testContext.seleniumService()
                                           .executeScript(""" 
             const controler = yojaWeb.controlerService
@@ -43,7 +43,7 @@ public class TestApp_controlerService {
         assertEquals("UserControler", result);
     };
     
-    public static Consumer<TestContext> test_first_02 = testContext -> {
+    public static Consumer<YojaTestContext> test_first_02 = testContext -> {
         final String result = testContext.seleniumService()
                                           .executeScript(""" 
             const controler = yojaWeb.controlerService
@@ -54,7 +54,7 @@ public class TestApp_controlerService {
         assertEquals("ArticleControler", result);
     };
     
-    public static Consumer<TestContext> test_first_03 = testContext -> {
+    public static Consumer<YojaTestContext> test_first_03 = testContext -> {
         final String result = testContext.seleniumService()
                                           .executeScript(""" 
             const controler = yojaWeb.controlerService
@@ -65,7 +65,7 @@ public class TestApp_controlerService {
         assertEquals("bread", result);
     };
 
-    public static Consumer<TestContext> test_first_04 = testContext -> {
+    public static Consumer<YojaTestContext> test_first_04 = testContext -> {
         final String result = testContext.seleniumService()
                                           .executeScript(""" 
             const controler = yojaWeb.controlerService
@@ -75,7 +75,7 @@ public class TestApp_controlerService {
         assertEquals("HomeControler", result);
     };
     
-    public static Consumer<TestContext> test_first_05 = testContext -> {
+    public static Consumer<YojaTestContext> test_first_05 = testContext -> {
         final String result = testContext.seleniumService()
                                           .executeScript(""" 
             const tag = yojaWeb.firstTag('.id-section')
@@ -86,7 +86,7 @@ public class TestApp_controlerService {
         assertNull(result);
     };
     
-    public static Consumer<TestContext> test_first_06 = testContext -> {
+    public static Consumer<YojaTestContext> test_first_06 = testContext -> {
         final String result = testContext.seleniumService()
                                           .executeScript(""" 
             const tag = yojaWeb.firstTag('.user-section')
@@ -98,7 +98,7 @@ public class TestApp_controlerService {
         assertEquals("ArticleControler", result);
     };
     
-    public static Consumer<TestContext> test_first_07 = testContext -> {
+    public static Consumer<YojaTestContext> test_first_07 = testContext -> {
         final Boolean result = testContext.seleniumService()
                                           .executeScript(""" 
             const tag = yojaWeb.firstTag('.id-section')
@@ -110,7 +110,7 @@ public class TestApp_controlerService {
         assertTrue(result);
     };
     
-    public static Consumer<TestContext> test_find_01 = testContext -> {
+    public static Consumer<YojaTestContext> test_find_01 = testContext -> {
         final Long result = testContext.seleniumService()
                                        .executeScript(""" 
             const controlers = yojaWeb.controlerService
@@ -121,7 +121,7 @@ public class TestApp_controlerService {
         assertEquals(2, result);
     };
 
-    public static Consumer<TestContext> test_find_02 = testContext -> {
+    public static Consumer<YojaTestContext> test_find_02 = testContext -> {
         final List<String> result = testContext.seleniumService()
                                                .executeScript(""" 
             const controlers = yojaWeb.controlerService
@@ -137,7 +137,7 @@ public class TestApp_controlerService {
                      result);
     };
 
-    public static Consumer<TestContext> test_find_03 = testContext -> {
+    public static Consumer<YojaTestContext> test_find_03 = testContext -> {
         final Long result = testContext.seleniumService()
                                        .executeScript(""" 
             const controlers = yojaWeb.controlerService
@@ -148,7 +148,7 @@ public class TestApp_controlerService {
         assertEquals(0, result);
     };
     
-    public static Consumer<TestContext> test_parent_01 = testContext -> {
+    public static Consumer<YojaTestContext> test_parent_01 = testContext -> {
         final String result = testContext.seleniumService()
                                          .executeScript(""" 
             const controlerService = yojaWeb.controlerService
@@ -159,7 +159,7 @@ public class TestApp_controlerService {
         assertEquals("HomeControler", result);
     };
     
-    public static Consumer<TestContext> test_parent_02 = testContext -> {
+    public static Consumer<YojaTestContext> test_parent_02 = testContext -> {
         final String result = testContext.seleniumService()
                                          .executeScript(""" 
             const controlerService = yojaWeb.controlerService
@@ -170,7 +170,7 @@ public class TestApp_controlerService {
         assertEquals("UserControler", result);
     };
 
-    public static Consumer<TestContext> test_parent_03 = testContext -> {
+    public static Consumer<YojaTestContext> test_parent_03 = testContext -> {
         final String result = testContext.seleniumService()
                                          .executeScript(""" 
             const controlerService = yojaWeb.controlerService
@@ -181,7 +181,7 @@ public class TestApp_controlerService {
         assertEquals("UserControler", result);
     };
 
-    public static Consumer<TestContext> test_parent_04 = testContext -> {
+    public static Consumer<YojaTestContext> test_parent_04 = testContext -> {
         final String result = testContext.seleniumService()
                                          .executeScript(""" 
             const controlerService = yojaWeb.controlerService
@@ -192,7 +192,7 @@ public class TestApp_controlerService {
         assertEquals("UserControler", result);
     };
 
-    public static Consumer<TestContext> test_parent_05 = testContext -> {
+    public static Consumer<YojaTestContext> test_parent_05 = testContext -> {
         final String result = testContext.seleniumService()
                                          .executeScript(""" 
             const controlerService = yojaWeb.controlerService
@@ -204,7 +204,7 @@ public class TestApp_controlerService {
         assertEquals("HomeControler", result);
     };
     
-    public static Consumer<TestContext> test_closest_01 = testContext -> {
+    public static Consumer<YojaTestContext> test_closest_01 = testContext -> {
         final String result = testContext.seleniumService()
                                          .executeScript(""" 
             const controlerService = yojaWeb.controlerService
@@ -215,7 +215,7 @@ public class TestApp_controlerService {
         assertEquals("UserControler", result);
     };
 
-    public static Consumer<TestContext> test_closest_02 = testContext -> {
+    public static Consumer<YojaTestContext> test_closest_02 = testContext -> {
         final String result = testContext.seleniumService()
                                          .executeScript(""" 
             const controlerService = yojaWeb.controlerService
@@ -226,7 +226,7 @@ public class TestApp_controlerService {
         assertEquals("UserControler", result);
     };
     
-    public static Consumer<TestContext> test_closest_03 = testContext -> {
+    public static Consumer<YojaTestContext> test_closest_03 = testContext -> {
         final String result = testContext.seleniumService()
                                          .executeScript(""" 
             const controlerService = yojaWeb.controlerService
@@ -237,7 +237,7 @@ public class TestApp_controlerService {
         assertEquals("UserControler", result);
     };
 
-    public static Consumer<TestContext> test_closest_04 = testContext -> {
+    public static Consumer<YojaTestContext> test_closest_04 = testContext -> {
         final String result = testContext.seleniumService()
                                          .executeScript(""" 
             const controlerService = yojaWeb.controlerService
@@ -248,7 +248,7 @@ public class TestApp_controlerService {
         assertEquals("UserControler", result);
     };
 
-    public static Consumer<TestContext> test_root_01 = testContext -> {
+    public static Consumer<YojaTestContext> test_root_01 = testContext -> {
         final String result = testContext.seleniumService()
                                          .executeScript(""" 
             const controlerService = yojaWeb.controlerService
@@ -259,7 +259,7 @@ public class TestApp_controlerService {
         assertEquals("HomeControler", result);
     };
     
-    public static Consumer<TestContext> test_children_01 = testContext -> {
+    public static Consumer<YojaTestContext> test_children_01 = testContext -> {
         final Long result = testContext.seleniumService()
                                        .executeScript(""" 
             const controlerService = yojaWeb.controlerService
@@ -270,7 +270,7 @@ public class TestApp_controlerService {
         assertEquals(2, result);
     };
     
-    public static Consumer<TestContext> test_children_02 = testContext -> {
+    public static Consumer<YojaTestContext> test_children_02 = testContext -> {
         final List<String> result = testContext.seleniumService()
                                                .executeScript(""" 
             const controlerService = yojaWeb.controlerService
@@ -286,7 +286,7 @@ public class TestApp_controlerService {
         assertEquals(List.of("milk"), result);
     };
 
-    public static Consumer<TestContext> test_parents_01 = testContext -> {
+    public static Consumer<YojaTestContext> test_parents_01 = testContext -> {
         final List<String> result = testContext.seleniumService()
                                                .executeScript(""" 
             const controlerService = yojaWeb.controlerService
@@ -302,7 +302,7 @@ public class TestApp_controlerService {
                      result);
     };
     
-    public static Consumer<TestContext> test_parents_02 = testContext -> {
+    public static Consumer<YojaTestContext> test_parents_02 = testContext -> {
         final List<String> result = testContext.seleniumService()
                                                .executeScript(""" 
             const controlerService = yojaWeb.controlerService
@@ -320,7 +320,7 @@ public class TestApp_controlerService {
                      result);
     };
     
-    public static Consumer<TestContext> test_walk_01 = testContext -> {
+    public static Consumer<YojaTestContext> test_walk_01 = testContext -> {
         final List<String> result = testContext.seleniumService()
                                                .executeScript(""" 
             const controlerService = yojaWeb.controlerService

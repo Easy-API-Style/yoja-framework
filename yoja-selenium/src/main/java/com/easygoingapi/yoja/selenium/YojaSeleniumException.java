@@ -26,12 +26,12 @@ package com.easygoingapi.yoja.selenium;
  * Selenium module is meant for tests and may be used without the rest of the
  * framework's runtime.
  */
-public class SeleniumException extends RuntimeException {
+public class YojaSeleniumException extends RuntimeException {
 
     private static final long serialVersionUID = 1L;
 
     /** No-arg constructor; used when neither a message nor a cause is available. */
-    public SeleniumException() {
+    public YojaSeleniumException() {
         super();
     }
 
@@ -41,7 +41,7 @@ public class SeleniumException extends RuntimeException {
      * @param message human-readable error description
      * @param cause   underlying cause
      */
-    public SeleniumException(final String message,
+    public YojaSeleniumException(final String message,
                              final Throwable cause) {
         super(message, cause);
     }
@@ -51,7 +51,7 @@ public class SeleniumException extends RuntimeException {
      *
      * @param message human-readable error description
      */
-    public SeleniumException(final String message) {
+    public YojaSeleniumException(final String message) {
         super(message);
     }
 
@@ -60,7 +60,7 @@ public class SeleniumException extends RuntimeException {
      *
      * @param cause underlying cause (used when no message adds context)
      */
-    public SeleniumException(final Throwable cause) {
+    public YojaSeleniumException(final Throwable cause) {
         super(cause);
     }
 

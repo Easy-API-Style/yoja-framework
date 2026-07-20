@@ -33,7 +33,7 @@ import com.easygoingapi.yoja.http.server.HttpRouting;
 import com.easygoingapi.yoja.http.server.HttpServer;
 import com.easygoingapi.yoja.http.server.WebService;
 import com.easygoingapi.yoja.selenium.Browser;
-import com.easygoingapi.yoja.selenium.SeleniumService;
+import com.easygoingapi.yoja.selenium.YojaSeleniumService;
 import com.easygoingapi.yoja.selenium.Browser.Mode;
 
 import io.vertx.core.Future;
@@ -51,7 +51,7 @@ public class TestSelenium {
             Browser.builder(Browser.FIREFOX)
                    .mode(Mode.HEADLESS)
                    .build();
-        final SeleniumService seleniumService = SeleniumService.newInstance(config);   
+        final YojaSeleniumService seleniumService = YojaSeleniumService.newInstance(config);   
         final HttpServer httpServer = startHttpServer();
            
         try {
@@ -73,7 +73,7 @@ public class TestSelenium {
             Browser.builder(Browser.CHROME)
                    .mode(Mode.HEADLESS)
                    .build();
-        final SeleniumService seleniumService = SeleniumService.newInstance(config);   
+        final YojaSeleniumService seleniumService = YojaSeleniumService.newInstance(config);   
         final HttpServer httpServer = startHttpServer();
            
         try {

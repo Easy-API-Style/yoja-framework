@@ -32,12 +32,12 @@ import org.junit.jupiter.api.TestFactory;
 import org.openqa.selenium.WebElement;
 
 import com.easygoingapi.yoja.selenium.ScriptOption;
-import com.easygoingapi.yoja.selenium.TestContext;
+import com.easygoingapi.yoja.selenium.YojaTestContext;
 import com.easygoingapi.yoja.web.test.util.TestConfig;
 
 public class TestLanguageService {
 
-    private static Consumer<TestContext> onChangeLanguage() {
+    private static Consumer<YojaTestContext> onChangeLanguage() {
         return c -> {
             c.seleniumService().executeScript(""" 
                 const callback = arguments[arguments.length - 1]
@@ -51,7 +51,7 @@ public class TestLanguageService {
          };
     }
     
-    private static Consumer<TestContext> checkDefaultLanguage() {
+    private static Consumer<YojaTestContext> checkDefaultLanguage() {
         return c -> {
              final String language = c.seleniumService().executeScript(""" 
                 const controler = yojaWeb.controlerService
@@ -62,7 +62,7 @@ public class TestLanguageService {
          };
     }
     
-    private static Consumer<TestContext> checkLabel_fr() {
+    private static Consumer<YojaTestContext> checkLabel_fr() {
         return c -> {
              final WebElement tag_1 = c.seleniumService().firstTag("label[for='familyName']");
              assertEquals("Nom De Famille", tag_1.getText());
@@ -71,7 +71,7 @@ public class TestLanguageService {
          };
     }
     
-    private static Consumer<TestContext> checkUpdatedLabel_fr() {
+    private static Consumer<YojaTestContext> checkUpdatedLabel_fr() {
         return c -> {
              final WebElement tag_1 = c.seleniumService().firstTag("label[for='familyName']");
              assertEquals("Nom", tag_1.getText());
@@ -80,7 +80,7 @@ public class TestLanguageService {
          };
     }
     
-    private static Consumer<TestContext> checkEmptyLabel() {
+    private static Consumer<YojaTestContext> checkEmptyLabel() {
         return c -> {
              final WebElement tag_1 = c.seleniumService().firstTag("label[for='familyName']");
              assertEquals("", tag_1.getText());
@@ -89,7 +89,7 @@ public class TestLanguageService {
          };
     }
     
-    private static Consumer<TestContext> checkPlaceholder_fr() {
+    private static Consumer<YojaTestContext> checkPlaceholder_fr() {
         return c -> {
              final WebElement tag_1 = c.seleniumService().firstTag("input[name='familyName']");
              assertEquals("saisir le nom de famille", tag_1.getDomAttribute("placeholder"));
@@ -98,7 +98,7 @@ public class TestLanguageService {
          };
     }
     
-    private static Consumer<TestContext> changeLanguage_en() {
+    private static Consumer<YojaTestContext> changeLanguage_en() {
         return c -> {
             c.seleniumService().executeScript(""" 
                 const callback = arguments[arguments.length - 1]
@@ -116,7 +116,7 @@ public class TestLanguageService {
          };
     }
     
-    private static Consumer<TestContext> changeLanguage_fr() {
+    private static Consumer<YojaTestContext> changeLanguage_fr() {
         return c -> {
             c.seleniumService().executeScript(""" 
                 const callback = arguments[arguments.length - 1]
@@ -134,7 +134,7 @@ public class TestLanguageService {
          };
     }
     
-    private static Consumer<TestContext> checkLabel_en() {
+    private static Consumer<YojaTestContext> checkLabel_en() {
         return c -> {
              final WebElement tag_1 = c.seleniumService().firstTag("label[for='familyName']");
              assertEquals("Family Name", tag_1.getText());
@@ -143,7 +143,7 @@ public class TestLanguageService {
          };
     }
     
-    private static Consumer<TestContext> checkPlaceholder_en() {
+    private static Consumer<YojaTestContext> checkPlaceholder_en() {
         return c -> {
              final WebElement tag_1 = c.seleniumService().firstTag("input[name='familyName']");
              assertEquals("type your family name", tag_1.getDomAttribute("placeholder"));
@@ -152,7 +152,7 @@ public class TestLanguageService {
          };
     }
 
-    private static Consumer<TestContext> appendAddress() {
+    private static Consumer<YojaTestContext> appendAddress() {
         return c -> {
             final Boolean done = c.seleniumService().executeAsyncScript(""" 
                 const callback = arguments[arguments.length - 1]
@@ -165,7 +165,7 @@ public class TestLanguageService {
          };
     }
     
-    private static Consumer<TestContext> checkAddress_en() {
+    private static Consumer<YojaTestContext> checkAddress_en() {
         return c -> {
              final WebElement tag_1 = c.seleniumService().firstTag("legend");
              assertEquals("Address", tag_1.getText());
@@ -174,7 +174,7 @@ public class TestLanguageService {
          };
     }
     
-    private static Consumer<TestContext> checkAddress_fr() {
+    private static Consumer<YojaTestContext> checkAddress_fr() {
         return c -> {
              final WebElement tag_1 = c.seleniumService().firstTag("legend");
              assertEquals("Adresse", tag_1.getText());
@@ -183,7 +183,7 @@ public class TestLanguageService {
          };
     }
     
-    private static Consumer<TestContext> checkOnTranslate() {
+    private static Consumer<YojaTestContext> checkOnTranslate() {
         return c -> {
             final List<String> events = c.seleniumService().executeScript(""" 
                const controler = yojaWeb.controlerService
@@ -198,7 +198,7 @@ public class TestLanguageService {
         };
     }
     
-    private static Consumer<TestContext> languageLoaded() {
+    private static Consumer<YojaTestContext> languageLoaded() {
         return c -> {
              final boolean result = c.seleniumService().repeatScript(Duration.ofSeconds(3), """
                  const controler = yojaWeb.controlerService
@@ -343,7 +343,7 @@ public class TestLanguageService {
 		expected_07.add("</xml-cascade>");
 	}
 	
-    public static Consumer<TestContext> test_log_07 = testContext -> {
+    public static Consumer<YojaTestContext> test_log_07 = testContext -> {
 		testContext.seleniumService().executeAsyncScript("""
 		      const callback = arguments[arguments.length - 1]
 		      yojaWebApi.languageService
@@ -388,7 +388,7 @@ public class TestLanguageService {
 		expected_08.add("</xml-cascade>");
 	}
 	
-    public static Consumer<TestContext> test_log_08 = testContext -> {
+    public static Consumer<YojaTestContext> test_log_08 = testContext -> {
 		testContext.seleniumService().executeAsyncScript("""
 		      const callback = arguments[arguments.length - 1]
 		      yojaWebApi.languageService

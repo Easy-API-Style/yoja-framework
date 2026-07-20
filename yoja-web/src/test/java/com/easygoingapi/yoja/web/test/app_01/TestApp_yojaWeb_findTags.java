@@ -27,11 +27,11 @@ import org.junit.jupiter.api.DynamicNode;
 import org.junit.jupiter.api.TestFactory;
 import org.openqa.selenium.remote.RemoteWebElement;
 
-import com.easygoingapi.yoja.selenium.TestContext;
+import com.easygoingapi.yoja.selenium.YojaTestContext;
 
 public class TestApp_yojaWeb_findTags {
     
-    public static Consumer<TestContext> test_00 = testContext -> {
+    public static Consumer<YojaTestContext> test_00 = testContext -> {
         final List<RemoteWebElement> result = testContext.seleniumService()
                                                          .executeScript(""" 
             const controlerService = yojaWeb.controlerService
@@ -41,7 +41,7 @@ public class TestApp_yojaWeb_findTags {
         assertEquals("label", result.get(0).getTagName());
     };
 
-    public static Consumer<TestContext> test_01 = testContext -> {
+    public static Consumer<YojaTestContext> test_01 = testContext -> {
         final List<RemoteWebElement> result = testContext.seleniumService()
                                                          .executeScript(""" 
             const controlerService = yojaWeb.controlerService
@@ -51,7 +51,7 @@ public class TestApp_yojaWeb_findTags {
         assertEquals("label", result.get(0).getTagName());
     };
     
-    public static Consumer<TestContext> test_02 = testContext -> {
+    public static Consumer<YojaTestContext> test_02 = testContext -> {
         final List<RemoteWebElement> result = testContext.seleniumService()
                                                          .executeScript(""" 
             const controlerService = yojaWeb.controlerService
@@ -61,7 +61,7 @@ public class TestApp_yojaWeb_findTags {
         assertEquals("label", result.get(0).getTagName());
     };
     
-    public static Consumer<TestContext> test_03 = testContext -> {
+    public static Consumer<YojaTestContext> test_03 = testContext -> {
         final List<RemoteWebElement> result = testContext.seleniumService()
                                                          .executeScript(""" 
             const controlerService = yojaWeb.controlerService
@@ -71,7 +71,7 @@ public class TestApp_yojaWeb_findTags {
         assertEquals("label", result.get(0).getTagName());
     };
 
-    public static Consumer<TestContext> test_04 = testContext -> {
+    public static Consumer<YojaTestContext> test_04 = testContext -> {
         final List<RemoteWebElement> result = testContext.seleniumService()
                                                          .executeScript(""" 
             const controlerService = yojaWeb.controlerService
@@ -81,7 +81,7 @@ public class TestApp_yojaWeb_findTags {
         assertEquals("label", result.get(0).getTagName());
     };
 
-    public static Consumer<TestContext> test_05 = testContext -> {
+    public static Consumer<YojaTestContext> test_05 = testContext -> {
         final List<RemoteWebElement> result = testContext.seleniumService()
                                                           .executeScript(""" 
             const controlerService = yojaWeb.controlerService
@@ -91,7 +91,7 @@ public class TestApp_yojaWeb_findTags {
         assertEquals("label", result.get(0).getTagName());
     };
 
-    public static Consumer<TestContext> test_06 = testContext -> {
+    public static Consumer<YojaTestContext> test_06 = testContext -> {
         final List<RemoteWebElement> result = testContext.seleniumService()
                                                           .executeScript(""" 
             const controlerService = yojaWeb.controlerService
@@ -101,7 +101,7 @@ public class TestApp_yojaWeb_findTags {
         assertEquals("label", result.get(0).getTagName());
     };
 
-    public static Consumer<TestContext> test_07 = testContext -> {
+    public static Consumer<YojaTestContext> test_07 = testContext -> {
         final List<RemoteWebElement> result = testContext.seleniumService()
                                                           .executeScript(""" 
             const controlerService = yojaWeb.controlerService
@@ -110,7 +110,7 @@ public class TestApp_yojaWeb_findTags {
         assertEquals(7, result.size());
     };
 
-    public static Consumer<TestContext> test_08 = testContext -> {
+    public static Consumer<YojaTestContext> test_08 = testContext -> {
         final List<RemoteWebElement> result = testContext.seleniumService()
                                                          .executeScript(""" 
             const controlerService = yojaWeb.controlerService
@@ -121,7 +121,7 @@ public class TestApp_yojaWeb_findTags {
         assertEquals("label", result.get(0).getTagName());
     };
     
-    public static Consumer<TestContext> test_section_00 = testContext -> {
+    public static Consumer<YojaTestContext> test_section_00 = testContext -> {
         final List<RemoteWebElement> result = testContext.seleniumService()
                                                          .executeScript(""" 
             const controlerService = yojaWeb.controlerService
@@ -131,7 +131,7 @@ public class TestApp_yojaWeb_findTags {
         assertEquals(2, result.size());
     };
     
-    public static Consumer<TestContext> test_section_01 = testContext -> {
+    public static Consumer<YojaTestContext> test_section_01 = testContext -> {
         final List<RemoteWebElement> result = testContext.seleniumService()
                                                          .executeScript(""" 
             const controlerService = yojaWeb.controlerService
@@ -141,7 +141,7 @@ public class TestApp_yojaWeb_findTags {
         assertEquals(0, result.size());
     };
 
-    public static Consumer<TestContext> test_section_02 = testContext -> {
+    public static Consumer<YojaTestContext> test_section_02 = testContext -> {
         final List<RemoteWebElement> result = testContext.seleniumService()
                                                          .executeScript(""" 
             const controlerService = yojaWeb.controlerService
@@ -151,7 +151,7 @@ public class TestApp_yojaWeb_findTags {
         assertEquals(1, result.size());
     };
     
-    public static Consumer<TestContext> test_section_03 = testContext -> {
+    public static Consumer<YojaTestContext> test_section_03 = testContext -> {
         final List<RemoteWebElement> result = testContext.seleniumService()
                                                          .executeScript(""" 
             const controlerService = yojaWeb.controlerService
@@ -161,7 +161,7 @@ public class TestApp_yojaWeb_findTags {
         assertEquals(0, result.size());
     };
 
-    public static Consumer<TestContext> test_section_04 = testContext -> {
+    public static Consumer<YojaTestContext> test_section_04 = testContext -> {
         final List<RemoteWebElement> result = testContext.seleniumService()
                                                          .executeScript(""" 
             const controlerService = yojaWeb.controlerService

@@ -22,13 +22,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.time.Duration;
 import java.util.function.Consumer;
 
-import com.easygoingapi.yoja.selenium.TestBuilder;
-import com.easygoingapi.yoja.selenium.TestContext;
+import com.easygoingapi.yoja.selenium.YojaSeleniumBuilder;
+import com.easygoingapi.yoja.selenium.YojaTestContext;
 import com.easygoingapi.yoja.web.test.util.TestConfig;
 
 public class ResourceUtil {
     
-    public static TestBuilder initialize_app() {
+    public static YojaSeleniumBuilder initialize_app() {
         return TestConfig.initialize()
                          .webResource("com.easygoingapi.yoja.web.test.app_02")
                          .test("getYojaWebPage", getYojaWebPage)
@@ -36,11 +36,11 @@ public class ResourceUtil {
                          .loadYwAssert();
     }
 
-    public static Consumer<TestContext> getYojaWebPage = testContext -> {
+    public static Consumer<YojaTestContext> getYojaWebPage = testContext -> {
         testContext.getHttpPage("/home.html");
     };
 
-    public static Consumer<TestContext> addArticle = testContext -> {
+    public static Consumer<YojaTestContext> addArticle = testContext -> {
         final Boolean result = testContext.seleniumService()
                                           .executeAsyncScript(Duration.ofSeconds(10), """ 
             const callback = arguments[arguments.length - 1]

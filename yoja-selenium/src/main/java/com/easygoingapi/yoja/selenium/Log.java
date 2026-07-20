@@ -22,7 +22,7 @@ import java.util.Objects;
 
 /**
  * Single browser-side log entry collected by the {@code ywLogger.js} helper
- * and surfaced by {@link SeleniumService#logs()}.
+ * and surfaced by {@link YojaSeleniumService#logs()}.
  * <p>
  * Each entry carries a timestamp (browser-side {@code Date.now()} value
  * converted to an {@link Instant}), a {@link Level} matching the JavaScript

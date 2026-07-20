@@ -19,13 +19,13 @@ package com.easygoingapi.yoja.selenium;
 
 /**
  * Two-flag option bundle passed to {@code startJavascript}/{@code startYojaWeb}
- * variants on {@link TestBuilder} and to {@link SeleniumService#reload(ScriptOption)}.
+ * variants on {@link YojaSeleniumBuilder} and to {@link YojaSeleniumService#reload(ScriptOption)}.
  * <p>
  * The two flags control which optional JS helpers are loaded into the page
  * after the navigation completes:
  * <ul>
  *   <li>{@link #wyLogger} — load the {@code ywLogger.js} helper so subsequent
- *       browser logs can be retrieved via {@link SeleniumService#logs()};</li>
+ *       browser logs can be retrieved via {@link YojaSeleniumService#logs()};</li>
  *   <li>{@link #ywAssert} — load the {@code ywAssert.js} helper so test code
  *       running inside the page can use the {@code ywAssert} API.</li>
  * </ul>

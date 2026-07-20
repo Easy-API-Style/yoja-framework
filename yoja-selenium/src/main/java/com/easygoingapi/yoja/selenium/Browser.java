@@ -30,7 +30,7 @@ import org.openqa.selenium.firefox.FirefoxDriver;
  * implementations that back each one.
  * <p>
  * Each enum value carries the matching driver class via
- * {@link #getWebDriverClass()}; {@link SeleniumService#newInstance(Config)}
+ * {@link #getWebDriverClass()}; {@link YojaSeleniumService#newInstance(Config)}
  * uses this mapping to instantiate the right driver from a {@link Config}.
  * A {@link Mode} controls whether the browser runs in headless,
  * developer-friendly headful, or a long-timeout "debugger" mode that pins
@@ -48,7 +48,7 @@ public enum Browser {
 //    SAFARI(SafariDriver.class),
 //    OPERA(ChromeDriver.class);
 
-    /** Display/runtime mode of the browser when started by {@link SeleniumService}. */
+    /** Display/runtime mode of the browser when started by {@link YojaSeleniumService}. */
     public enum Mode {
         /** No window, no devtools — suitable for CI. */
         HEADLESS,
@@ -85,7 +85,7 @@ public enum Browser {
      */
     /**
      * Bundle of browser-launch settings consumed by
-     * {@link SeleniumService#newInstance(Config)}: which {@link Browser} to
+     * {@link YojaSeleniumService#newInstance(Config)}: which {@link Browser} to
      * start, in which {@link Mode}, and with what default timeout for script
      * execution / page loads / implicit waits.
      * <p>
@@ -212,7 +212,7 @@ public enum Browser {
     /**
      * Fluent builder for {@link Config}. Defaults the runtime mode to
      * {@link Mode#HEADFUL}; the timeout is left {@code null} so the default
-     * applied by {@link SeleniumService#newInstance(Config)} takes effect.
+     * applied by {@link YojaSeleniumService#newInstance(Config)} takes effect.
      */
     public static class Builder {
 

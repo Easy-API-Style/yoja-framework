@@ -35,7 +35,7 @@ import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebDriver.Timeouts;
 
 /**
- * Verifies how {@link SeleniumService} manages the Selenium timeouts
+ * Verifies how {@link YojaSeleniumService} manages the Selenium timeouts
  * (script / page-load / implicit-wait). Each test launches a headless Chrome,
  * so it inspects the timeouts actually applied on the live driver.
  */
@@ -53,31 +53,31 @@ public class TestTimeout {
 
     @Test
     public void test_default_timeout_is_10s() {
-        try (SeleniumService service = SeleniumService.newInstance(headless(null))) {
+        try (YojaSeleniumService service = YojaSeleniumService.newInstance(headless(null))) {
             final Timeouts timeouts = service.timeouts();
-            assertEquals(SeleniumService.DEFAULT_TIMEOUT, timeouts.getScriptTimeout());
-            assertEquals(SeleniumService.DEFAULT_TIMEOUT, timeouts.getPageLoadTimeout());
-            assertEquals(SeleniumService.DEFAULT_TIMEOUT, timeouts.getImplicitWaitTimeout());
+            assertEquals(YojaSeleniumService.DEFAULT_TIMEOUT, timeouts.getScriptTimeout());
+            assertEquals(YojaSeleniumService.DEFAULT_TIMEOUT, timeouts.getPageLoadTimeout());
+            assertEquals(YojaSeleniumService.DEFAULT_TIMEOUT, timeouts.getImplicitWaitTimeout());
         }
     }
 
     @Test
     @Disabled
     public void test_debugger_timeout_is_1h() {
-        try (SeleniumService service = SeleniumService.newInstance(Browser.builder(Browser.CHROME)
+        try (YojaSeleniumService service = YojaSeleniumService.newInstance(Browser.builder(Browser.CHROME)
                                                                           .mode(Browser.Mode.DEBUGGER)
                                                                           .build())) {
             final Timeouts timeouts = service.timeouts();
-            assertEquals(SeleniumService.DEBUGGER_TIMEOUT, timeouts.getScriptTimeout());
-            assertEquals(SeleniumService.DEBUGGER_TIMEOUT, timeouts.getPageLoadTimeout());
-            assertEquals(SeleniumService.DEBUGGER_TIMEOUT, timeouts.getImplicitWaitTimeout());
+            assertEquals(YojaSeleniumService.DEBUGGER_TIMEOUT, timeouts.getScriptTimeout());
+            assertEquals(YojaSeleniumService.DEBUGGER_TIMEOUT, timeouts.getPageLoadTimeout());
+            assertEquals(YojaSeleniumService.DEBUGGER_TIMEOUT, timeouts.getImplicitWaitTimeout());
         }
     }
 
     @Test
     public void test_custom_timeout_applied_to_all_three() {
         final Duration custom = Duration.ofSeconds(3);
-        try (SeleniumService service = SeleniumService.newInstance(headless(custom))) {
+        try (YojaSeleniumService service = YojaSeleniumService.newInstance(headless(custom))) {
             final Timeouts timeouts = service.timeouts();
             assertEquals(custom, timeouts.getScriptTimeout());
             assertEquals(custom, timeouts.getPageLoadTimeout());
@@ -87,18 +87,18 @@ public class TestTimeout {
 
     @Test
     public void test_executeAsyncScript_restores_scriptTimeout_after_success() {
-        try (SeleniumService service = SeleniumService.newInstance(headless(null))) {
+        try (YojaSeleniumService service = YojaSeleniumService.newInstance(headless(null))) {
             final String result = service.executeAsyncScript(Duration.ofSeconds(2),
                                                              "const cb = arguments[arguments.length - 1]; cb('ok')");
             assertEquals("ok", result);
             // The explicit per-call timeout must be rolled back to the default.
-            assertEquals(SeleniumService.DEFAULT_TIMEOUT, service.timeouts().getScriptTimeout());
+            assertEquals(YojaSeleniumService.DEFAULT_TIMEOUT, service.timeouts().getScriptTimeout());
         }
     }
 
     @Test
     public void test_executeAsyncScript_enforces_explicit_timeout() {
-        try (SeleniumService service = SeleniumService.newInstance(headless(null))) {
+        try (YojaSeleniumService service = YojaSeleniumService.newInstance(headless(null))) {
             final long startNanos = System.nanoTime();
             // Script never calls its callback: it must time out at the explicit
             // 1s, far below the 10s default.
@@ -113,11 +113,11 @@ public class TestTimeout {
 
     @Test
     public void test_getHttpPage_restores_pageLoadTimeout_after_success() {
-        try (SeleniumService service = SeleniumService.newInstance(headless(null))) {
+        try (YojaSeleniumService service = YojaSeleniumService.newInstance(headless(null))) {
             // The explicit per-call timeout applies during the load, then the
             // page-load timeout is rolled back to the service default.
             service.getHttpPage(Duration.ofSeconds(5), "about:blank");
-            assertEquals(SeleniumService.DEFAULT_TIMEOUT, service.timeouts().getPageLoadTimeout());
+            assertEquals(YojaSeleniumService.DEFAULT_TIMEOUT, service.timeouts().getPageLoadTimeout());
         }
     }
 
@@ -141,7 +141,7 @@ public class TestTimeout {
             acceptor.start();
 
             final String url = "http://localhost:" + serverSocket.getLocalPort() + "/";
-            try (SeleniumService service = SeleniumService.newInstance(headless(null))) {
+            try (YojaSeleniumService service = YojaSeleniumService.newInstance(headless(null))) {
                 final long startNanos = System.nanoTime();
                 // The explicit 2s must abort the never-completing load, far
                 // below the 10s default.

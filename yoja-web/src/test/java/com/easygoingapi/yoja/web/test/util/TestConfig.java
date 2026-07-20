@@ -20,15 +20,15 @@ package com.easygoingapi.yoja.web.test.util;
 import com.easygoingapi.yoja.http.server.WebApp;
 import com.easygoingapi.yoja.http.server.WebResource;
 import com.easygoingapi.yoja.selenium.Browser;
-import com.easygoingapi.yoja.selenium.TestBuilder;
+import com.easygoingapi.yoja.selenium.YojaSeleniumBuilder;
 
 public class TestConfig {
 
     public static String host = "localhost";
     
-    public static TestBuilder initialize() {
+    public static YojaSeleniumBuilder initialize() {
         WebApp yojaWebApp = WebApp.of(WebApp.Type.jar, "com.easygoingapi.yoja.web", "/yoja");
-        return TestBuilder.builder()
+        return YojaSeleniumBuilder.builder()
                           .host(host)
                           .contentType("css", "text/css")
                           .contentType("html", "text/html")

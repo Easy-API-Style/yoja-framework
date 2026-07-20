@@ -27,11 +27,11 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.DynamicNode;
 import org.junit.jupiter.api.TestFactory;
 
-import com.easygoingapi.yoja.selenium.TestContext;
+import com.easygoingapi.yoja.selenium.YojaTestContext;
 
 public class TestApp_yojaWeb_section {
 
-    public static Consumer<TestContext> test_languagePath_01 = testContext -> {
+    public static Consumer<YojaTestContext> test_languagePath_01 = testContext -> {
         final String result = testContext.seleniumService()
                                          .executeScript("""
             const section = yojaWeb.sectionService
@@ -42,7 +42,7 @@ public class TestApp_yojaWeb_section {
         assertNull(result);
     };
 
-    public static Consumer<TestContext> test_languagePath_02 = testContext -> {
+    public static Consumer<YojaTestContext> test_languagePath_02 = testContext -> {
         final String result = testContext.seleniumService()
                                          .executeScript("""
             const section = yojaWeb.sectionService
@@ -52,7 +52,7 @@ public class TestApp_yojaWeb_section {
         assertEquals("/lang.xml", result);
     };
 
-    public static Consumer<TestContext> test_cssPath_01 = testContext -> {
+    public static Consumer<YojaTestContext> test_cssPath_01 = testContext -> {
         final String result = testContext.seleniumService()
                                          .executeScript("""
             const section = yojaWeb.sectionService
@@ -63,7 +63,7 @@ public class TestApp_yojaWeb_section {
         assertEquals("/user/user.css", result);
     };
     
-    public static Consumer<TestContext> test_slotPath_01 = testContext -> {
+    public static Consumer<YojaTestContext> test_slotPath_01 = testContext -> {
         final String result = testContext.seleniumService()
                                          .executeScript("""
             const section = yojaWeb.sectionService
@@ -74,7 +74,7 @@ public class TestApp_yojaWeb_section {
         assertNull(result);
     };
     
-    public static Consumer<TestContext> test_path_01 = testContext -> {
+    public static Consumer<YojaTestContext> test_path_01 = testContext -> {
         final String result = testContext.seleniumService()
                                          .executeScript("""
             const section = yojaWeb.sectionService
@@ -85,7 +85,7 @@ public class TestApp_yojaWeb_section {
         assertEquals("/user/user.cpt.html", result);
     };
     
-    public static Consumer<TestContext> test_path_02 = testContext -> {
+    public static Consumer<YojaTestContext> test_path_02 = testContext -> {
         final String result = testContext.seleniumService()
                                          .executeScript("""
             const section = yojaWeb.sectionService
@@ -96,7 +96,7 @@ public class TestApp_yojaWeb_section {
         assertEquals("/user/user.cpt.html", result);
     };
 
-    public static Consumer<TestContext> test_path_03 = testContext -> {
+    public static Consumer<YojaTestContext> test_path_03 = testContext -> {
         final String result = testContext.seleniumService()
                                          .executeScript("""
             const section = yojaWeb.sectionService
@@ -107,7 +107,7 @@ public class TestApp_yojaWeb_section {
         assertEquals("/order/article/article.cpt.html", result);
     };
     
-    public static Consumer<TestContext> test_path_04 = testContext -> {
+    public static Consumer<YojaTestContext> test_path_04 = testContext -> {
         final String result = testContext.seleniumService()
                                          .executeScript("""
             const section = yojaWeb.sectionService
@@ -117,7 +117,7 @@ public class TestApp_yojaWeb_section {
         assertEquals("/home.html", result);
     };
 
-    public static Consumer<TestContext> test_path_05 = testContext -> {
+    public static Consumer<YojaTestContext> test_path_05 = testContext -> {
         final String result = testContext.seleniumService()
                                          .executeScript("""
             const section = yojaWeb.sectionService
@@ -128,7 +128,7 @@ public class TestApp_yojaWeb_section {
         assertEquals("/order/order.cpt.html", result);
     };
 
-    public static Consumer<TestContext> test_tag_01 = testContext -> {
+    public static Consumer<YojaTestContext> test_tag_01 = testContext -> {
         final String result = testContext.seleniumService()
                                          .executeScript("""
             const section = yojaWeb.sectionService
@@ -139,7 +139,7 @@ public class TestApp_yojaWeb_section {
         assertEquals("order-section", result);
     };
     
-    public static Consumer<TestContext> test_tag_02 = testContext -> {
+    public static Consumer<YojaTestContext> test_tag_02 = testContext -> {
         final String result = testContext.seleniumService()
                                          .executeScript("""
             const section = yojaWeb.sectionService
@@ -150,7 +150,7 @@ public class TestApp_yojaWeb_section {
         assertEquals("article-section", result);
     };
 
-    public static Consumer<TestContext> test_shadowTag_01 = testContext -> {
+    public static Consumer<YojaTestContext> test_shadowTag_01 = testContext -> {
         final String result = testContext.seleniumService()
                                          .executeScript("""
             const section = yojaWeb.sectionService
@@ -161,7 +161,7 @@ public class TestApp_yojaWeb_section {
         assertEquals("article-section", result);
     };
     
-    public static Consumer<TestContext> test_shadowTag_02 = testContext -> {
+    public static Consumer<YojaTestContext> test_shadowTag_02 = testContext -> {
         final String result = testContext.seleniumService()
                                          .executeScript("""
             const section = yojaWeb.sectionService
@@ -172,7 +172,7 @@ public class TestApp_yojaWeb_section {
         assertEquals("order-section", result);
     };
 
-    public static Consumer<TestContext> test_firstTag_01 = testContext -> {
+    public static Consumer<YojaTestContext> test_firstTag_01 = testContext -> {
         final String result = testContext.seleniumService()
                                          .executeScript("""
             const section = yojaWeb.sectionService
@@ -183,7 +183,7 @@ public class TestApp_yojaWeb_section {
         assertNull(result);
     };
 
-    public static Consumer<TestContext> test_firstTag_02 = testContext -> {
+    public static Consumer<YojaTestContext> test_firstTag_02 = testContext -> {
         final String result = testContext.seleniumService()
                                          .executeScript("""
             const section = yojaWeb.sectionService
@@ -194,7 +194,7 @@ public class TestApp_yojaWeb_section {
         assertEquals("bread", result);
     };
 
-    public static Consumer<TestContext> test_deepFirstTag_01 = testContext -> {
+    public static Consumer<YojaTestContext> test_deepFirstTag_01 = testContext -> {
         final String result = testContext.seleniumService()
                                          .executeScript("""
             const section = yojaWeb.sectionService
@@ -205,7 +205,7 @@ public class TestApp_yojaWeb_section {
         assertEquals("bread", result);
     };
     
-    public static Consumer<TestContext> test_deepFindTags_01 = testContext -> {
+    public static Consumer<YojaTestContext> test_deepFindTags_01 = testContext -> {
         final Long result = testContext.seleniumService()
                                        .executeScript("""
             const section = yojaWeb.sectionService
@@ -216,7 +216,7 @@ public class TestApp_yojaWeb_section {
         assertEquals(2, result);
     };
     
-    public static Consumer<TestContext> test_findTags_01 = testContext -> {
+    public static Consumer<YojaTestContext> test_findTags_01 = testContext -> {
         final Long result = testContext.seleniumService()
                                        .executeScript("""
             const section = yojaWeb.sectionService
@@ -227,7 +227,7 @@ public class TestApp_yojaWeb_section {
         assertEquals(1, result);
     };
     
-    public static Consumer<TestContext> test_findTags_02 = testContext -> {
+    public static Consumer<YojaTestContext> test_findTags_02 = testContext -> {
         final Long result = testContext.seleniumService()
                                        .executeScript("""
             const section = yojaWeb.sectionService
@@ -238,7 +238,7 @@ public class TestApp_yojaWeb_section {
         assertEquals(0, result);
     };
       
-    public static Consumer<TestContext> test_walkTag_01 = testContext -> {
+    public static Consumer<YojaTestContext> test_walkTag_01 = testContext -> {
         final List<String> result = testContext.seleniumService()
                                                .executeScript(""" 
             const section = yojaWeb.sectionService
@@ -251,7 +251,7 @@ public class TestApp_yojaWeb_section {
         assertEquals(List.of("FIELDSET", "LEGEND"), result);
     };
 
-    public static Consumer<TestContext> test_deepWalkTag_01= testContext -> {
+    public static Consumer<YojaTestContext> test_deepWalkTag_01= testContext -> {
         final List<String> result = testContext.seleniumService()
                                                .executeScript(""" 
             const section = yojaWeb.sectionService
@@ -268,7 +268,7 @@ public class TestApp_yojaWeb_section {
                      result);
     };
     
-    public static Consumer<TestContext> test_firstSection_01 = testContext -> {
+    public static Consumer<YojaTestContext> test_firstSection_01 = testContext -> {
         final String result = testContext.seleniumService()
                                          .executeScript("""
             const section = yojaWeb.sectionService
@@ -280,7 +280,7 @@ public class TestApp_yojaWeb_section {
         assertEquals("order-section", result);
     };
     
-    public static Consumer<TestContext> test_firstSection_02 = testContext -> {
+    public static Consumer<YojaTestContext> test_firstSection_02 = testContext -> {
         final String result = testContext.seleniumService()
                                          .executeScript("""
             const section = yojaWeb.sectionService
@@ -292,7 +292,7 @@ public class TestApp_yojaWeb_section {
         assertEquals("address-section", result);
     };
     
-    public static Consumer<TestContext> test_findSections_01 = testContext -> {
+    public static Consumer<YojaTestContext> test_findSections_01 = testContext -> {
         final Long result = testContext.seleniumService()
                                        .executeScript("""
             const section = yojaWeb.sectionService
@@ -303,7 +303,7 @@ public class TestApp_yojaWeb_section {
         assertEquals(2, result);
     };
     
-    public static Consumer<TestContext> test_findSections_02 = testContext -> {
+    public static Consumer<YojaTestContext> test_findSections_02 = testContext -> {
         final List<String> result = testContext.seleniumService()
                                                .executeScript("""
             const section = yojaWeb.sectionService
@@ -321,7 +321,7 @@ public class TestApp_yojaWeb_section {
                      result);
     };
 
-    public static Consumer<TestContext> test_findSections_03 = testContext -> {
+    public static Consumer<YojaTestContext> test_findSections_03 = testContext -> {
         final List<String> result = testContext.seleniumService()
                                                .executeScript("""
             const section = yojaWeb.sectionService
@@ -339,7 +339,7 @@ public class TestApp_yojaWeb_section {
                      result);
     };
     
-    public static Consumer<TestContext> test_childrenSections_01 = testContext -> {
+    public static Consumer<YojaTestContext> test_childrenSections_01 = testContext -> {
         final List<String> result = testContext.seleniumService()
                                                .executeScript("""
             const section = yojaWeb.sectionService
@@ -356,7 +356,7 @@ public class TestApp_yojaWeb_section {
                      result);
     };
     
-    public static Consumer<TestContext> test_childrenSections_02 = testContext -> {
+    public static Consumer<YojaTestContext> test_childrenSections_02 = testContext -> {
         final List<String> result = testContext.seleniumService()
                                                .executeScript("""
             const section = yojaWeb.sectionService
@@ -373,7 +373,7 @@ public class TestApp_yojaWeb_section {
                      result);
     };
     
-    public static Consumer<TestContext> test_childrenSections_03 = testContext -> {
+    public static Consumer<YojaTestContext> test_childrenSections_03 = testContext -> {
         final List<String> result = testContext.seleniumService()
                                                .executeScript("""
             const section = yojaWeb.sectionService
@@ -390,7 +390,7 @@ public class TestApp_yojaWeb_section {
                      result);
     };
 
-    public static Consumer<TestContext> test_parentSection_01 = testContext -> {
+    public static Consumer<YojaTestContext> test_parentSection_01 = testContext -> {
         final String result = testContext.seleniumService()
                                          .executeScript("""
             const section = yojaWeb.sectionService
@@ -402,7 +402,7 @@ public class TestApp_yojaWeb_section {
         assertEquals("user-section", result);
     };
     
-    public static Consumer<TestContext> test_parentSection_02 = testContext -> {
+    public static Consumer<YojaTestContext> test_parentSection_02 = testContext -> {
         final String result = testContext.seleniumService()
                                          .executeScript("""
             const section = yojaWeb.sectionService
@@ -414,7 +414,7 @@ public class TestApp_yojaWeb_section {
         assertEquals("user-section", result);
     };
 
-    public static Consumer<TestContext> test_parentSections_01 = testContext -> {
+    public static Consumer<YojaTestContext> test_parentSections_01 = testContext -> {
         final List<String> result = testContext.seleniumService()
                                                .executeScript("""
             const section = yojaWeb.sectionService
@@ -430,7 +430,7 @@ public class TestApp_yojaWeb_section {
         assertEquals(List.of(), result);
     };
     
-    public static Consumer<TestContext> test_parentSections_02 = testContext -> {
+    public static Consumer<YojaTestContext> test_parentSections_02 = testContext -> {
         final List<String> result = testContext.seleniumService()
                                                .executeScript("""
             const section = yojaWeb.sectionService
@@ -447,7 +447,7 @@ public class TestApp_yojaWeb_section {
                      result);
     };
     
-    public static Consumer<TestContext> test_parentSections_03 = testContext -> {
+    public static Consumer<YojaTestContext> test_parentSections_03 = testContext -> {
         final List<String> result = testContext.seleniumService()
                                                .executeScript("""
             const section = yojaWeb.sectionService
@@ -463,7 +463,7 @@ public class TestApp_yojaWeb_section {
         assertEquals(List.of("home-section"), result);
     };
 
-    public static Consumer<TestContext> test_rootSection_01 = testContext -> {
+    public static Consumer<YojaTestContext> test_rootSection_01 = testContext -> {
         final String result = testContext.seleniumService()
                                          .executeScript("""
             const section = yojaWeb.sectionService
@@ -475,7 +475,7 @@ public class TestApp_yojaWeb_section {
         assertEquals("home-section", result);
     };
     
-    public static Consumer<TestContext> test_walkSection_01 = testContext -> {
+    public static Consumer<YojaTestContext> test_walkSection_01 = testContext -> {
         final List<String> result = testContext.seleniumService()
                                                .executeScript("""
             const section = yojaWeb.sectionService
@@ -492,7 +492,7 @@ public class TestApp_yojaWeb_section {
         assertEquals(List.of("article-section"), result);
     };
 
-    public static Consumer<TestContext> test_firstControler_01 = testContext -> {
+    public static Consumer<YojaTestContext> test_firstControler_01 = testContext -> {
         final String result = testContext.seleniumService()
                                          .executeScript("""
             const section = yojaWeb.sectionService
@@ -504,7 +504,7 @@ public class TestApp_yojaWeb_section {
         assertEquals("OrderControler", result);
     };
     
-    public static Consumer<TestContext> test_firstControler_02 = testContext -> {
+    public static Consumer<YojaTestContext> test_firstControler_02 = testContext -> {
         final String result = testContext.seleniumService()
                                          .executeScript("""
             const section = yojaWeb.sectionService
@@ -516,7 +516,7 @@ public class TestApp_yojaWeb_section {
         assertEquals("OrderControler", result);
     };
     
-    public static Consumer<TestContext> test_findControlers_01 = testContext -> {
+    public static Consumer<YojaTestContext> test_findControlers_01 = testContext -> {
         final Long result = testContext.seleniumService()
                                        .executeScript("""
             const section = yojaWeb.sectionService
@@ -527,7 +527,7 @@ public class TestApp_yojaWeb_section {
         assertEquals(2, result);
     };
     
-    public static Consumer<TestContext> test_findControlers_02 = testContext -> {
+    public static Consumer<YojaTestContext> test_findControlers_02 = testContext -> {
         final List<String> result = testContext.seleniumService()
                                                .executeScript("""
             const section = yojaWeb.sectionService
@@ -544,7 +544,7 @@ public class TestApp_yojaWeb_section {
                      result);
     };
 
-    public static Consumer<TestContext> test_findControlers_03 = testContext -> {
+    public static Consumer<YojaTestContext> test_findControlers_03 = testContext -> {
         final List<String> result = testContext.seleniumService()
                                                .executeScript("""
             const section = yojaWeb.sectionService
@@ -561,7 +561,7 @@ public class TestApp_yojaWeb_section {
                      result);
     };
     
-    public static Consumer<TestContext> test_childrenControlers_01 = testContext -> {
+    public static Consumer<YojaTestContext> test_childrenControlers_01 = testContext -> {
         final List<String> result = testContext.seleniumService()
                                                .executeScript("""
             const section = yojaWeb.sectionService
@@ -578,7 +578,7 @@ public class TestApp_yojaWeb_section {
                      result);
     };
     
-    public static Consumer<TestContext> test_childrenControlers_02 = testContext -> {
+    public static Consumer<YojaTestContext> test_childrenControlers_02 = testContext -> {
         final List<String> result = testContext.seleniumService()
                                                .executeScript("""
             const section = yojaWeb.sectionService
@@ -595,7 +595,7 @@ public class TestApp_yojaWeb_section {
                      result);
     };
     
-    public static Consumer<TestContext> test_childrenControlers_03 = testContext -> {
+    public static Consumer<YojaTestContext> test_childrenControlers_03 = testContext -> {
         final List<String> result = testContext.seleniumService()
                                                .executeScript("""
             const section = yojaWeb.sectionService
@@ -612,7 +612,7 @@ public class TestApp_yojaWeb_section {
                      result);
     };
 
-    public static Consumer<TestContext> test_parentControler_01 = testContext -> {
+    public static Consumer<YojaTestContext> test_parentControler_01 = testContext -> {
         final String result = testContext.seleniumService()
                                          .executeScript("""
             const section = yojaWeb.sectionService
@@ -624,7 +624,7 @@ public class TestApp_yojaWeb_section {
         assertEquals("UserControler", result);
     };
     
-    public static Consumer<TestContext> test_parentControler_02 = testContext -> {
+    public static Consumer<YojaTestContext> test_parentControler_02 = testContext -> {
         final String result = testContext.seleniumService()
                                          .executeScript("""
             const section = yojaWeb.sectionService
@@ -636,7 +636,7 @@ public class TestApp_yojaWeb_section {
         assertEquals("UserControler", result);
     };
 
-    public static Consumer<TestContext> test_parentControlers_01 = testContext -> {
+    public static Consumer<YojaTestContext> test_parentControlers_01 = testContext -> {
         final List<String> result = testContext.seleniumService()
                                                .executeScript("""
             const section = yojaWeb.sectionService
@@ -652,7 +652,7 @@ public class TestApp_yojaWeb_section {
         assertEquals(List.of(), result);
     };
     
-    public static Consumer<TestContext> test_parentControlers_02 = testContext -> {
+    public static Consumer<YojaTestContext> test_parentControlers_02 = testContext -> {
         final List<String> result = testContext.seleniumService()
                                                .executeScript("""
             const section = yojaWeb.sectionService
@@ -669,7 +669,7 @@ public class TestApp_yojaWeb_section {
                      result);
     };
     
-    public static Consumer<TestContext> test_parentControlers_03 = testContext -> {
+    public static Consumer<YojaTestContext> test_parentControlers_03 = testContext -> {
         final List<String> result = testContext.seleniumService()
                                                .executeScript("""
             const section = yojaWeb.sectionService
@@ -685,7 +685,7 @@ public class TestApp_yojaWeb_section {
         assertEquals(List.of("HomeControler"), result);
     };
 
-    public static Consumer<TestContext> test_rootControler_01 = testContext -> {
+    public static Consumer<YojaTestContext> test_rootControler_01 = testContext -> {
         final String result = testContext.seleniumService()
                                          .executeScript("""
             const section = yojaWeb.sectionService
@@ -697,7 +697,7 @@ public class TestApp_yojaWeb_section {
         assertEquals("HomeControler", result);
     };
     
-    public static Consumer<TestContext> test_walkControler_01 = testContext -> {
+    public static Consumer<YojaTestContext> test_walkControler_01 = testContext -> {
         final List<String> result = testContext.seleniumService()
                                                .executeScript("""
             const section = yojaWeb.sectionService

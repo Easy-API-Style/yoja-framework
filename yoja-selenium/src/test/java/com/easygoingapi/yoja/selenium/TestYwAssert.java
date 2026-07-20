@@ -27,7 +27,7 @@ public class TestYwAssert {
 
     @TestFactory
     Stream<DynamicNode> jsUnitDemo() {
-        return TestBuilder.builder()
+        return YojaSeleniumBuilder.builder()
                           .browser(Browser.builder(Browser.CHROME)
                                           .mode(Browser.Mode.HEADLESS)
                                           .build())

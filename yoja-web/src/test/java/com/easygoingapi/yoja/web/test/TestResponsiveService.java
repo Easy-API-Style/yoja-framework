@@ -26,14 +26,14 @@ import org.junit.jupiter.api.TestFactory;
 
 import com.easygoingapi.yoja.selenium.Browser;
 import com.easygoingapi.yoja.selenium.ScriptOption;
-import com.easygoingapi.yoja.selenium.TestBuilder;
+import com.easygoingapi.yoja.selenium.YojaSeleniumBuilder;
 import com.easygoingapi.yoja.web.test.util.TestConfig;
 
 @Disabled
 public class TestResponsiveService {
 
-     public static TestBuilder initialize() {
-            return TestBuilder.builder()
+     public static YojaSeleniumBuilder initialize() {
+            return YojaSeleniumBuilder.builder()
                               .contentType("css", "text/css")
                               .contentType("html", "text/html")
                               .contentType("json", "application/json")

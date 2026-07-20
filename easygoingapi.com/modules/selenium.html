@@ -99,8 +99,8 @@
       <li><a href="#install">Installation</a></li>
       <li><a href="#quickstart">Quick start</a></li>
       <li><a href="#browser">Browser</a></li>
-      <li><a href="#service">SeleniumService</a></li>
-      <li><a href="#testbuilder">TestBuilder</a></li>
+      <li><a href="#service">YojaSeleniumService</a></li>
+      <li><a href="#testbuilder">YojaSeleniumBuilder</a></li>
       <li><a href="#context">Test context</a></li>
       <li><a href="#ywassert">ywAssert</a></li>
       <li><a href="#logs">Logs</a></li>
@@ -115,7 +115,7 @@
     </p>
     <h1>yoja-selenium</h1>
     <p class="lead">
-      Browser-driven tests with a fluent <code>TestBuilder</code>: pick a
+      Browser-driven tests with a fluent <code>YojaSeleniumBuilder</code>: pick a
       browser, start an embedded server, run named JS exports as test steps,
       capture browser logs, integrate as JUnit 6 dynamic tests.
     </p>
@@ -137,7 +137,7 @@
 
     <span class="k">@TestFactory</span>
     Stream&lt;DynamicNode&gt; scenarios() {
-        <span class="k">return</span> TestBuilder.builder()
+        <span class="k">return</span> YojaSeleniumBuilder.builder()
             .browser(Browser.builder(Browser.CHROME)
                             .mode(Browser.Mode.HEADLESS)
                             .build())
@@ -211,17 +211,17 @@
       </table>
     </div>
 
-    <h2 id="service">SeleniumService</h2>
+    <h2 id="service">YojaSeleniumService</h2>
 
     <div class="api-class">
-      <h3><code>SeleniumService</code> <span class="kind">class (AutoCloseable)</span></h3>
+      <h3><code>YojaSeleniumService</code> <span class="kind">class (AutoCloseable)</span></h3>
       <p>High-level wrapper around a <code>WebDriver</code>, tailored to driving Yoja-Web pages.</p>
 
       <span class="api-table-group">Factory</span>
       <table class="api-table">
         <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td><code>static newInstance(Browser.Config)</code></td><td class="ret"><code>SeleniumService</code></td><td class="desc">Launch the browser with the right options</td></tr>
+          <tr><td><code>static newInstance(Browser.Config)</code></td><td class="ret"><code>YojaSeleniumService</code></td><td class="desc">Launch the browser with the right options</td></tr>
           <tr><td><code>webDriver()</code></td><td class="ret"><code>WebDriver</code></td><td class="desc">Underlying Selenium driver</td></tr>
           <tr><td><code>javascriptExecutor()</code></td><td class="ret"><code>JavascriptExecutor</code></td><td class="desc"></td></tr>
         </tbody>
@@ -290,17 +290,17 @@
       </table>
     </div>
 
-    <h2 id="testbuilder">TestBuilder</h2>
+    <h2 id="testbuilder">YojaSeleniumBuilder</h2>
 
     <div class="api-class">
-      <h3><code>TestBuilder</code> <span class="kind">class</span></h3>
+      <h3><code>YojaSeleniumBuilder</code> <span class="kind">class</span></h3>
       <p>Fluent orchestrator. Builds a list of test steps, then runs them via <code>execute()</code> or exposes them as JUnit dynamic nodes via <code>stream()</code>.</p>
 
       <span class="api-table-group">Factory</span>
       <table class="api-table">
         <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td><code>static builder()</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc"></td></tr>
+          <tr><td><code>static builder()</code></td><td class="ret"><code>YojaSeleniumBuilder</code></td><td class="desc"></td></tr>
         </tbody>
       </table>
 
@@ -308,14 +308,14 @@
       <table class="api-table">
         <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td><code>browser(Browser.Config)</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Select browser and mode</td></tr>
-          <tr><td><code>host(String)</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Override embedded server host</td></tr>
-          <tr><td><code>contentType(String ext, String mime)</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Extension → MIME mapping for static serving</td></tr>
-          <tr><td><code>webResource(String packageName [, contextPath [, url]])</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Serve resources from a classpath package</td></tr>
-          <tr><td><code>webResource(WebApp, String url)</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Serve resources from a <code>WebApp</code></td></tr>
-          <tr><td><code>webResource(WebResource)</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Serve a pre-built <code>WebResource</code></td></tr>
-          <tr><td><code>webService(WebService)</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Add a service endpoint to the embedded server</td></tr>
-          <tr><td><code>webSocket(WebSocket)</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Add a WebSocket endpoint to the embedded server</td></tr>
+          <tr><td><code>browser(Browser.Config)</code></td><td class="ret"><code>YojaSeleniumBuilder</code></td><td class="desc">Select browser and mode</td></tr>
+          <tr><td><code>host(String)</code></td><td class="ret"><code>YojaSeleniumBuilder</code></td><td class="desc">Override embedded server host</td></tr>
+          <tr><td><code>contentType(String ext, String mime)</code></td><td class="ret"><code>YojaSeleniumBuilder</code></td><td class="desc">Extension → MIME mapping for static serving</td></tr>
+          <tr><td><code>webResource(String packageName [, contextPath [, url]])</code></td><td class="ret"><code>YojaSeleniumBuilder</code></td><td class="desc">Serve resources from a classpath package</td></tr>
+          <tr><td><code>webResource(WebApp, String url)</code></td><td class="ret"><code>YojaSeleniumBuilder</code></td><td class="desc">Serve resources from a <code>WebApp</code></td></tr>
+          <tr><td><code>webResource(WebResource)</code></td><td class="ret"><code>YojaSeleniumBuilder</code></td><td class="desc">Serve a pre-built <code>WebResource</code></td></tr>
+          <tr><td><code>webService(WebService)</code></td><td class="ret"><code>YojaSeleniumBuilder</code></td><td class="desc">Add a service endpoint to the embedded server</td></tr>
+          <tr><td><code>webSocket(WebSocket)</code></td><td class="ret"><code>YojaSeleniumBuilder</code></td><td class="desc">Add a WebSocket endpoint to the embedded server</td></tr>
         </tbody>
       </table>
 
@@ -323,9 +323,9 @@
       <table class="api-table">
         <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td><code>startJavascript([ScriptOption])</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Step: serve a minimal HTML fixture and navigate to it</td></tr>
-          <tr><td><code>startYojaWeb([ScriptOption])</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Step: serve a full Yoja-Web fixture page and navigate to it. The page loads <code>YojaWeb-1.3.0.js</code> with <code>yw-config-path="/YojaWeb.conf.js"</code> — serve that path to configure yoja-web in tests</td></tr>
-          <tr><td><code>getPage(String path)</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Step: navigate to the given path on the embedded server</td></tr>
+          <tr><td><code>startJavascript([ScriptOption])</code></td><td class="ret"><code>YojaSeleniumBuilder</code></td><td class="desc">Step: serve a minimal HTML fixture and navigate to it</td></tr>
+          <tr><td><code>startYojaWeb([ScriptOption])</code></td><td class="ret"><code>YojaSeleniumBuilder</code></td><td class="desc">Step: serve a full Yoja-Web fixture page and navigate to it. The page loads <code>YojaWeb-1.3.0.js</code> with <code>yw-config-path="/YojaWeb.conf.js"</code> — serve that path to configure yoja-web in tests</td></tr>
+          <tr><td><code>getPage(String path)</code></td><td class="ret"><code>YojaSeleniumBuilder</code></td><td class="desc">Step: navigate to the given path on the embedded server</td></tr>
         </tbody>
       </table>
 
@@ -333,12 +333,16 @@
       <table class="api-table">
         <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td><code>test(String name, Consumer&lt;TestContext&gt;)</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Add a custom named step</td></tr>
-          <tr><td><code>testJsUnit(String path, List&lt;String&gt; functions, args...)</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Run named JS exports as individual test steps</td></tr>
-          <tr><td><code>testModule(String path, args...)</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Run a synchronous JS module as a test step</td></tr>
-          <tr><td><code>testAsyncModule([Duration,] String path, args...)</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Run an async JS module; optional timeout</td></tr>
-          <tr><td><code>loadModule(String path)</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Step: load a JS module without asserting on its result</td></tr>
-          <tr><td><code>repeatTestModuleUntil(Duration, String path, args...)</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Step: retry the module until it returns truthy or the timeout elapses</td></tr>
+          <tr><td><code>test(String name, Consumer&lt;YojaTestContext&gt;)</code></td><td class="ret"><code>YojaSeleniumBuilder</code></td><td class="desc">Add a custom named step</td></tr>
+          <tr><td><code>beforeEach(Consumer&lt;YojaTestContext&gt;)</code></td><td class="ret"><code>YojaSeleniumBuilder</code></td><td class="desc">Hook run before <em>every</em> step (JUnit's <code>@BeforeEach</code> does not fire per dynamic step)</td></tr>
+          <tr><td><code>afterEach(Consumer&lt;YojaTestContext&gt;)</code></td><td class="ret"><code>YojaSeleniumBuilder</code></td><td class="desc">Hook run after <em>every</em> step (even on failure)</td></tr>
+          <tr><td><code>beforeEachBrowser(Consumer&lt;YojaTestContext&gt;)</code></td><td class="ret"><code>YojaSeleniumBuilder</code></td><td class="desc">Hook run once per browser, before its first step (per-browser <code>@BeforeAll</code>) — e.g. reset the server/DB to a baseline</td></tr>
+          <tr><td><code>afterEachBrowser(Consumer&lt;YojaTestContext&gt;)</code></td><td class="ret"><code>YojaSeleniumBuilder</code></td><td class="desc">Hook run once per browser, after its last step (per-browser <code>@AfterAll</code>)</td></tr>
+          <tr><td><code>testJsUnit(String path, List&lt;String&gt; functions, args...)</code></td><td class="ret"><code>YojaSeleniumBuilder</code></td><td class="desc">Run named JS exports as individual test steps</td></tr>
+          <tr><td><code>testModule(String path, args...)</code></td><td class="ret"><code>YojaSeleniumBuilder</code></td><td class="desc">Run a synchronous JS module as a test step</td></tr>
+          <tr><td><code>testAsyncModule([Duration,] String path, args...)</code></td><td class="ret"><code>YojaSeleniumBuilder</code></td><td class="desc">Run an async JS module; optional timeout</td></tr>
+          <tr><td><code>loadModule(String path)</code></td><td class="ret"><code>YojaSeleniumBuilder</code></td><td class="desc">Step: load a JS module without asserting on its result</td></tr>
+          <tr><td><code>repeatTestModuleUntil(Duration, String path, args...)</code></td><td class="ret"><code>YojaSeleniumBuilder</code></td><td class="desc">Step: retry the module until it returns truthy or the timeout elapses</td></tr>
         </tbody>
       </table>
 
@@ -346,13 +350,13 @@
       <table class="api-table">
         <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td><code>reload([ScriptOption])</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Step: reload the current page</td></tr>
-          <tr><td><code>resizeWindow(int w, int h)</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Step: resize the browser window</td></tr>
-          <tr><td><code>await(Duration)</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Step: pause execution</td></tr>
-          <tr><td><code>loadYwAssert()</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Step: inject <code>ywAssert.js</code></td></tr>
-          <tr><td><code>saveLogs()</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Step: persist browser logs to disk</td></tr>
-          <tr><td><code>printLogs()</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Step: print browser logs to stdout</td></tr>
-          <tr><td><code>debugger()</code></td><td class="ret"><code>TestBuilder</code></td><td class="desc">Step: IDE breakpoint hook</td></tr>
+          <tr><td><code>reload([ScriptOption])</code></td><td class="ret"><code>YojaSeleniumBuilder</code></td><td class="desc">Step: reload the current page</td></tr>
+          <tr><td><code>resizeWindow(int w, int h)</code></td><td class="ret"><code>YojaSeleniumBuilder</code></td><td class="desc">Step: resize the browser window</td></tr>
+          <tr><td><code>await(Duration)</code></td><td class="ret"><code>YojaSeleniumBuilder</code></td><td class="desc">Step: pause execution</td></tr>
+          <tr><td><code>loadYwAssert()</code></td><td class="ret"><code>YojaSeleniumBuilder</code></td><td class="desc">Step: inject <code>ywAssert.js</code></td></tr>
+          <tr><td><code>saveLogs()</code></td><td class="ret"><code>YojaSeleniumBuilder</code></td><td class="desc">Step: persist browser logs to disk</td></tr>
+          <tr><td><code>printLogs()</code></td><td class="ret"><code>YojaSeleniumBuilder</code></td><td class="desc">Step: print browser logs to stdout</td></tr>
+          <tr><td><code>debugger()</code></td><td class="ret"><code>YojaSeleniumBuilder</code></td><td class="desc">Step: IDE breakpoint hook</td></tr>
         </tbody>
       </table>
 
@@ -393,15 +397,15 @@
     <h2 id="context">Test context</h2>
 
     <div class="api-class">
-      <h3><code>TestContext</code> <span class="kind">class (AutoCloseable)</span></h3>
-      <p>Per-test handle injected into every <code>Consumer&lt;TestContext&gt;</code> step. Closing it shuts down both the embedded server and the WebDriver.</p>
+      <h3><code>YojaTestContext</code> <span class="kind">class (AutoCloseable)</span></h3>
+      <p>Per-test handle injected into every <code>Consumer&lt;YojaTestContext&gt;</code> step. Closing it shuts down both the embedded server and the WebDriver.</p>
 
       <table class="api-table">
         <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
         <tbody>
           <tr><td><code>browser()</code></td><td class="ret"><code>Browser</code></td><td class="desc">Active browser enum value</td></tr>
-          <tr><td><code>seleniumService()</code></td><td class="ret"><code>SeleniumService</code></td><td class="desc">The wrapped WebDriver instance</td></tr>
-          <tr><td><code>httpServerContext()</code></td><td class="ret"><code>HttpServerContext</code></td><td class="desc">Embedded HTTP server details</td></tr>
+          <tr><td><code>seleniumService()</code></td><td class="ret"><code>YojaSeleniumService</code></td><td class="desc">The wrapped WebDriver instance</td></tr>
+          <tr><td><code>httpServerContext()</code></td><td class="ret"><code>YojaHttpServerContext</code></td><td class="desc">Embedded HTTP server details</td></tr>
           <tr><td><code>httpUrlBuilder()</code></td><td class="ret"><code>HttpUrlBuilder</code></td><td class="desc">URL builder pre-configured for the embedded server</td></tr>
           <tr><td><code>logs()</code></td><td class="ret"><code>List&lt;Log&gt;</code></td><td class="desc">Browser-side log entries</td></tr>
           <tr><td><code>getHttpPage(HttpUrl | String [, Duration])</code></td><td class="ret"><code>void</code></td><td class="desc">Navigate the browser; optional explicit timeout</td></tr>
@@ -411,10 +415,10 @@
     </div>
 
     <div class="api-class">
-      <h3><code>HttpServerContext</code> · <code>HttpUrlBuilder</code> <span class="kind">classes</span></h3>
+      <h3><code>YojaHttpServerContext</code> · <code>HttpUrlBuilder</code> <span class="kind">classes</span></h3>
       <p>Embedded Yoja HTTP server serving test fixtures. Port auto-assigned from a monotonically-increasing sequence starting at 8888.</p>
 
-      <span class="api-table-group">HttpServerContext</span>
+      <span class="api-table-group">YojaHttpServerContext</span>
       <table class="api-table">
         <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
         <tbody>
@@ -446,7 +450,7 @@
       <p>It is <em>not</em> injected by default. Make it available three equivalent ways:</p>
 <pre><code><span class="c">// 1. as a script option when starting the page</span>
 builder.startYojaWeb(ScriptOption.apply().loadYwAssert());
-<span class="c">// 2. as a dedicated TestBuilder step (before any test that needs it)</span>
+<span class="c">// 2. as a dedicated YojaSeleniumBuilder step (before any test that needs it)</span>
 builder.loadYwAssert();
 <span class="c">// 3. on demand from inside a test step</span>
 builder.test(<span class="s">"..."</span>, ctx -&gt; ctx.seleniumService().loadYwAssert());</code></pre>
@@ -474,7 +478,7 @@ builder.test(<span class="s">"..."</span>, ctx -&gt; ctx.seleniumService().loadY
         <tbody>
           <tr><td class="desc">Strict equality only</td><td class="desc"><code>assertTrue</code> / <code>assertFalse</code> use <code>===</code>, not truthiness — <code>assertTrue(1)</code> <strong>fails</strong>; only the literal <code>true</code> passes. Same for the <code>null</code> / <code>undefined</code> checks.</td></tr>
           <tr><td class="desc">Structural deep equality</td><td class="desc">Object key order does <strong>not</strong> matter (<code>{a:1,b:2}</code> equals <code>{b:2,a:1}</code>). Comparison is recursive and value-aware: <code>NaN</code> equals <code>NaN</code>, boxed primitives equal their primitive (<code>99</code> equals <code>new Number(99)</code>), and <code>Date</code>, <code>RegExp</code>, <code>Map</code> and <code>Set</code> are compared by value. <code>+0</code> and <code>-0</code> are treated as distinct (<code>Object.is</code> semantics).</td></tr>
-          <tr><td class="desc">Failure propagation</td><td class="desc">Each failure throws a plain <code>Error</code>. From an async module, catch it and forward via <code>reject(error.message)</code> so Selenium lifts it into a Java <code>SeleniumException</code> on the right step.</td></tr>
+          <tr><td class="desc">Failure propagation</td><td class="desc">Each failure throws a plain <code>Error</code>. From an async module, catch it and forward via <code>reject(error.message)</code> so Selenium lifts it into a Java <code>YojaSeleniumException</code> on the right step.</td></tr>
         </tbody>
       </table>
 
@@ -503,7 +507,7 @@ builder.test(<span class="s">"..."</span>, ctx -&gt; ctx.seleniumService().loadY
 
     <div class="api-class">
       <h3><code>Log</code> · <code>Log.Level</code> <span class="kind">classes</span></h3>
-      <p>Browser-side log entry collected by <code>ywLogger.js</code> and surfaced via <code>SeleniumService.logs()</code>.</p>
+      <p>Browser-side log entry collected by <code>ywLogger.js</code> and surfaced via <code>YojaSeleniumService.logs()</code>.</p>
 
       <span class="api-table-group">Log accessors</span>
       <table class="api-table">
@@ -525,14 +529,14 @@ builder.test(<span class="s">"..."</span>, ctx -&gt; ctx.seleniumService().loadY
     </div>
 
     <div class="api-class">
-      <h3><code>DateUtil</code> · <code>Debugger</code> · <code>SeleniumException</code> <span class="kind">helpers</span></h3>
+      <h3><code>DateUtil</code> · <code>Debugger</code> · <code>YojaSeleniumException</code> <span class="kind">helpers</span></h3>
 
       <table class="api-table">
         <thead><tr><th>Class</th><th>Key API</th><th>Description</th></tr></thead>
         <tbody>
           <tr><td><code>DateUtil</code></td><td class="ret"><code>formatTimestamp(Long | Instant)</code></td><td class="desc">Format a timestamp as <code>yyyy-MM-dd HH:mm:ss</code> in the JVM timezone</td></tr>
           <tr><td><code>Debugger</code></td><td class="ret"><code>debugger()</code></td><td class="desc">IDE breakpoint hook — throws and immediately catches a <code>Debugger</code> exception</td></tr>
-          <tr><td><code>SeleniumException</code></td><td class="ret"></td><td class="desc">Runtime exception for WebDriver, script and embedded-server failures</td></tr>
+          <tr><td><code>YojaSeleniumException</code></td><td class="ret"></td><td class="desc">Runtime exception for WebDriver, script and embedded-server failures</td></tr>
         </tbody>
       </table>
     </div>

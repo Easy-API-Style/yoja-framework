@@ -27,7 +27,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.DynamicNode;
 import org.junit.jupiter.api.TestFactory;
 
-import com.easygoingapi.yoja.selenium.TestContext;
+import com.easygoingapi.yoja.selenium.YojaTestContext;
 import com.easygoingapi.yoja.web.test.util.TestConfig;
 
 public class TestInclude {
@@ -158,7 +158,7 @@ public class TestInclude {
     	expected_04.add("INCLUDE");
     }
 
-    public static Consumer<TestContext> test_walkTag(List<String> expected_02) {
+    public static Consumer<YojaTestContext> test_walkTag(List<String> expected_02) {
         return testContext -> {
             final List<String> actual = testContext.seleniumService()
                                                    .executeScript(""" 

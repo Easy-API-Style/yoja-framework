@@ -58,8 +58,8 @@ import com.easygoingapi.yoja.http.server.WebSocketService;
  * <p>
  * Each registered "step" is a {@link Test} record pairing a label with a
  * {@code Consumer<TestContext>}. When {@link #execute(boolean)} runs, every
- * browser config is exercised in sequence: a fresh {@link SeleniumService}
- * and {@link TestContext} are created, the embedded {@link HttpServerContext}
+ * browser config is exercised in sequence: a fresh {@link YojaSeleniumService}
+ * and {@link YojaTestContext} are created, the embedded {@link YojaHttpServerContext}
  * is started, each step runs in declaration order, and (unless
  * {@code keepRunning} is true) the context is closed at the end.
  * <p>
@@ -74,22 +74,31 @@ import com.easygoingapi.yoja.http.server.WebSocketService;
  * Both variants accept a {@link ScriptOption} to tell the post-load step
  * whether to install the {@code ywLogger.js} / {@code ywAssert.js} helpers.
  */
-public class TestBuilder {
+public class YojaSeleniumBuilder {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(TestBuilder.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(YojaSeleniumBuilder.class);
 
     /**
      * A single test step.
      *
      * @param name   human-readable label (also used as the JUnit dynamic-test display name)
-     * @param action work to run against the per-browser {@link TestContext}
+     * @param action work to run against the per-browser {@link YojaTestContext}
      */
-    private static record Test(String name, Consumer<TestContext> action) {}
+    private static record Test(String name, Consumer<YojaTestContext> action) {}
 
     /** Browser configurations to exercise (iteration order preserved via {@link LinkedHashSet}). */
     private final LinkedHashSet<Browser.Config> browserConfigs = new LinkedHashSet<>();
     /** Test steps in declaration order. */
     private final List<Test> tests = new ArrayList<>();
+
+    /** Actions run before every step (like JUnit's {@code @BeforeEach}, but per dynamic step). */
+    private final List<Consumer<YojaTestContext>> beforeEachActions = new ArrayList<>();
+    /** Actions run after every step (like JUnit's {@code @AfterEach}, but per dynamic step). */
+    private final List<Consumer<YojaTestContext>> afterEachActions = new ArrayList<>();
+    /** Actions run once per browser, before its first step (like a per-browser {@code @BeforeAll}). */
+    private final List<Consumer<YojaTestContext>> beforeEachBrowserActions = new ArrayList<>();
+    /** Actions run once per browser, after its last step (like a per-browser {@code @AfterAll}). */
+    private final List<Consumer<YojaTestContext>> afterEachBrowserActions = new ArrayList<>();
 
     /** JS-unit web apps mounted as fixtures on the embedded server. */
     private final List<WebApp> jsUnitWebApps = new ArrayList<>();
@@ -108,7 +117,7 @@ public class TestBuilder {
     private boolean doStartYojaJs;
 
     /** Public no-arg constructor; instances may also be obtained through {@link #builder()}. */
-    public TestBuilder() {
+    public YojaSeleniumBuilder() {
         super();
     }
 
@@ -123,7 +132,7 @@ public class TestBuilder {
      * @param config browser configuration (no-op when already registered)
      * @return this builder
      */
-    public TestBuilder browser(final Browser.Config config) {
+    public YojaSeleniumBuilder browser(final Browser.Config config) {
         this.browserConfigs.add(config);
         return this;
     }
@@ -134,7 +143,7 @@ public class TestBuilder {
      * @param host host name to bind to
      * @return this builder
      */
-    public TestBuilder host(final String host) {
+    public YojaSeleniumBuilder host(final String host) {
         this.host = host;
         return this;
     }
@@ -149,7 +158,7 @@ public class TestBuilder {
      *
      * @return this builder
      */
-    public TestBuilder startJavascript() {
+    public YojaSeleniumBuilder startJavascript() {
     	return start(ScriptOption.apply(), false);
     }
 
@@ -159,7 +168,7 @@ public class TestBuilder {
      * @param yojaWebOption post-load options (logger / assert helpers)
      * @return this builder
      */
-    public TestBuilder startJavascript(final ScriptOption yojaWebOption) {
+    public YojaSeleniumBuilder startJavascript(final ScriptOption yojaWebOption) {
     	return start(yojaWebOption, false);
     }
 
@@ -168,7 +177,7 @@ public class TestBuilder {
      *
      * @return this builder
      */
-    public TestBuilder startYojaWeb() {
+    public YojaSeleniumBuilder startYojaWeb() {
         return start(ScriptOption.apply(), true);
     }
 
@@ -178,7 +187,7 @@ public class TestBuilder {
      * @param yojaWebOption post-load options (logger / assert helpers)
      * @return this builder
      */
-    public TestBuilder startYojaWeb(final ScriptOption yojaWebOption) {
+    public YojaSeleniumBuilder startYojaWeb(final ScriptOption yojaWebOption) {
     	return start(yojaWebOption, true);
     }
 
@@ -192,10 +201,10 @@ public class TestBuilder {
      * @param yojaWeb       {@code true} to load the full Yoja-Web template,
      *                      {@code false} for the minimal one
      * @return this builder
-     * @throws SeleniumException when the bootstrap has already run or the
+     * @throws YojaSeleniumException when the bootstrap has already run or the
      *                           template extraction fails
      */
-    private TestBuilder start(final ScriptOption yojaWebOption,
+    private YojaSeleniumBuilder start(final ScriptOption yojaWebOption,
     		                  final boolean yojaWeb) {
         if (!this.doStartYojaJs) {
             try {
@@ -205,13 +214,13 @@ public class TestBuilder {
                 		                         ? ResourceUtil.read("com/easygoingapi/yoja/selenium/yojaWeb.html")
                 		                         : ResourceUtil.read("com/easygoingapi/yoja/selenium/hello.html");
                 Files.writeString(temporaryFolder.resolve("yojaSelenium.html"), homeFileContent);
-                final String contextPath = "/" + TestBuilder.class.getName().replace(".", "/");
+                final String contextPath = "/" + YojaSeleniumBuilder.class.getName().replace(".", "/");
                 final WebApp webApp = WebApp.builder(Type.folder,
                                                      HttpRouter.formatPath(temporaryFolder))
                                             .contextPath(contextPath)
                                             .build();
                 this.webServices.add(new WebResource(webApp, "/yojaSelenium.html"));
-                final Consumer<TestContext> action = testContext -> {
+                final Consumer<YojaTestContext> action = testContext -> {
                     final HttpUrl httpUrl = testContext.httpUrlBuilder()
                                                        .path(contextPath + "/yojaSelenium.html")
                                                        .build();
@@ -226,11 +235,11 @@ public class TestBuilder {
                 this.tests.add(0, new Test("startYojaJs", action));
             }
             catch (final Exception e) {
-                throw new SeleniumException("start yojaJs failed", e);
+                throw new YojaSeleniumException("start yojaJs failed", e);
             }
         }
         else {
-            throw new SeleniumException("yojaJs already started");
+            throw new YojaSeleniumException("yojaJs already started");
         }
         return this;
     }
@@ -242,7 +251,7 @@ public class TestBuilder {
      * @param path URL path to navigate to
      * @return this builder
      */
-    public TestBuilder getPage(final String path) {
+    public YojaSeleniumBuilder getPage(final String path) {
     	 this.tests.add(new Test("page " + path,
     			                 c -> c.getHttpPage(Duration.ofSeconds(2),
                                                     c.httpUrlBuilder()
@@ -263,7 +272,7 @@ public class TestBuilder {
      * @param contentType MIME type
      * @return this builder
      */
-    public TestBuilder contentType(final String extension,
+    public YojaSeleniumBuilder contentType(final String extension,
                                    final String contentType) {
         this.contentTypes.put(extension, contentType);
         return this;
@@ -275,7 +284,7 @@ public class TestBuilder {
      * @param packageName classpath base of the resources
      * @return this builder
      */
-    public TestBuilder webResource(final String packageName) {
+    public YojaSeleniumBuilder webResource(final String packageName) {
         final WebApp webApp = WebApp.builder(Type.jar, packageName)
                                     .contextPath("/")
                                     .build();
@@ -291,7 +300,7 @@ public class TestBuilder {
      * @param contextPath URL prefix to mount under
      * @return this builder
      */
-    public TestBuilder webResource(final String packageName,
+    public YojaSeleniumBuilder webResource(final String packageName,
                                    final String contextPath) {
         final WebApp webApp = WebApp.builder(Type.jar, packageName)
                                     .contextPath(contextPath)
@@ -309,7 +318,7 @@ public class TestBuilder {
      * @param url         URL pattern of the resource entry
      * @return this builder
      */
-    public TestBuilder webResource(final String packageName,
+    public YojaSeleniumBuilder webResource(final String packageName,
                                    final String contextPath,
                                    final String url) {
         final WebApp webApp = WebApp.builder(Type.jar, packageName)
@@ -326,7 +335,7 @@ public class TestBuilder {
      * @param url    URL pattern of the resource entry
      * @return this builder
      */
-    public TestBuilder webResource(final WebApp webApp,
+    public YojaSeleniumBuilder webResource(final WebApp webApp,
                                    final String url) {
         this.webServices.add(new WebResource(webApp, url));
         return this;
@@ -338,7 +347,7 @@ public class TestBuilder {
      * @param webResource resource to mount
      * @return this builder
      */
-    public TestBuilder webResource(final WebResource webResource) {
+    public YojaSeleniumBuilder webResource(final WebResource webResource) {
         this.webServices.add(webResource);
         return this;
     }
@@ -349,7 +358,7 @@ public class TestBuilder {
      * @param webService service to register
      * @return this builder
      */
-    public TestBuilder webService(final WebService webService) {
+    public YojaSeleniumBuilder webService(final WebService webService) {
         this.webServices.add(webService);
         return this;
     }
@@ -364,29 +373,29 @@ public class TestBuilder {
      *
      * @return this builder
      */
-    public TestBuilder saveLogs() {
+    public YojaSeleniumBuilder saveLogs() {
         this.tests.add(new Test("save logs", c -> c.seleniumService().saveLogs()));
         return this;
     }
 
     /**
      * Adds a step that drains the browser logs to SLF4J via
-     * {@link SeleniumService#printLogs()}.
+     * {@link YojaSeleniumService#printLogs()}.
      *
      * @return this builder
      */
-    public TestBuilder printLogs() {
+    public YojaSeleniumBuilder printLogs() {
         this.tests.add(new Test("print logs", c -> c.seleniumService().printLogs()));
         return this;
     }
 
     /**
      * Adds a step that triggers the IDE breakpoint hook through
-     * {@link SeleniumService#debugger()}.
+     * {@link YojaSeleniumService#debugger()}.
      *
      * @return this builder
      */
-    public TestBuilder debugger() {
+    public YojaSeleniumBuilder debugger() {
         this.tests.add(new Test("debugger", c -> c.seleniumService().debugger()));
         return this;
     }
@@ -396,7 +405,7 @@ public class TestBuilder {
      *
      * @return this builder
      */
-    public TestBuilder loadYwAssert() {
+    public YojaSeleniumBuilder loadYwAssert() {
         this.tests.add(new Test("load assert", c -> c.seleniumService().loadYwAssert()));
         return this;
     }
@@ -406,7 +415,7 @@ public class TestBuilder {
      *
      * @return this builder
      */
-    public TestBuilder reload() {
+    public YojaSeleniumBuilder reload() {
         return reload(ScriptOption.apply());
     }
 
@@ -416,7 +425,7 @@ public class TestBuilder {
      * @param scriptOption options applied after reload (logger / assert helpers)
      * @return this builder
      */
-    public TestBuilder reload(final ScriptOption scriptOption) {
+    public YojaSeleniumBuilder reload(final ScriptOption scriptOption) {
         this.tests.add(new Test("reload", c ->  c.seleniumService().reload(scriptOption)));
         return this;
     }
@@ -428,7 +437,7 @@ public class TestBuilder {
      * @param heigth target height in pixels
      * @return this builder
      */
-    public TestBuilder resizeWindow(final int width, final int heigth) {
+    public YojaSeleniumBuilder resizeWindow(final int width, final int heigth) {
         this.tests.add(new Test("resize window [" + width + "x" + heigth + "]",
                                 c -> c.seleniumService().resizeWindow(width, heigth)));
         return this;
@@ -440,7 +449,7 @@ public class TestBuilder {
      * @param timeout how long to sleep
      * @return this builder
      */
-    public TestBuilder await(final Duration timeout) {
+    public YojaSeleniumBuilder await(final Duration timeout) {
         this.tests.add(new Test("await " + TimeUtil.prettyPrint(timeout), c -> c.seleniumService().await(timeout)));
         return this;
     }
@@ -454,12 +463,61 @@ public class TestBuilder {
      * Adds an arbitrary user-supplied test step.
      *
      * @param testName display name of the step
-     * @param test     action receiving the per-browser {@link TestContext}
+     * @param test     action receiving the per-browser {@link YojaTestContext}
      * @return this builder
      */
-    public TestBuilder test(final String testName,
-                            final Consumer<TestContext> test) {
+    public YojaSeleniumBuilder test(final String testName,
+                            final Consumer<YojaTestContext> test) {
         this.tests.add(new Test(testName, test));
+        return this;
+    }
+
+    /**
+     * Registers an action run <b>before every step</b> (JUnit's {@code @BeforeEach} does not fire per
+     * dynamic step, so this is the way to reset state between the chained steps of a scenario).
+     *
+     * @param action work run against the {@link YojaTestContext} before each step; may be called several times
+     * @return this builder
+     */
+    public YojaSeleniumBuilder beforeEach(final Consumer<YojaTestContext> action) {
+        this.beforeEachActions.add(action);
+        return this;
+    }
+
+    /**
+     * Registers an action run <b>after every step</b> (see {@link #beforeEach(Consumer)}); it runs even
+     * when the step failed, and always before the browser session is closed on the last step.
+     *
+     * @param action work run against the {@link YojaTestContext} after each step; may be called several times
+     * @return this builder
+     */
+    public YojaSeleniumBuilder afterEach(final Consumer<YojaTestContext> action) {
+        this.afterEachActions.add(action);
+        return this;
+    }
+
+    /**
+     * Registers an action run <b>once per browser, before its first step</b> (a per-browser
+     * {@code @BeforeAll}). Ideal to bring the store/DB to a known baseline so each browser runs the
+     * chained scenario from the same starting point.
+     *
+     * @param action work run against the {@link YojaTestContext} once per browser, before the first step
+     * @return this builder
+     */
+    public YojaSeleniumBuilder beforeEachBrowser(final Consumer<YojaTestContext> action) {
+        this.beforeEachBrowserActions.add(action);
+        return this;
+    }
+
+    /**
+     * Registers an action run <b>once per browser, after its last step</b> (a per-browser
+     * {@code @AfterAll}); it runs before the browser session is closed.
+     *
+     * @param action work run against the {@link YojaTestContext} once per browser, after the last step
+     * @return this builder
+     */
+    public YojaSeleniumBuilder afterEachBrowser(final Consumer<YojaTestContext> action) {
+        this.afterEachBrowserActions.add(action);
         return this;
     }
 
@@ -505,7 +563,7 @@ public class TestBuilder {
      * @param arguments     arguments passed to each function
      * @return this builder
      */
-    public TestBuilder testJsUnit(final String filePath,
+    public YojaSeleniumBuilder testJsUnit(final String filePath,
                                   final List<String> functionNames,
                                   final Object... arguments) {
         final List<String> fonctionCalls = new ArrayList<>();
@@ -550,7 +608,7 @@ public class TestBuilder {
      * @param arguments arguments passed to the module
      * @return this builder
      */
-    public TestBuilder testAsyncModule(final Duration duration,
+    public YojaSeleniumBuilder testAsyncModule(final Duration duration,
                                        final String filePath,
                                        final Object... arguments) {
         return testModule(true, duration, filePath, arguments);
@@ -563,7 +621,7 @@ public class TestBuilder {
      * @param arguments arguments passed to the module
      * @return this builder
      */
-    public TestBuilder testAsyncModule(final String filePath,
+    public YojaSeleniumBuilder testAsyncModule(final String filePath,
                                        final Object... arguments) {
         return testModule(true, null, filePath, arguments);
     }
@@ -574,7 +632,7 @@ public class TestBuilder {
      * @param filePath URL of the JS module
      * @return this builder
      */
-    public TestBuilder loadModule(final String filePath) {
+    public YojaSeleniumBuilder loadModule(final String filePath) {
         return testModule(false, null, filePath);
     }
 
@@ -587,7 +645,7 @@ public class TestBuilder {
      * @param arguments arguments passed to the module
      * @return this builder
      */
-    public TestBuilder testModule(final String filePath,
+    public YojaSeleniumBuilder testModule(final String filePath,
                                   final Object... arguments) {
         return testModule(false, null, filePath, arguments);
     }
@@ -627,7 +685,7 @@ public class TestBuilder {
      * @param arguments arguments passed to the module
      * @return this builder
      */
-    public TestBuilder repeatTestModuleUntil(final Duration until,
+    public YojaSeleniumBuilder repeatTestModuleUntil(final Duration until,
                                              final String filePath,
                                              final Object... arguments) {
         final String formatedPath = HttpRouter.formatPath(filePath);
@@ -643,7 +701,7 @@ public class TestBuilder {
                 }
             }
             catch (final Exception e) {
-                throw new SeleniumException("execute jsModule failed: " + formatedPath
+                throw new YojaSeleniumException("execute jsModule failed: " + formatedPath
                                           + "; cause: " + e.getMessage(), e);
             }
         });
@@ -705,7 +763,7 @@ public class TestBuilder {
      * @param arguments arguments passed to the module
      * @return this builder
      */
-    private TestBuilder testModule(final boolean async,
+    private YojaSeleniumBuilder testModule(final boolean async,
                                    final Duration duration,
                                    final String filePath,
                                    final Object... arguments) {
@@ -721,7 +779,7 @@ public class TestBuilder {
                 }
             }
             catch (final Exception e) {
-                throw new SeleniumException("execute jsModule failed: " + formatedPath
+                throw new YojaSeleniumException("execute jsModule failed: " + formatedPath
                                           + "; cause: " + e.getMessage(), e);
             }
         });
@@ -739,7 +797,7 @@ public class TestBuilder {
      * @param webSocket endpoint to register (no-op when {@code null})
      * @return this builder
      */
-    public TestBuilder webSocket(final WebSocket webSocket) {
+    public YojaSeleniumBuilder webSocket(final WebSocket webSocket) {
         if (webSocket != null) {
             this.webSocketService.add(webSocket);
         }
@@ -759,8 +817,8 @@ public class TestBuilder {
     /**
      * Runs every registered step against every registered browser config.
      * <p>
-     * For each browser config a fresh {@link SeleniumService} and
-     * {@link TestContext} are created, the embedded {@link HttpServerContext}
+     * For each browser config a fresh {@link YojaSeleniumService} and
+     * {@link YojaTestContext} are created, the embedded {@link YojaHttpServerContext}
      * is started, the steps execute in declaration order, and (unless
      * {@code keepRunning} is true) the context is closed in the surrounding
      * {@code finally}. Step failures (assertion errors or exceptions) are
@@ -770,14 +828,14 @@ public class TestBuilder {
      *                    open after the steps finish (useful for debugging)
      */
     public void execute(final boolean keepRunning) {
-        final HttpServerContext httpServerContext = new HttpServerContext(host,
+        final YojaHttpServerContext httpServerContext = new YojaHttpServerContext(host,
                                                                           jsUnitWebApps,
                                                                           webServices,
                                                                           webSocketService,
                                                                           contentTypes);
         for (final Browser.Config browserConfig : browserConfigs) {
-            final SeleniumService seleniumService = SeleniumService.newInstance(browserConfig);
-            final TestContext testContext = new TestContext(browserConfig,
+            final YojaSeleniumService seleniumService = YojaSeleniumService.newInstance(browserConfig);
+            final YojaTestContext testContext = new YojaTestContext(browserConfig,
                                                             httpServerContext,
                                                             seleniumService);
             try {
@@ -819,7 +877,7 @@ public class TestBuilder {
         if (browserConfigs.isEmpty()) {
             browserConfigs.add(Browser.builder(Browser.FIREFOX).build());
         }
-        final HttpServerContext httpServerContext = new HttpServerContext(host,
+        final YojaHttpServerContext httpServerContext = new YojaHttpServerContext(host,
                                                                           jsUnitWebApps,
                                                                           webServices,
                                                                           webSocketService,
@@ -839,53 +897,50 @@ public class TestBuilder {
         }
         else {
             for (final Browser.Config browserConfig : browserConfigs) {
-                final SeleniumService seleniumService = SeleniumService.newInstance(browserConfig);
-                final TestContext testContext = new TestContext(browserConfig,
+                final YojaSeleniumService seleniumService = YojaSeleniumService.newInstance(browserConfig);
+                final YojaTestContext testContext = new YojaTestContext(browserConfig,
                                                                 httpServerContext,
                                                                 seleniumService);
-                if (tests.size() == 1) {
-                    final Test test = tests.get(0);
-                    final Consumer<TestContext> action = c -> {
-                        httpServerContext.start();
+                for (int index = 0; index < tests.size(); index++) {
+                    final Test test = tests.get(index);
+                    final boolean first = index == 0;
+                    final boolean last = index == tests.size() - 1;
+                    // per step: [start server + beforeEachBrowser* on the first] -> beforeEach* -> step
+                    //           -> afterEach* -> [afterEachBrowser* + close on the last]
+                    final Consumer<YojaTestContext> action = c -> {
+                        if (first) {
+                            httpServerContext.start();
+                            for (final Consumer<YojaTestContext> beforeBrowser : beforeEachBrowserActions) {
+                                beforeBrowser.accept(c);
+                            }
+                        }
                         try {
+                            for (final Consumer<YojaTestContext> before : beforeEachActions) {
+                                before.accept(c);
+                            }
                             test.action().accept(c);
                         }
                         finally {
-                            testContext.close();
+                            try {
+                                for (final Consumer<YojaTestContext> after : afterEachActions) {
+                                    after.accept(c);
+                                }
+                            }
+                            finally {
+                                if (last) {
+                                    try {
+                                        for (final Consumer<YojaTestContext> afterBrowser : afterEachBrowserActions) {
+                                            afterBrowser.accept(c);
+                                        }
+                                    }
+                                    finally {
+                                        testContext.close();
+                                    }
+                                }
+                            }
                         }
                     };
-                    dynamicNodes.add(TestBuilder.test(testContext,
-                                                      test.name(),
-                                                      action));
-                }
-                else {
-                    int index = 0;
-                    for (final Test test : tests) {
-                        final Consumer<TestContext> action;
-                        if (index == 0) {
-                            action = c -> {
-                                httpServerContext.start();
-                                test.action().accept(c);
-                            };
-                        }
-                        else if (index == tests.size() - 1) {
-                            action = c -> {
-                                try {
-                                    test.action().accept(c);
-                                }
-                                finally {
-                                    testContext.close();
-                                }
-                            };
-                        }
-                        else {
-                            action = test.action();
-                        }
-                        index++;
-                        dynamicNodes.add(TestBuilder.test(testContext,
-                                                          test.name(),
-                                                          action));
-                    }
+                    dynamicNodes.add(YojaSeleniumBuilder.test(testContext, test.name(), action));
                 }
             }
         }
@@ -912,8 +967,8 @@ public class TestBuilder {
      *
      * @return a new builder
      */
-    public static TestBuilder builder() {
-        return new TestBuilder();
+    public static YojaSeleniumBuilder builder() {
+        return new YojaSeleniumBuilder();
     }
 
     /**
@@ -925,9 +980,9 @@ public class TestBuilder {
      * @param test        action to run
      * @return the dynamic-test node
      */
-    private static DynamicTest test(final TestContext testContext,
+    private static DynamicTest test(final YojaTestContext testContext,
                                     final String testName,
-                                    final Consumer<TestContext> test) {
+                                    final Consumer<YojaTestContext> test) {
         return DynamicTest.dynamicTest(testContext.browser().name()
                                         + " -> "
                                         + testName,

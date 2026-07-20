@@ -19,20 +19,20 @@ package com.easygoingapi.yoja.web.test.app_03;
 
 import java.util.function.Consumer;
 
-import com.easygoingapi.yoja.selenium.TestBuilder;
-import com.easygoingapi.yoja.selenium.TestContext;
+import com.easygoingapi.yoja.selenium.YojaSeleniumBuilder;
+import com.easygoingapi.yoja.selenium.YojaTestContext;
 import com.easygoingapi.yoja.web.test.util.TestConfig;
 
 public class ResourceUtil {
     
-    public static TestBuilder initialize_app() {
+    public static YojaSeleniumBuilder initialize_app() {
         return TestConfig.initialize()
                          .webResource("com.easygoingapi.yoja.web.test.app_03")
                          .test("getYojaWebPage", getYojaWebPage)
                          .loadYwAssert();
     }
 
-    public static Consumer<TestContext> getYojaWebPage = testContext -> {
+    public static Consumer<YojaTestContext> getYojaWebPage = testContext -> {
         testContext.getHttpPage("/home.html");
     };
 

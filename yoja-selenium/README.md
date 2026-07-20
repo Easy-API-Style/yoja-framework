@@ -26,18 +26,19 @@ dependencies {
   - [Standalone execution (no JUnit)](#standalone-execution-no-junit)
 - [BrowserConfig](#browserconfig)
 - [Browser Mode Debugger](#browser-mode-debugger)
-- [TestBuilder — Fluent Test Runner](#testbuilder-fluent-test-runner)
+- [YojaSeleniumBuilder — Fluent Test Runner](#yojaseleniumbuilder-fluent-test-runner)
   - [Browser configuration](#browser-configuration)
   - [Serving pages and resources](#serving-pages-and-resources)
   - [Navigation steps](#navigation-steps)
   - [Test steps](#test-steps)
+  - [Lifecycle hooks](#lifecycle-hooks)
   - [JS module tests](#js-module-tests)
   - [JS unit tests](#js-unit-tests)
   - [Utility steps](#utility-steps)
   - [WebSocket support](#websocket-support)
   - [Execution modes](#execution-modes)
-- [TestContext](#testcontext)
-- [SeleniumService — Browser Control](#seleniumservice-browser-control)
+- [YojaTestContext](#yojatestcontext)
+- [YojaSeleniumService — Browser Control](#yojaseleniumservice-browser-control)
   - [JavaScript execution](#javascript-execution)
   - [DOM querying](#dom-querying)
   - [Page navigation](#page-navigation)
@@ -51,9 +52,9 @@ dependencies {
   - [Behavior notes](#behavior-notes)
   - [Example — async test module](#example--async-test-module)
 - [Log](#log)
-- [HttpServerContext](#httpservercontext)
+- [YojaHttpServerContext](#yojahttpservercontext)
 - [HttpUrlBuilder](#httpurlbuilder)
-- [SeleniumException](#seleniumexception)
+- [YojaSeleniumException](#yojaseleniumexception)
 - [Full Example](#full-example)
 - [Dependencies](#dependencies)
 
@@ -66,7 +67,7 @@ dependencies {
 ```java
 @TestFactory
 Stream<DynamicNode> myBrowserTest() {
-    return TestBuilder.builder()
+    return YojaSeleniumBuilder.builder()
         .browser(Browser.builder(Browser.CHROME)
                         .mode(Browser.Mode.HEADLESS)
                         .build())
@@ -83,7 +84,7 @@ Stream<DynamicNode> myBrowserTest() {
 ### Standalone execution (no JUnit)
 
 ```java
-TestBuilder.builder()
+YojaSeleniumBuilder.builder()
            .browser(Browser.builder(Browser.FIREFOX).build())
            .startYojaWeb()
            .test("my test", ctx -> {
@@ -159,16 +160,16 @@ Every `debugger()` call then suspends the JVM at that throw — no per-line brea
 
 ---
 
-## TestBuilder: Fluent Test Runner
+## YojaSeleniumBuilder: Fluent Test Runner
 
-`TestBuilder` orchestrates the full test lifecycle:
+`YojaSeleniumBuilder` orchestrates the full test lifecycle:
 1. Starts an **embedded HTTP server** on an auto-assigned port
 2. Opens a **browser** via Selenium
 3. Runs the declared **steps** sequentially
 4. Closes the browser and server when done
 
 ```java
-TestBuilder builder = TestBuilder.builder();
+YojaSeleniumBuilder builder = YojaSeleniumBuilder.builder();
 ```
 
 ### Browser configuration
@@ -281,6 +282,37 @@ builder.test("check API response", ctx -> {
     """);
     assertTrue(json.contains("key"));
 });
+```
+
+### Lifecycle hooks
+
+The steps of a `@TestFactory` scenario are **chained on a single browser session** and, when several
+browsers are configured, replayed on each of them. JUnit's own `@BeforeEach`/`@AfterEach` are **not**
+called around dynamic tests — they only wrap the `@TestFactory` method — so the builder provides its
+own hooks, each receiving the `YojaTestContext`:
+
+| Hook | Runs |
+| --- | --- |
+| `beforeEach(Consumer<YojaTestContext>)` | before **every** step |
+| `afterEach(Consumer<YojaTestContext>)` | after **every** step (even if it failed) |
+| `beforeEachBrowser(Consumer<YojaTestContext>)` | **once per browser**, before its first step (a per-browser `@BeforeAll`) |
+| `afterEachBrowser(Consumer<YojaTestContext>)` | **once per browser**, after its last step (a per-browser `@AfterAll`) |
+
+Order, per browser: `beforeEachBrowser` → (`beforeEach` → step → `afterEach`)\* → `afterEachBrowser`.
+
+Typical use: bring the server/DB to a known baseline so each browser replays the scenario from the
+same starting point (the chained steps otherwise share — and mutate — one server across browsers).
+
+```java
+return YojaSeleniumBuilder.builder()
+    .browser(Browser.builder(Browser.CHROME).mode(Browser.Mode.HEADLESS).build())
+    .browser(Browser.builder(Browser.FIREFOX).mode(Browser.Mode.HEADLESS).build())
+    // a fresh, seeded app per browser -> Chrome and Firefox start identically
+    .beforeEachBrowser(ctx -> startApp(ctx.browser()))
+    .afterEachBrowser(ctx -> stopApp())
+    .test("step 1", ctx -> { /* ... */ })
+    .test("step 2", ctx -> { /* ... */ })
+    .stream();
 ```
 
 ### JS module tests
@@ -426,7 +458,7 @@ builder.webSocket(ws);
 ```java
 @TestFactory
 Stream<DynamicNode> myTests() {
-    return TestBuilder.builder()
+    return YojaSeleniumBuilder.builder()
         .browser(Browser.builder(Browser.CHROME).mode(Browser.Mode.HEADLESS).build())
         .startYojaWeb()
         .test("step 1", ctx -> { /* ... */ })
@@ -438,7 +470,7 @@ Stream<DynamicNode> myTests() {
 **Standalone** — runs all steps in sequence, errors are logged but execution continues:
 
 ```java
-TestBuilder.builder()
+YojaSeleniumBuilder.builder()
     .browser(...)
     .test("step 1", ctx -> { /* ... */ })
     .execute();
@@ -449,9 +481,9 @@ builder.execute(true);
 
 ---
 
-## TestContext
+## YojaTestContext
 
-`TestContext` is passed to every `.test(...)` lambda. It gives access to the browser, the server, and navigation helpers.
+`YojaTestContext` is passed to every `.test(...)` lambda. It gives access to the browser, the server, and navigation helpers.
 
 ```java
 builder.test("my test", ctx -> {
@@ -471,14 +503,14 @@ builder.test("my test", ctx -> {
     // Which browser is running
     Browser browser = ctx.browser(); // CHROME, FIREFOX, EDGE
 
-    // Direct access to SeleniumService
-    SeleniumService selenium = ctx.seleniumService();
+    // Direct access to YojaSeleniumService
+    YojaSeleniumService selenium = ctx.seleniumService();
 
     // Shortcut to browser logs
     List<Log> logs = ctx.logs();
 
     // Server context
-    HttpServerContext server = ctx.httpServerContext();
+    YojaHttpServerContext server = ctx.httpServerContext();
     System.out.println("port: " + server.port());
     System.out.println("host: " + server.host());
 });
@@ -486,9 +518,9 @@ builder.test("my test", ctx -> {
 
 ---
 
-## SeleniumService: Browser Control
+## YojaSeleniumService: Browser Control
 
-Obtained from `TestContext.seleniumService()` or created directly:
+Obtained from `YojaTestContext.seleniumService()` or created directly:
 
 ```java
 Browser.Config config = Browser.builder(Browser.CHROME)
@@ -496,7 +528,7 @@ Browser.Config config = Browser.builder(Browser.CHROME)
                                 .timeout(Duration.ofSeconds(10))
                                 .build();
 
-SeleniumService selenium = SeleniumService.newInstance(config);
+YojaSeleniumService selenium = YojaSeleniumService.newInstance(config);
 // implements AutoCloseable
 try (selenium) {
     selenium.getHttpPage("http://localhost:8080");
@@ -643,9 +675,9 @@ String raw = selenium.sessionStorage("my-key");
 // Storage.type  → the stored type name
 // Storage.value → the stored value
 
-String value = selenium.localStorage("user-token", SeleniumService.Storage.value);
-String date  = selenium.localStorage("user-token", SeleniumService.Storage.date);
-String type  = selenium.sessionStorage("cart",     SeleniumService.Storage.type);
+String value = selenium.localStorage("user-token", YojaSeleniumService.Storage.value);
+String date  = selenium.localStorage("user-token", YojaSeleniumService.Storage.date);
+String type  = selenium.sessionStorage("cart",     YojaSeleniumService.Storage.type);
 ```
 
 ### Browser logs
@@ -729,7 +761,7 @@ builder.reload(ScriptOption.apply().saveLogs());
 // 1. As a script option when starting the page
 builder.startYojaWeb(ScriptOption.apply().loadYwAssert());
 
-// 2. As a dedicated TestBuilder step (before any test that needs it)
+// 2. As a dedicated YojaSeleniumBuilder step (before any test that needs it)
 builder.loadYwAssert();
 
 // 3. On demand from inside a test step
@@ -758,7 +790,7 @@ All methods hang off the global `window.ywAssert` singleton. The optional `messa
 
 - **Strict equality only.** `assertTrue` / `assertFalse` use `===`, not truthiness. `ywAssert.assertTrue(1)` **fails** — only the literal `true` passes. Same for `null` / `undefined` checks.
 - **`JSON.stringify` based deep equality.** Object key order matters (`{a:1,b:2}` is not equal to `{b:2,a:1}`). Values that don't survive JSON serialization (`undefined`, functions, `Date`, `Map`, `Set`, `Symbol`) are compared as their JSON form — usually stripped or stringified to `"null"`. Convert them yourself before asserting if precision matters.
-- **Failure propagation.** Each failure throws a plain `Error`. From an async test module, catch it and forward via `reject(error.message)` so Selenium can lift it into a Java `SeleniumException` and fail the right step.
+- **Failure propagation.** Each failure throws a plain `Error`. From an async test module, catch it and forward via `reject(error.message)` so Selenium can lift it into a Java `YojaSeleniumException` and fail the right step.
 
 ### Example — async test module
 
@@ -787,7 +819,7 @@ export default async function(args, resolve, reject) {
 Wired from Java:
 
 ```java
-TestBuilder.builder()
+YojaSeleniumBuilder.builder()
     .browser(Browser.builder(Browser.CHROME).mode(Browser.Mode.HEADLESS).build())
     .startYojaWeb(ScriptOption.apply().loadYwAssert())
     .testAsyncModule("/test/checkUserList.js")
@@ -823,12 +855,12 @@ for (Log log : logs) {
 
 ---
 
-## HttpServerContext
+## YojaHttpServerContext
 
-The embedded HTTP server used during tests. Accessible from `TestContext`.
+The embedded HTTP server used during tests. Accessible from `YojaTestContext`.
 
 ```java
-HttpServerContext server = ctx.httpServerContext();
+YojaHttpServerContext server = ctx.httpServerContext();
 
 String host = server.host();  // e.g. "localhost"
 int    port = server.port();  // auto-assigned, e.g. 8888
@@ -853,14 +885,14 @@ HttpUrl url = ctx.httpUrlBuilder()
 
 ---
 
-## SeleniumException
+## YojaSeleniumException
 
 Unchecked exception thrown by the module.
 
 ```java
 try {
     selenium.executeScript("invalid {{");
-} catch (SeleniumException e) {
+} catch (YojaSeleniumException e) {
     System.err.println(e.getMessage());
 }
 ```
@@ -873,7 +905,7 @@ try {
 >
 > | Demo class | Mechanisms exercised |
 > |---|---|
-> | [`TaskAppTest.java`](../yoja-blueprint-kanban/src/test/java/com/easygoingapi/yoja/example/TaskAppTest.java) | Full end-to-end Selenium suite using `SeleniumService` directly: login, task CRUD, task detail navigation against the live demo app |
+> | [`TaskAppTest.java`](../yoja-blueprint-kanban/src/test/java/com/easygoingapi/yoja/example/TaskAppTest.java) | Full end-to-end Selenium suite using `YojaSeleniumService` directly: login, task CRUD, task detail navigation against the live demo app |
 > | [`JsUnitDemoTest.java`](../yoja-blueprint-kanban/src/test/java/com/easygoingapi/yoja/example/JsUnitDemoTest.java) | `testJsUnit` (sync, named exports) + `testAsyncModule`. JS modules: [`jsUnitSyncTest.js`](../yoja-blueprint-kanban/src/test/resources/com/easygoingapi/yoja/example/webapp/jsUnitSyncTest.js), [`jsUnitAsyncTest.js`](../yoja-blueprint-kanban/src/test/resources/com/easygoingapi/yoja/example/webapp/jsUnitAsyncTest.js) |
 > | [`TestModuleDemoTest.java`](../yoja-blueprint-kanban/src/test/java/com/easygoingapi/yoja/example/TestModuleDemoTest.java) | `testModule` (sync default export) + `testAsyncModule` (async default export). JS modules: [`moduleSync.js`](../yoja-blueprint-kanban/src/test/resources/com/easygoingapi/yoja/example/webapp/moduleSync.js), [`moduleAsync.js`](../yoja-blueprint-kanban/src/test/resources/com/easygoingapi/yoja/example/webapp/moduleAsync.js) |
 
@@ -884,7 +916,7 @@ Stream<DynamicNode> loginFlow() {
     WebSocket ws = new WebSocket("/ws/notify");
     ws.onTextMessage(e -> ws.send("ack"));
 
-    return TestBuilder.builder()
+    return YojaSeleniumBuilder.builder()
         // Browsers
         .browser(Browser.builder(Browser.CHROME).mode(Browser.Mode.HEADLESS).build())
         .browser(Browser.builder(Browser.FIREFOX).mode(Browser.Mode.HEADLESS).build())
@@ -903,7 +935,7 @@ Stream<DynamicNode> loginFlow() {
         .getPage("/login.html")
         // Test: fill form and submit
         .test("fill login form", ctx -> {
-            SeleniumService s = ctx.seleniumService();
+            YojaSeleniumService s = ctx.seleniumService();
 
             WebElement email = s.firstTag("input[name='email']");
             WebElement pwd   = s.firstTag("input[name='password']");
