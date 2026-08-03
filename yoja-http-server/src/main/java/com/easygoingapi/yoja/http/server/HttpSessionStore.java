@@ -54,6 +54,8 @@ import io.vertx.ext.web.sstore.impl.LocalSessionStoreImpl;
  * public Vert.x API does not expose).
  */
 public class HttpSessionStore {
+    
+    public static enum SameSite { Strict, Lax }
 
     /** Cookie name used to carry the session id. */
     private final String cookieName;
@@ -239,5 +241,25 @@ public class HttpSessionStore {
                                    .put("mapName", LocalSessionStore.DEFAULT_SESSION_MAP_NAME));
         return store;
     }
+    
+    /*
+     * 
+     * BUILDER
+     * 
+     */
+    public static Builder builder() {
+        return new Builder();
+    }
 
+    public static class Builder {
+        
+        private boolean httpOnly;
+        private boolean Secure;
+        private SameSite SameSite;
+        private Duration MaxAge;
+        private String path;
+        private String domain;
+        
+    }
+    
 }
