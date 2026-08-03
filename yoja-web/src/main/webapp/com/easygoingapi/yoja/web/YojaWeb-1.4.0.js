@@ -881,6 +881,9 @@ class YojaWeb {
         else {
             nodes = [tags];
         }
+        // expand any DocumentFragment into its element children (a fragment has
+        // no style and is emptied by appendChild, so work on its children)
+        nodes = nodes.flatMap(node => node instanceof DocumentFragment ? [...node.children] : [node]);
         const nodesToLetNone = [];
         for (const node of nodes) {
             if (node.style.display === 'none') {

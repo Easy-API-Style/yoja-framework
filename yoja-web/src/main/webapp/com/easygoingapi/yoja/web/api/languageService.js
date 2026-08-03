@@ -118,11 +118,15 @@ class LanguageService {
         if (language && tags) {
             // tagsToUpdate
             const tagsToUpdate = [];
-            if (Array.isArray(tags)) {
-                tagsToUpdate.push(...tags);
-            }
-            else {
-                tagsToUpdate.push(tags);
+            const sources = Array.isArray(tags) ? tags : [tags];
+            for (const source of sources) {
+                if (source instanceof DocumentFragment) {
+                    // a fragment is not in the DOM tree: take its element children
+                    tagsToUpdate.push(...source.children);
+                }
+                else {
+                    tagsToUpdate.push(source);
+                }
             }
             // sectionsToUpdate
             const sectionsToUpdate = [];

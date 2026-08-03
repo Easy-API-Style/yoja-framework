@@ -176,6 +176,37 @@ public class TestApp_yojaWeb_appendTag {
         assertEquals("[\"/home.html\"]", result.get("parents"));
     };
 
+    /**
+     * appendTag with a DocumentFragment: its children must be added, and the
+     * language pipeline ({@code updateFrom} flattening the fragment to its
+     * children) must translate each one.
+     */
+    public static Consumer<YojaTestContext> test_appendTag_with_fragment = testContext -> {
+        final Map<String, Object> result = testContext.seleniumService()
+                                                      .executeAsyncScript(Duration.ofSeconds(10), """
+            const callback = arguments[arguments.length - 1]
+            try {
+                const fromTag = yojaWeb.firstTag('.id-section')
+                const fragment = document.createDocumentFragment()
+                const a = document.createElement('label'); a.setAttribute('yw-i18n', 'familyName')
+                const b = document.createElement('label'); b.setAttribute('yw-i18n', 'firstName')
+                fragment.appendChild(a)
+                fragment.appendChild(b)
+                yojaWeb.appendTag(fromTag, fragment)
+                       .then(() => callback({ aText: a.textContent, bText: b.textContent,
+                                              aInDom: fromTag.contains(a), bInDom: fromTag.contains(b) }))
+                       .catch(e => callback({ error: '' + (e && e.message ? e.message : e) }))
+            }
+            catch (e) { callback({ error: '' + e }) }
+        """);
+        assertNull(result.get("error"), "appendTag with fragment failed: " + result.get("error"));
+        assertEquals(Boolean.TRUE, result.get("aInDom"));
+        assertEquals(Boolean.TRUE, result.get("bInDom"));
+        // updateFrom flattened the fragment -> each child translated (fr)
+        assertEquals("Nom De Famille", result.get("aText"));
+        assertEquals("Prénom", result.get("bText"));
+    };
+
     @TestFactory
     public Stream<DynamicNode> factory() {
         return ResourceUtil.initialize_app()
@@ -184,6 +215,7 @@ public class TestApp_yojaWeb_appendTag {
                            .test("appendTag_keeps_already_hidden", test_appendTag_keeps_already_hidden)
                            .test("appendTag_in_section_with_path", test_appendTag_in_section_with_path)
                            .test("closest_is_used_for_section_host", test_closest_is_used_for_section_host)
+                           .test("appendTag_with_fragment", test_appendTag_with_fragment)
                            .stream();
     }
 
