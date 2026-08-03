@@ -89,7 +89,7 @@ public class HttpResponse extends AbstractHttpResponse {
      * @param body collection of POJOs to serialize
      * @return a future completing when the response is flushed
      */
-    public Future<Void> sendJson(final Collection<Object> body) {
+    public Future<Void> sendJson(final Collection<?> body) {
         return sendBody(JsonWriter.defaultWriter().writeAsJsonArray(body));
     }
 

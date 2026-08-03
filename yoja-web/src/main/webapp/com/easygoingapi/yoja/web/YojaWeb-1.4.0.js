@@ -830,40 +830,108 @@ class YojaWeb {
         return this.#version;
     }
     
-    append(tag, path) {
-        return this.#addTag('append', tag, path);
+    appendTag(fromTag, tags) {
+        return new Promise((resolve, reject) => {
+            this.#addOnlyTag('append', fromTag, tags, this.#sectionPath(fromTag), resolve, reject);
+        });
+    }
+
+    prependTag(fromTag, tags) {
+        return new Promise((resolve, reject) => {
+            this.#addOnlyTag('prepend', fromTag, tags, this.#sectionPath(fromTag), resolve, reject);
+        });
+    }
+
+    /**
+     * Path of the section {@code fromTag} belongs to (its own section when
+     * {@code fromTag} is a section host), walking up to the nearest ancestor
+     * that has a path. Uses {@code closest} — which includes {@code fromTag}'s
+     * own section — rather than {@code parents}, which only looks at ancestors.
+     */
+    #sectionPath(fromTag) {
+        let section = this.#sectionService.closest(fromTag);
+        while (section) {
+            if (section.path) {
+                return section.path;
+            }
+            section = this.#sectionService.parent(section.tag);
+        }
+        return undefined;
+    }
+
+    append(fromTag, path) {
+        return this.#addTag('append', fromTag, path);
+    }
+
+    prepend(fromTag, path) {
+        return this.#addTag('prepend', fromTag, path);
     }
     
-    prepend(tag, path) {
-        return this.#addTag('prepend', tag, path);
+    #addOnlyTag(mode, fromTag, tags, 
+                path, resolve, reject) {
+        const shadow = fromTag.shadowRoot;
+        let _fromTag = fromTag;
+        if (shadow) {
+            _fromTag = shadow;
+        }
+        let nodes;
+        if (Array.isArray(tags)) {
+            nodes = [...tags];
+        }
+        else {
+            nodes = [tags];
+        }
+        const nodesToLetNone = [];
+        for (const node of nodes) {
+            if (node.style.display === 'none') {
+                nodesToLetNone.push(node);
+            }
+            else {
+                node.style.display = 'none';
+            }
+        }
+        if (mode === 'append') {
+            for (const node of nodes) {
+                _fromTag.appendChild(node);
+            }
+        }
+        else {
+            for (const node of nodes.reverse()) {
+                _fromTag.prepend(node);
+            }
+        }
+        applyYojaWebOnTags(path, nodes)
+            .then(() => {
+                languageService.refreshFrom(fromTag)
+                               .then(() => {
+                                   for (const node of nodes) {
+                                       if (!nodesToLetNone.includes(node)) {
+                                          node.style.display = '';
+                                       }
+                                   }
+                                   resolve(nodes);
+                               })
+                               .catch(error => reject({
+                                   message: 'apply yoja on tags failed during refreshing language',
+                                   nodes: nodes,
+                                   error: error
+                               }));
+            })
+            .catch(error => reject({
+                message: 'apply yoja on tags failed',
+                nodes: nodes,
+                error: error
+            }));
     }
     
-    #addTag(mode, tag, path) {
+    #addTag(mode, fromTag, path) {
         return new Promise((resolve, reject) => {
             httpClient.get({url: path, fetchAs: 'text'})
                       .then(response => {
                 if (response.status === 200) {
                     const body = domUtil.parseHtml(response.body).body;
                     const children = Array.from(body.childNodes);
-                    const shadow = tag.shadowRoot;
-                    if (shadow) {
-                        tag = shadow;
-                    }
-                    if (mode === 'append') {
-                        for (const child of children) {
-                            tag.appendChild(child);
-                        }
-                    }
-                    else {
-                        for (const child of children.reverse()) {
-                            tag.prepend(child);
-                        }
-                    }
-                    applyYojaWebOnTags(path, children)
-                        .then(() => resolve(children))
-                        .catch(error => reject({message: 'apply yoja on tags failed', 
-                                                tags: children,
-                                                error: error}));
+                    this.#addOnlyTag(mode, fromTag, children, path, resolve, reject);
                 }
                 else {
                     reject({message: 'http request for append tag failed', 
