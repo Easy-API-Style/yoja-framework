@@ -883,19 +883,21 @@ class YojaWeb {
         }
         // expand any DocumentFragment into its element children (a fragment has
         // no style and is emptied by appendChild, so work on its children)
-        nodes = nodes.flatMap(node => node instanceof DocumentFragment ? [...node.children] : [node]);
+        nodes = nodes.flatMap(node => node instanceof DocumentFragment ? [...node.childNodes] : [node]);
         const nodesToLetNone = [];
         for (const node of nodes) {
-            if (node.style.display === 'none') {
-                nodesToLetNone.push(node);
-            }
-            else {
-                node.style.display = 'none';
+            if (node.style) {
+                if (node.style.display === 'none') {
+                    nodesToLetNone.push(node);
+                }
+                else {
+                    node.style.display = 'none';
+                }
             }
         }
         if (mode === 'append') {
             for (const node of nodes) {
-                _fromTag.appendChild(node);
+                _fromTag.append(node);
             }
         }
         else {
@@ -908,8 +910,10 @@ class YojaWeb {
                 languageService.refreshFrom(fromTag)
                                .then(() => {
                                    for (const node of nodes) {
-                                       if (!nodesToLetNone.includes(node)) {
-                                          node.style.display = '';
+                                       if (node.style) {
+                                           if (!nodesToLetNone.includes(node)) {
+                                               node.style.display = '';
+                                           }
                                        }
                                    }
                                    resolve(nodes);
@@ -1577,18 +1581,19 @@ async function applyYojaWebOnTags(path, tags) {
 }
 
 async function applyYojaWebOnTag(path, tag) {
-    return load(path, tag)
-             .then(sectionDescriptions => append(tag, sectionDescriptions));
+    return load(path, tag).then(sectionDescriptions => append(tag, sectionDescriptions));
 }
 
 async function applyYojaWebOnDocument() {
     const path = window.location.pathname;
+    document.body.style.display = 'none';
     return load(path, document)
              .then(sectionDescriptions => append(document, sectionDescriptions))
              .then(flatSectionDescriptions => {
                 console.debug('applyYojaWebOnDocument');
                 sectionReady(flatSectionDescriptions);
                 documentReady(flatSectionDescriptions);
+                document.body.style.display = '';
               });
 }
     
