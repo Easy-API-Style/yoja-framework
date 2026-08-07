@@ -131,7 +131,7 @@ class LanguageService {
             // sectionsToUpdate
             const sectionsToUpdate = [];
             for (const tagToUpdate of tagsToUpdate) {
-                if (tagToUpdate.nodeName !== '#text') {
+                if (tagToUpdate.closest) {
                     const sectionParent = sectionService.closest(tagToUpdate);
                     if (sectionParent && !sectionsToUpdate.includes(sectionParent)) {
                         sectionsToUpdate.push(sectionParent);
