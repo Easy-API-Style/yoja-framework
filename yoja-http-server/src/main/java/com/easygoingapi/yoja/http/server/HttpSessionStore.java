@@ -20,6 +20,7 @@ package com.easygoingapi.yoja.http.server;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 import com.easygoingapi.yoja.core.YojaApp;
@@ -29,6 +30,7 @@ import com.google.common.collect.Sets;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.http.CookieSameSite;
 import io.vertx.core.internal.ContextInternal;
 import io.vertx.core.internal.VertxInternal;
 import io.vertx.core.json.JsonObject;
@@ -43,8 +45,10 @@ import io.vertx.ext.web.sstore.impl.LocalSessionStoreImpl;
  * <p>
  * Wraps Vert.x' {@link LocalSessionStore}, with two additions:
  * <ul>
- *   <li>cookie name and timeout are pinned at construction time and exposed
- *       on the API;</li>
+ *   <li>the session cookie settings (name, timeout, {@code HttpOnly},
+ *       {@code Secure}, {@code SameSite}, {@code Path}, {@code Max-Age}) are
+ *       pinned at construction time and exposed on the API -- see
+ *       {@link #builder(String)}, whose defaults are the secure ones;</li>
  *   <li>a list of {@code onSession} handlers is invoked every time the store
  *       allocates a fresh session, allowing the application to seed default
  *       attributes or instrument session creation.</li>
@@ -55,12 +59,25 @@ import io.vertx.ext.web.sstore.impl.LocalSessionStoreImpl;
  */
 public class HttpSessionStore {
     
-    public static enum SameSite { Strict, Lax }
+    /** Default idle timeout of a session. */
+    public static final Duration DEFAULT_TIMEOUT = Duration.ofMinutes(30);
+    /** Default path of the session cookie: the whole site. */
+    public static final String DEFAULT_PATH = "/";
 
     /** Cookie name used to carry the session id. */
     private final String cookieName;
     /** Session timeout (idle deadline). */
     private final Duration timeout;
+    /** Whether the cookie is hidden from JavaScript ({@code HttpOnly}). */
+    private final boolean httpOnly;
+    /** Whether the cookie is sent over HTTPS only ({@code Secure}). */
+    private final boolean secure;
+    /** {@code SameSite} attribute of the cookie. */
+    private final CookieSameSite sameSite;
+    /** {@code Path} attribute of the cookie. */
+    private final String path;
+    /** {@code Max-Age} of the cookie, or {@code null} for a browser-session cookie. */
+    private final Duration maxAge;
 
     /** Handlers invoked whenever the store creates a fresh session. */
     private final List<Handler<HttpSession>> onSessionActions = new ArrayList<>();
@@ -71,16 +88,33 @@ public class HttpSessionStore {
     private final LocalSessionStore localSessionStore;
 
     /**
-     * Creates a new session store with the given cookie name and idle timeout.
+     * Creates a new session store with the given cookie name and idle timeout,
+     * and the secure defaults of {@link Builder} for the other cookie settings
+     * ({@code HttpOnly}, {@code Secure}, {@code SameSite=Strict}, {@code Path=/}).
      *
      * @param cookieName cookie name used to carry the session id
      * @param timeout    idle timeout after which a session is reaped
      */
     public HttpSessionStore(final String cookieName,
                             final Duration timeout) {
+        this(builder(cookieName).timeout(timeout));
+    }
+
+    /**
+     * Creates a new session store from a validated builder.
+     *
+     * @param builder the cookie settings
+     */
+    private HttpSessionStore(final Builder builder) {
         super();
-        this.cookieName = cookieName;
-        this.timeout = timeout;
+        builder.validate();
+        this.cookieName = builder.cookieName;
+        this.timeout = builder.timeout;
+        this.httpOnly = builder.httpOnly;
+        this.secure = builder.secure;
+        this.sameSite = builder.sameSite;
+        this.path = builder.path;
+        this.maxAge = builder.maxAge;
         this.localSessionStore = create(YojaApp.vertx());
         this.localMap = JavaReflectUtil.getFieldValue(this.localSessionStore, "localMap");
         this.localMap.clear();
@@ -102,6 +136,52 @@ public class HttpSessionStore {
      */
     public Duration timeout() {
         return timeout;
+    }
+
+    /**
+     * Returns whether the session cookie is hidden from JavaScript.
+     *
+     * @return whether the session cookie carries {@code HttpOnly}
+     */
+    public boolean httpOnly() {
+        return httpOnly;
+    }
+
+    /**
+     * Returns whether the session cookie is sent over HTTPS only.
+     *
+     * @return whether the session cookie carries {@code Secure}
+     */
+    public boolean secure() {
+        return secure;
+    }
+
+    /**
+     * Returns the {@code SameSite} attribute of the session cookie.
+     *
+     * @return the {@code SameSite} attribute of the session cookie
+     */
+    public CookieSameSite sameSite() {
+        return sameSite;
+    }
+
+    /**
+     * Returns the {@code Path} attribute of the session cookie.
+     *
+     * @return the {@code Path} attribute of the session cookie
+     */
+    public String path() {
+        return path;
+    }
+
+    /**
+     * Returns the {@code Max-Age} of the session cookie.
+     *
+     * @return the {@code Max-Age} of the session cookie, or {@code null} for a
+     *         cookie dropped when the browser closes
+     */
+    public Duration maxAge() {
+        return maxAge;
     }
 
     /**
@@ -206,6 +286,16 @@ public class HttpSessionStore {
         result.append(cookieName);
         result.append(", timeout=");
         result.append(timeout);
+        result.append(", httpOnly=");
+        result.append(httpOnly);
+        result.append(", secure=");
+        result.append(secure);
+        result.append(", sameSite=");
+        result.append(sameSite);
+        result.append(", path=");
+        result.append(path);
+        result.append(", maxAge=");
+        result.append(maxAge);
         result.append(", sessions=");
         result.append(localMap.size());
         result.append("]");
@@ -247,19 +337,173 @@ public class HttpSessionStore {
      * BUILDER
      * 
      */
-    public static Builder builder() {
-        return new Builder();
+    /**
+     * Creates a new {@link Builder} of a session store, with secure defaults:
+     * {@code HttpOnly}, {@code Secure}, {@code SameSite=Strict}, {@code Path=/},
+     * no {@code Max-Age} (the cookie is dropped when the browser closes) and an
+     * idle timeout of {@link #DEFAULT_TIMEOUT}.
+     * <p>
+     * The cookie has no {@code Domain} attribute: it is sent back to the exact
+     * host that set it only, never to its sub-domains.
+     *
+     * @param cookieName cookie name used to carry the session id; a name
+     *                   prefixed {@code __Host-} (the most robust) requires
+     *                   {@code Secure} and {@code Path=/}, a name prefixed
+     *                   {@code __Secure-} requires {@code Secure}
+     * @return a new builder
+     */
+    public static Builder builder(final String cookieName) {
+        return new Builder(cookieName);
     }
 
+    /** Builder of a {@link HttpSessionStore}: its session cookie settings. */
     public static class Builder {
-        
-        private boolean httpOnly;
-        private boolean Secure;
-        private SameSite SameSite;
-        private Duration MaxAge;
-        private String path;
-        private String domain;
-        
+
+        private final String cookieName;
+        private Duration timeout = DEFAULT_TIMEOUT;
+        private boolean httpOnly = true;
+        private boolean secure = true;
+        private CookieSameSite sameSite = CookieSameSite.STRICT;
+        private String path = DEFAULT_PATH;
+        private Duration maxAge;
+
+        /**
+         * Creates a builder with secure defaults; use {@link HttpSessionStore#builder(String)}.
+         *
+         * @param cookieName cookie name used to carry the session id
+         */
+        private Builder(final String cookieName) {
+            this.cookieName = cookieName;
+        }
+
+        /**
+         * Sets the idle timeout after which a session is reaped (default
+         * {@link #DEFAULT_TIMEOUT}).
+         *
+         * @param timeout the idle timeout
+         * @return this builder
+         */
+        public Builder timeout(final Duration timeout) {
+            this.timeout = timeout;
+            return this;
+        }
+
+        /**
+         * Sets whether the cookie is hidden from JavaScript (default {@code true}):
+         * a script injected in a page (XSS) can't read the session id.
+         *
+         * @param httpOnly whether the cookie carries {@code HttpOnly}
+         * @return this builder
+         */
+        public Builder httpOnly(final boolean httpOnly) {
+            this.httpOnly = httpOnly;
+            return this;
+        }
+
+        /**
+         * Sets whether the cookie is sent over HTTPS only (default {@code true}).
+         * Browsers treat {@code http://localhost} as secure, so a {@code Secure}
+         * cookie works there too; turn it off only for a plain HTTP server
+         * reached by another name.
+         *
+         * @param secure whether the cookie carries {@code Secure}
+         * @return this builder
+         */
+        public Builder secure(final boolean secure) {
+            this.secure = secure;
+            return this;
+        }
+
+        /**
+         * Sets the {@code SameSite} attribute of the cookie (default
+         * {@link CookieSameSite#STRICT}): it guards against cross-site request
+         * forgery (CSRF). {@link CookieSameSite#LAX} keeps the user signed in
+         * when coming from a link of another site (an email...);
+         * {@link CookieSameSite#NONE} requires {@code Secure}.
+         *
+         * @param sameSite the {@code SameSite} attribute
+         * @return this builder
+         */
+        public Builder sameSite(final CookieSameSite sameSite) {
+            this.sameSite = sameSite;
+            return this;
+        }
+
+        /**
+         * Sets the {@code Path} attribute of the cookie (default {@link #DEFAULT_PATH}).
+         *
+         * @param path the path, starting with {@code /}
+         * @return this builder
+         */
+        public Builder path(final String path) {
+            this.path = path;
+            return this;
+        }
+
+        /**
+         * Sets the {@code Max-Age} of the cookie (default {@code null}: the
+         * cookie is dropped when the browser closes). Set it only to keep the
+         * user signed in across browser restarts ("remember me"); the session
+         * itself still expires on the server after its {@link #timeout(Duration)}.
+         *
+         * @param maxAge the {@code Max-Age}, or {@code null}
+         * @return this builder
+         */
+        public Builder maxAge(final Duration maxAge) {
+            this.maxAge = maxAge;
+            return this;
+        }
+
+        /**
+         * Builds the session store.
+         *
+         * @return the session store
+         * @throws IllegalArgumentException when the settings are inconsistent
+         *                                  (see {@link HttpSessionStore#builder(String)})
+         */
+        public HttpSessionStore build() {
+            return new HttpSessionStore(this);
+        }
+
+        /**
+         * Checks the settings are consistent: the browser would otherwise drop
+         * the cookie silently.
+         *
+         * @throws IllegalArgumentException when the settings are inconsistent
+         */
+        private void validate() {
+            if (cookieName == null
+                    || cookieName.isBlank()) {
+                throw new IllegalArgumentException("cookieName is required");
+            }
+            if (timeout == null
+                    || timeout.isNegative()
+                    || timeout.isZero()) {
+                throw new IllegalArgumentException("timeout must be positive: " + timeout);
+            }
+            Objects.requireNonNull(sameSite, "sameSite");
+            if (path == null
+                    || !path.startsWith("/")) {
+                throw new IllegalArgumentException("path must start with '/': " + path);
+            }
+            if (maxAge != null
+                    && maxAge.isNegative()) {
+                throw new IllegalArgumentException("maxAge must not be negative: " + maxAge);
+            }
+            if (sameSite == CookieSameSite.NONE
+                    && !secure) {
+                throw new IllegalArgumentException("SameSite=None requires Secure");
+            }
+            if (cookieName.startsWith("__Secure-")
+                    && !secure) {
+                throw new IllegalArgumentException("a cookie prefixed __Secure- requires Secure");
+            }
+            if (cookieName.startsWith("__Host-")
+                    && (!secure || !DEFAULT_PATH.equals(path))) {
+                throw new IllegalArgumentException("a cookie prefixed __Host- requires Secure and Path=/");
+            }
+        }
+
     }
-    
+
 }

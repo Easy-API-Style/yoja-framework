@@ -21,7 +21,6 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -41,7 +40,6 @@ import com.google.common.collect.MultimapBuilder;
 import com.google.common.io.Resources;
 
 import io.vertx.core.Handler;
-import io.vertx.core.http.CookieSameSite;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.ext.web.Route;
 import io.vertx.ext.web.Router;
@@ -190,8 +188,7 @@ public class HttpRouter {
      */
     private void initialize() {
         if (httpSessionStore != null) {
-            router.route().handler(createSessionHandler(httpSessionStore.cookieName(),
-                                                        httpSessionStore.timeout()));
+            router.route().handler(createSessionHandler(httpSessionStore));
         }
         for (final WebService webService : webServices) {
         	final WebService.Type webServiceType = webService.getType();
@@ -320,15 +317,18 @@ public class HttpRouter {
      */
     /**
      * Builds the Vert.x session handler bound to the router's
-     * {@link HttpSessionStore} with {@link CookieSameSite#STRICT}.
+     * {@link HttpSessionStore}, with its session cookie settings.
      */
-    private SessionHandler createSessionHandler(final String cookieName,
-                                                final Duration timeout) {
+    private SessionHandler createSessionHandler(final HttpSessionStore httpSessionStore) {
         final SessionHandler sessionHandler = SessionHandler.create(httpSessionStore.localSessionStore());
-        sessionHandler.setSessionCookieName(cookieName);
-        sessionHandler.setCookieSameSite(CookieSameSite.STRICT);
-        if (timeout != null) {
-            sessionHandler.setSessionTimeout(timeout.toMillis());
+        sessionHandler.setSessionCookieName(httpSessionStore.cookieName());
+        sessionHandler.setSessionTimeout(httpSessionStore.timeout().toMillis());
+        sessionHandler.setCookieHttpOnlyFlag(httpSessionStore.httpOnly());
+        sessionHandler.setCookieSecureFlag(httpSessionStore.secure());
+        sessionHandler.setCookieSameSite(httpSessionStore.sameSite());
+        sessionHandler.setSessionCookiePath(httpSessionStore.path());
+        if (httpSessionStore.maxAge() != null) {
+            sessionHandler.setCookieMaxAge(httpSessionStore.maxAge().toSeconds());
         }
         return sessionHandler;
     }

@@ -530,6 +530,23 @@ HttpRouter router = HttpRouter.builder()
     .build();
 ```
 
+### Session cookie
+
+The session cookie is secure by default: `HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/`, no `Max-Age`
+(dropped when the browser closes) and no `Domain` (sent back to the exact host only). Browsers treat
+`http://localhost` as secure, so a `Secure` cookie works there too.
+
+```java
+HttpSessionStore store = HttpSessionStore.builder("__Host-session")
+    .timeout(Duration.ofHours(1))         // idle timeout, on the server (default 30 min)
+    .sameSite(CookieSameSite.LAX)         // keep the user signed in from a link of another site
+    .maxAge(Duration.ofDays(30))          // "remember me": survives a browser restart
+    .build();
+```
+
+`build()` rejects inconsistent settings the browser would silently drop: `SameSite=None` without `Secure`,
+a `__Secure-` name without `Secure`, a `__Host-` name without `Secure` and `Path=/`.
+
 ### HttpSession API
 
 ```java
