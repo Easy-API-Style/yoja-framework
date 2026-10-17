@@ -470,9 +470,15 @@
       <table class="api-table">
         <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td><code>HttpSessionStore(String cookieName, Duration timeout)</code></td><td class="ret"></td><td class="desc"></td></tr>
+          <tr><td><code>HttpSessionStore(String cookieName, Duration timeout)</code></td><td class="ret"></td><td class="desc">Store with the secure cookie defaults (see <code>builder</code>)</td></tr>
+          <tr><td><code>builder(String cookieName)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Static. Configure the session cookie</td></tr>
           <tr><td><code>cookieName()</code></td><td class="ret"><code>String</code></td><td class="desc">Name of the session cookie</td></tr>
           <tr><td><code>timeout()</code></td><td class="ret"><code>Duration</code></td><td class="desc">Session idle timeout</td></tr>
+          <tr><td><code>httpOnly()</code></td><td class="ret"><code>boolean</code></td><td class="desc">Whether the cookie is hidden from JavaScript</td></tr>
+          <tr><td><code>secure()</code></td><td class="ret"><code>boolean</code></td><td class="desc">Whether the cookie is sent over HTTPS only</td></tr>
+          <tr><td><code>sameSite()</code></td><td class="ret"><code>CookieSameSite</code></td><td class="desc"><code>SameSite</code> attribute of the cookie</td></tr>
+          <tr><td><code>path()</code></td><td class="ret"><code>String</code></td><td class="desc"><code>Path</code> attribute of the cookie</td></tr>
+          <tr><td><code>maxAge()</code></td><td class="ret"><code>Duration</code></td><td class="desc"><code>Max-Age</code> of the cookie, or <code>null</code> (dropped when the browser closes)</td></tr>
           <tr><td><code>onSession(Handler&lt;HttpSession&gt;)</code></td><td class="ret"><code>void</code></td><td class="desc">Invoked once per newly-created session</td></tr>
         </tbody>
       </table>
@@ -488,6 +494,30 @@
           <tr><td><code>clear()</code></td><td class="ret"><code>void</code></td><td class="desc">Remove all sessions</td></tr>
         </tbody>
       </table>
+    </div>
+
+    <div class="api-class">
+      <h3><code>HttpSessionStore.Builder</code> <span class="kind">class</span></h3>
+      <p>Session cookie settings, secure by default: <code>HttpOnly</code>, <code>Secure</code>, <code>SameSite=Strict</code>, <code>Path=/</code>, no <code>Max-Age</code> and no <code>Domain</code> (sent back to the exact host only). Browsers treat <code>http://localhost</code> as secure, so a <code>Secure</code> cookie works there too.</p>
+
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>timeout(Duration)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Idle timeout, on the server (default 30 min)</td></tr>
+          <tr><td><code>httpOnly(boolean)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Hide the cookie from JavaScript (default <code>true</code>)</td></tr>
+          <tr><td><code>secure(boolean)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Send the cookie over HTTPS only (default <code>true</code>)</td></tr>
+          <tr><td><code>sameSite(CookieSameSite)</code></td><td class="ret"><code>Builder</code></td><td class="desc">CSRF guard (default <code>STRICT</code>); <code>NONE</code> requires <code>Secure</code></td></tr>
+          <tr><td><code>path(String)</code></td><td class="ret"><code>Builder</code></td><td class="desc"><code>Path</code> attribute (default <code>/</code>)</td></tr>
+          <tr><td><code>maxAge(Duration)</code></td><td class="ret"><code>Builder</code></td><td class="desc">"Remember me": the cookie survives a browser restart (default none)</td></tr>
+          <tr><td><code>build()</code></td><td class="ret"><code>HttpSessionStore</code></td><td class="desc">Rejects settings the browser would silently drop: <code>SameSite=None</code> without <code>Secure</code>, a <code>__Secure-</code> name without <code>Secure</code>, a <code>__Host-</code> name without <code>Secure</code> and <code>Path=/</code></td></tr>
+        </tbody>
+      </table>
+
+<pre><code>HttpSessionStore store = HttpSessionStore.builder(<span class="s">"__Host-session"</span>)
+    .timeout(Duration.ofHours(<span class="n">1</span>))
+    .sameSite(CookieSameSite.LAX)
+    .maxAge(Duration.ofDays(<span class="n">30</span>))
+    .build();</code></pre>
     </div>
 
     <div class="api-class">

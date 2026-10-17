@@ -1,3 +1,12 @@
+## 1.5.0
+* session cookie secure by default (HttpOnly, Secure, SameSite=Strict) -> `HttpSessionStore.builder(...)` to configure it
+* remove `HttpSessionStore.SameSite` -> use Vert.x `CookieSameSite`
+* add `yojaWeb.appendTag(...)` and `yojaWeb.prependTag(...)` -> manage `DocumentFragment`
+* fix `style.display` on load
+* fix `LanguageService.updateFrom(tags, language)`
+* fix `sendJson(Collection<?> body)`
+* update java dependencies
+
 ## 1.4.0
 * fix http response of httpClient.js 
 * add after/before browser hooks -> yoja-selenium
