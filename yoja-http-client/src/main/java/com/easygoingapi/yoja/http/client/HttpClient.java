@@ -17,7 +17,7 @@
  */
 package com.easygoingapi.yoja.http.client;
 
-import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -235,26 +235,67 @@ public class HttpClient {
     }
 
     /**
-     * Assembles the request URI by appending an encoded query string (when
-     * any) to the path.
+     * Assembles the request URI: the path, encoded ({@link #encodePath}),
+     * then the encoded query string (when any).
      *
-     * @param path          path component
+     * @param path          the path, as given
      * @param httpParameter optional query parameters
      * @return the assembled URI
-     * @throws UnsupportedEncodingException never thrown today; retained to
-     *         keep the signature flexible if URL-encoding is reintroduced
      */
     private static String toUri(final String path,
-                                final HttpParameter httpParameter)
-                                 throws UnsupportedEncodingException {
+                                final HttpParameter httpParameter) {
         final StringBuilder uri = new StringBuilder();
-        uri.append(path);
-//        uri.append(URLEncoder.encode(path, "UTF-8"));
+        uri.append(encodePath(path));
         if (httpParameter != null) {
             uri.append("?");
             uri.append(httpParameter.parameterQuery(Format.encoded));
         }
         return uri.toString();
+    }
+
+    /**
+     * Percent-encodes a path, segment by segment (RFC 3986): the {@code /}
+     * stay the separators, every character a segment cannot hold is encoded
+     * as its UTF-8 bytes ({@code " "} → {@code %20}, {@code é} →
+     * {@code %C3%A9}, {@code ?} → {@code %3F}, {@code #} → {@code %23}).
+     * Kept as they are: the unreserved characters, the sub-delimiters,
+     * {@code :} and {@code @} -- and a {@code %XX} already there, so that a
+     * path given encoded is not encoded twice.
+     *
+     * @param path the path, as given
+     * @return the path, encoded
+     */
+    static String encodePath(final String path) {
+        if (path == null) {
+            return "";
+        }
+        final StringBuilder encoded = new StringBuilder(path.length());
+        final byte[] bytes = path.getBytes(StandardCharsets.UTF_8);
+        for (int i = 0; i < bytes.length; i++) {
+            final int b = bytes[i] & 0xFF;
+            if (isPathCharacter(b)) {
+                encoded.append((char) b);
+            }
+            else if (b == '%' && i + 2 < bytes.length && isHex(bytes[i + 1]) && isHex(bytes[i + 2])) {
+                encoded.append('%').append((char) bytes[i + 1]).append((char) bytes[i + 2]);   // already encoded
+                i += 2;
+            }
+            else {
+                encoded.append('%').append(Character.toUpperCase(Character.forDigit(b >> 4, 16)))
+                                   .append(Character.toUpperCase(Character.forDigit(b & 0xF, 16)));
+            }
+        }
+        return encoded.toString();
+    }
+
+    /** @return whether a byte stands as it is in a path: a segment's character (RFC 3986 pchar) or {@code /} */
+    private static boolean isPathCharacter(final int b) {
+        return (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') || (b >= '0' && b <= '9')
+               || "-._~!$&'()*+,;=:@/".indexOf(b) >= 0;
+    }
+
+    private static boolean isHex(final byte b) {
+        return (b >= '0' && b <= '9') || (b >= 'a' && b <= 'f') || (b >= 'A' && b <= 'F');
     }
 
     @Override
