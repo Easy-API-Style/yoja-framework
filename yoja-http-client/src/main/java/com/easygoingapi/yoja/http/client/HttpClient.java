@@ -56,7 +56,10 @@ import io.vertx.ext.web.client.WebClient;
  *   <li>{@code byte[]} → no implicit content type;</li>
  *   <li>{@code null} → no body.</li>
  * </ul>
- * Any I/O failure is wrapped into an {@link HttpException}.
+ * A failure never throws: it fails the returned future -- with an
+ * {@link HttpException} when the request cannot be built, with the Vert.x
+ * error itself when the exchange fails (connection refused, a timeout, a
+ * stream reset...), so that a caller can tell them apart.
  */
 public class HttpClient {
 
@@ -116,8 +119,9 @@ public class HttpClient {
      * Sends a GET request and returns a future resolving to the response.
      *
      * @param httpGet GET request to send
-     * @return future resolving to the response
-     * @throws HttpException when the request cannot be built
+     * @return future resolving to the response; failed with an
+     *         {@link HttpException} when the request cannot be built, with the
+     *         Vert.x error when the exchange fails
      */
     public Future<HttpResponse> send(final HttpGet httpGet) {
         try {
@@ -132,7 +136,7 @@ public class HttpClient {
                           .map(v -> new HttpResponse(v));
         }
         catch (final Exception e) {
-            throw new HttpException("GET failed, path=" + httpGet.path(), e);
+            return Future.failedFuture(new HttpException("GET failed, path=" + httpGet.path(), e));
         }
     }
 
@@ -141,8 +145,9 @@ public class HttpClient {
      * body's runtime type, and returns a future resolving to the response.
      *
      * @param httpPost POST request to send
-     * @return future resolving to the response
-     * @throws HttpException when the request cannot be built
+     * @return future resolving to the response; failed with an
+     *         {@link HttpException} when the request cannot be built, with the
+     *         Vert.x error when the exchange fails
      */
     public Future<HttpResponse> send(final HttpPost httpPost) {
         try {
@@ -183,7 +188,7 @@ public class HttpClient {
             return result;
         }
         catch (final Exception e) {
-            throw new HttpException("POST failed, path=" + httpPost.path(), e);
+            return Future.failedFuture(new HttpException("POST failed, path=" + httpPost.path(), e));
         }
     }
 
