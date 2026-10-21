@@ -37,16 +37,12 @@ import com.easygoingapi.yoja.core.http.HttpUrl;
 import com.easygoingapi.yoja.core.util.JsonReader;
 import com.easygoingapi.yoja.core.util.PathUtil;
 import com.easygoingapi.yoja.core.worker.Worker;
-import com.easygoingapi.yoja.http.client.WebSocketEngine;
 import com.easygoingapi.yoja.reverse.proxy.ReverseProxyRule.Url;
 import com.google.common.base.Strings;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.http.ClientWebSocket;
 import io.vertx.core.http.HttpServerRequest;
-import io.vertx.core.http.ServerWebSocket;
-import io.vertx.core.http.ServerWebSocketHandshake;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
@@ -70,10 +66,9 @@ import io.vertx.ext.web.handler.BodyHandler;
  * {@link #adminRouter()} and protected by a token header
  * ({@code Reserve-Proxy-Token}). Admin operations run serialized through
  * {@link Worker.singleThread} keyed by this switcher's port to avoid races
- * between concurrent updates and lookups. WebSocket connections are also
- * dispatched here ({@link #websocketHandshake} / {@link #websocket}); HTTP
- * dispatching is the responsibility of the subclass
- * {@link ReverseProxySwitcherWebClient}.
+ * between concurrent updates and lookups. Forwarding the traffic -- HTTP and
+ * WebSocket -- is the responsibility of the subclass
+ * {@link ReverseProxySwitcherHttpProxy}.
  * <p>
  * Per-upstream-port usage counters are kept in {@link #usedPorts} so the
  * {@link #loadBalancing(List)} helper can pick the least-loaded port among
@@ -83,10 +78,11 @@ public class ReverseProxySwitcher {
 
     private final static Logger LOGGER = LoggerFactory.getLogger(ReverseProxySwitcher.class);
 
+    /** Largest body an admin endpoint accepts, in bytes; beyond, it answers {@code 413}. */
+    private static final long ADMIN_BODY_LIMIT = 1024 * 1024;
+
     /** When {@code true}, missed resolutions return silently instead of {@code 404}. */
     private final boolean silent;
-    /** WebSocket engine used to open client-side sockets towards the upstream. */
-    private final WebSocketEngine proxyWebSocketEngine;
 
     /** Current rule table keyed by {@code from.id()}. */
     private final Map<String, ReverseProxyRule> rules = new ConcurrentHashMap<>();
@@ -112,9 +108,8 @@ public class ReverseProxySwitcher {
      * Constructs a new switcher with the given configuration.
      *
      * @param adminToken          initial admin bearer token
-     * @param silent              when {@code true}, missed handshakes are not rejected explicitly
+     * @param silent              when {@code true}, missed requests are not answered {@code 404}
      * @param proxyPort           port the proxy listens on
-     * @param proxyWebSocketEngine WebSocket engine used to dial upstream
      * @param reverseProxyRules   initial rule set
      * @param resolver            optional fallback resolver consulted when no rule matches
      * @param onResolveActions    listeners invoked for every resolution
@@ -122,7 +117,6 @@ public class ReverseProxySwitcher {
     protected ReverseProxySwitcher(final String adminToken,
                                    final boolean silent,
                                    final int proxyPort,
-                                   final WebSocketEngine proxyWebSocketEngine,
                                    final Set<ReverseProxyRule> reverseProxyRules,
                                    final Function<HttpUrl, HttpUrl> resolver,
                                    final List<Handler<ReverseProxyResult>> onResolveActions) {
@@ -131,7 +125,6 @@ public class ReverseProxySwitcher {
         this.workerId = ReverseProxySwitcher.class.getName() + "_" + proxyPort;
         this.silent = silent;
         this.proxyPort = proxyPort;
-        this.proxyWebSocketEngine = proxyWebSocketEngine;
         this.resolver = resolver;
         this.onResolveActions = onResolveActions;
         this.adminRouter = Router.router(YojaApp.vertx());
@@ -155,9 +148,9 @@ public class ReverseProxySwitcher {
     }
 
     /**
-     * Returns whether handshake misses are silenced (instead of being rejected).
+     * Returns whether missed requests are dropped (instead of being answered {@code 404}).
      *
-     * @return whether handshake misses are silenced (instead of being rejected)
+     * @return whether missed requests are dropped (instead of being answered {@code 404})
      */
     public boolean isSilent() {
         return silent;
@@ -177,78 +170,6 @@ public class ReverseProxySwitcher {
      * TRAFIC
      *
      */
-    /**
-     * Resolves the inbound WebSocket handshake URL and either accepts or
-     * rejects the upgrade based on whether a target could be derived.
-     *
-     * @param serverWebSocketHandshake the inbound handshake from Vert.x
-     */
-    protected void websocketHandshake(final ServerWebSocketHandshake serverWebSocketHandshake) {
-        final HttpUrl fromUrl = HttpUrl.builder(serverWebSocketHandshake.authority().host())
-                                       .protocol(HttpProtocole.ws)
-                                       .port(serverWebSocketHandshake.authority().port())
-                                       .path(serverWebSocketHandshake.path())
-                                       .parameterQuery(serverWebSocketHandshake.query())
-                                       .build();
-        final ReverseProxyResult reverseProxyResult = resolve(fromUrl);
-        if (reverseProxyResult.isResolved()) {
-            serverWebSocketHandshake.accept();
-        }
-        else if (!isSilent()) {
-            serverWebSocketHandshake.reject();
-        }
-        for (final Handler<ReverseProxyResult> onResolveAction : onResolveActions) {
-            onResolveAction.handle(reverseProxyResult);
-        }
-    }
-
-    /**
-     * Wires a bidirectional WebSocket bridge between the accepted server
-     * socket and a freshly-dialed client socket aimed at the resolved
-     * upstream. Each direction copies text and binary frames; close on either
-     * side closes the other.
-     * <p>
-     * The upstream port's usage counter is incremented on connect and
-     * decremented on either close to feed the load-balancing heuristic.
-     *
-     * @param serverWebSocket the accepted Vert.x server socket
-     */
-    protected void websocket(final ServerWebSocket serverWebSocket) {
-        final HttpUrl fromUrl = HttpUrl.builder(serverWebSocket.authority().host())
-                                       .protocol(HttpProtocole.ws)
-                                       .port(serverWebSocket.authority().port())
-                                       .path(serverWebSocket.path())
-                                       .parameterQuery(serverWebSocket.query())
-                                       .build();
-        final ReverseProxyResult reverseProxyResult = resolve(fromUrl);
-        if (reverseProxyResult.isResolved()) {
-            final HttpUrl url = reverseProxyResult.toUrl();
-            usedPorts.compute(url.port(), (k, v) -> v + 1);
-            final ClientWebSocket clientWebSocket = proxyWebSocketEngine.webSocketClient().webSocket();
-            serverWebSocket.binaryMessageHandler(v -> clientWebSocket.writeBinaryMessage(v));
-            serverWebSocket.textMessageHandler(v -> clientWebSocket.writeTextMessage(v));
-            serverWebSocket.closeHandler(h -> {
-                clientWebSocket.close();
-                usedPorts.compute(url.port(), (k, v) -> Math.max(0, v - 1));
-            });
-            clientWebSocket.textMessageHandler(v -> serverWebSocket.writeTextMessage(v));
-            clientWebSocket.binaryMessageHandler(v -> serverWebSocket.write(v));
-            clientWebSocket.closeHandler(h -> {
-                serverWebSocket.close();
-                usedPorts.compute(url.port(), (k, v) -> Math.max(0, v - 1));
-            });
-            final StringBuilder pathAndQuery = new StringBuilder(url.path());
-            if (!Strings.isNullOrEmpty(url.parameterQuery(Format.encoded))) {
-                pathAndQuery.append("?");
-                pathAndQuery.append(url.parameterQuery(Format.encoded));
-            }
-            clientWebSocket.connect(url.port(), url.host(), pathAndQuery.toString())
-                           .onFailure(v -> {
-                               LOGGER.error("webSocket connection failed {}", url, v.getCause());
-                           });
-        }
-    }
-
     /**
      * Picks the least-loaded port among {@code ports} using the
      * {@link #usedPorts} counter (ties broken in declaration order).
@@ -319,7 +240,12 @@ public class ReverseProxySwitcher {
         HttpUrl fromUrl = null;
         try {
             if (httpServerRequest.absoluteURI() != null) {
-                fromUrl = toHttpUrl(httpServerRequest.absoluteURI());
+                String uri = httpServerRequest.absoluteURI();
+                if (httpServerRequest.canUpgradeToWebSocket()) {
+                    // a WebSocket handshake: http(s)://... is ws(s)://...
+                    uri = uri.replaceFirst("^http", "ws");
+                }
+                fromUrl = toHttpUrl(uri);
                 result = resolve(fromUrl);
             }
         }
@@ -369,7 +295,7 @@ public class ReverseProxySwitcher {
     }
 
     /**
-     * Parses an absolute URI string into an {@link HttpUrl}.
+     * Parses an absolute URI string -- {@code http(s)} or {@code ws(s)} -- into an {@link HttpUrl}.
      *
      * @param uri absolute URI to parse
      * @return the parsed URL
@@ -377,9 +303,11 @@ public class ReverseProxySwitcher {
      */
     protected static HttpUrl toHttpUrl(final String uri) {
         try {
-            final URL url = new URI(uri).toURL();
+            final URI parsed = new URI(uri);
+            // java.net.URL knows no ws(s): read as http(s), the protocol kept
+            final URL url = new URI(uri.replaceFirst("^ws", "http")).toURL();
             return HttpUrl.builder(url.getHost())
-                          .protocol(HttpProtocole.valueOf(url.getProtocol()))
+                          .protocol(HttpProtocole.valueOf(parsed.getScheme()))
                           .port(url.getPort())
                           .path(url.getPath())
                           .parameterQuery(url.getQuery())
@@ -413,7 +341,7 @@ public class ReverseProxySwitcher {
                 protocol = to.ssl() ? HttpProtocole.https : HttpProtocole.http;
             }
             else if (protocol.name().toLowerCase().startsWith("ws")) {
-                protocol = to.ssl() ? HttpProtocole.ws : HttpProtocole.wss;
+                protocol = to.ssl() ? HttpProtocole.wss : HttpProtocole.ws;
             }
             return HttpUrl.builder(to.host())
                           .protocol(protocol)
@@ -448,19 +376,31 @@ public class ReverseProxySwitcher {
         adminRouter.post("/update/token")
                    .blockingHandler(updateToken(), true);
         adminRouter.post("/put/rule")
-                   .handler(BodyHandler.create())
+                   .handler(adminBodyHandler())
                    .blockingHandler(putRule(), true);
         adminRouter.post("/put/rules")
-                   .handler(BodyHandler.create())
+                   .handler(adminBodyHandler())
                    .blockingHandler(putRules(), true);
         adminRouter.post("/remove/rule")
-                   .handler(BodyHandler.create())
+                   .handler(adminBodyHandler())
                    .blockingHandler(removeRule(), true);
         adminRouter.post("/remove/rules")
-                   .handler(BodyHandler.create())
+                   .handler(adminBodyHandler())
                    .blockingHandler(removeRules(), true);
         adminRouter.get("/load/rules")
                    .blockingHandler(rules(), false);
+    }
+
+    /**
+     * Builds the body handler of an admin endpoint: a rule set is small, so its
+     * body is limited to {@value #ADMIN_BODY_LIMIT} bytes, and never written to
+     * disk.
+     *
+     * @return the body handler
+     */
+    private static BodyHandler adminBodyHandler() {
+        return BodyHandler.create(false)
+                          .setBodyLimit(ADMIN_BODY_LIMIT);
     }
 
     /**
@@ -659,13 +599,14 @@ public class ReverseProxySwitcher {
      *
      */
     /**
-     * Releases the underlying WebSocket engine. Called by
+     * Releases the resources used to reach the upstreams; nothing here, the
+     * subclass forwarding the traffic overrides it. Called by
      * {@link ReverseProxyServer#stop()}.
      *
-     * @return a future completing when the engine has finished closing
+     * @return a future completing when the resources are released
      */
     protected Future<Void> close() {
-        return this.proxyWebSocketEngine.close();
+        return Future.succeededFuture();
     }
 
 }

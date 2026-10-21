@@ -74,7 +74,10 @@ public class TestUtil {
             reverseProxyServer.ssl(sslFolder.resolve("ssl-key.pem"), 
                                    sslFolder.resolve("ssl-cert.pem"));
         }
-        reverseProxyServer.sslProxy(sslProxy);
+        if (sslProxy) {
+            // the upstreams' certificate is self-signed: trusted explicitly
+            reverseProxyServer.sslProxyTrust(sslFolder.resolve("ssl-cert.pem"));
+        }
         return reverseProxyServer.rules(reverseProxyRules)
                                  .onResolve(h -> LOGGER.info("ON_RESOLVE {}", h))
                                  .start()

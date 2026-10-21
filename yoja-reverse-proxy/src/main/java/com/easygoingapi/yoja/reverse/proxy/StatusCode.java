@@ -18,9 +18,12 @@
 package com.easygoingapi.yoja.reverse.proxy;
 
 import java.util.Collection;
+import java.util.UUID;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.easygoingapi.yoja.core.util.JsonArrayHelper;
-import com.google.common.base.Throwables;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.ext.web.RoutingContext;
@@ -35,6 +38,8 @@ import io.vertx.ext.web.RoutingContext;
  * single {@code end(...)} call.
  */
 public class StatusCode {
+
+    private final static Logger LOGGER = LoggerFactory.getLogger(StatusCode.class);
 
     /** Not instantiable; only static helpers are exposed. */
     private StatusCode() {
@@ -108,31 +113,58 @@ public class StatusCode {
     }
 
     /**
-     * Ends the response with {@code 500 Internal Server Error} and a textual
-     * stack trace of {@code throwable} as body.
+     * Ends the response with {@code 500 Internal Server Error}. The cause is
+     * <b>logged server-side</b> and the client only gets a reference: a stack
+     * trace would hand out the class layout, the file paths and the library
+     * versions of the server. The reference ties what the user reports to the
+     * logged entry.
      *
      * @param routingContext routing context to respond on
-     * @param throwable      cause to dump
+     * @param throwable      cause, logged
      */
     protected static void serverError(final RoutingContext routingContext,
                                       final Throwable throwable) {
-        routingContext.response().setStatusCode(500);
-        routingContext.response().putHeader("Content-Type", "text/plain");
-        routingContext.response().end(Throwables.getStackTraceAsString(throwable));
+        failure(routingContext, 500, "internal error", throwable);
     }
 
     /**
-     * Ends the response with {@code 404 Not Found} and a textual stack trace of
-     * {@code throwable} as body.
+     * Ends the response with {@code 404 Not Found}. As for
+     * {@link #serverError(RoutingContext, Throwable)}, the cause is logged and
+     * the client only gets a reference.
      *
      * @param routingContext routing context to respond on
-     * @param throwable      cause to dump
+     * @param throwable      cause, logged
      */
     protected static void notFound(final RoutingContext routingContext,
                                    final Throwable throwable) {
-        routingContext.response().setStatusCode(404);
-        routingContext.response().putHeader("Content-Type", "text/plain");
-        routingContext.response().end(Throwables.getStackTraceAsString(throwable));
+        failure(routingContext, 404, "not found", throwable);
+    }
+
+    /**
+     * Logs a failure under a fresh reference and ends the response with the
+     * status code and the reference only.
+     *
+     * @param routingContext routing context to respond on
+     * @param statusCode     status code of the response
+     * @param message        what the client reads before the reference
+     * @param throwable      cause, logged
+     */
+    private static void failure(final RoutingContext routingContext,
+                                final int statusCode,
+                                final String message,
+                                final Throwable throwable) {
+        final String reference = UUID.randomUUID().toString();
+        LOGGER.error("[http] [reverseProxy] {} [{}] on {} {}",
+                     message,
+                     reference,
+                     routingContext.request().method(),
+                     routingContext.request().uri(),
+                     throwable);
+        if (!routingContext.response().ended()) {
+            routingContext.response().setStatusCode(statusCode);
+            routingContext.response().putHeader("Content-Type", "text/plain");
+            routingContext.response().end(message + " (reference " + reference + ")");
+        }
     }
 
     /**

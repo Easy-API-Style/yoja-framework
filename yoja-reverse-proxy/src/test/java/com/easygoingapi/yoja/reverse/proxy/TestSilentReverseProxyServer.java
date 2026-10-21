@@ -139,7 +139,8 @@ public class TestSilentReverseProxyServer {
             assertTrue(reverseProxyResult.get().isResolved());
             assertEquals("HttpUrl [protocol=ws, host=localhost, port=7777, path=/serverOne/websocket/test]", 
                          reverseProxyResult.get().fromUrl().toString());
-            assertEquals("HttpUrl [protocol=wss, host=localhost, port=1111, path=/websocket/test]",
+            // a rule without TLS: ws, not wss
+            assertEquals("HttpUrl [protocol=ws, host=localhost, port=1111, path=/websocket/test]",
                          reverseProxyResult.get().toUrl().toString());
         }
         catch (final Exception e) {
@@ -203,7 +204,8 @@ public class TestSilentReverseProxyServer {
             await(future);
             assertTrue(future.failed());
             assertEquals(UpgradeRejectedException.class, future.cause().getClass());
-            assertEquals("WebSocket upgrade failure: 502", future.cause().getMessage());
+            // unresolved: not found, as an HTTP request is
+            assertEquals("WebSocket upgrade failure: 404", future.cause().getMessage());
         }
         catch (final Exception e) {
 			fail(e);

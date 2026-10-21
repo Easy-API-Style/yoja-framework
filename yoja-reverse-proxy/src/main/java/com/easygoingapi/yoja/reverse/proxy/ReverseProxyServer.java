@@ -35,20 +35,17 @@ import com.easygoingapi.yoja.core.YojaApp;
 import com.easygoingapi.yoja.core.http.Certificatable;
 import com.easygoingapi.yoja.core.http.HttpCertificate;
 import com.easygoingapi.yoja.core.http.HttpUrl;
-import com.easygoingapi.yoja.http.client.HttpEngine;
-import com.easygoingapi.yoja.http.client.WebSocketEngine;
 import com.easygoingapi.yoja.http.server.HttpServer.State;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.http.HttpVersion;
-import io.vertx.core.http.WebSocketClientOptions;
 import io.vertx.core.net.PemKeyCertOptions;
 import io.vertx.core.net.PemTrustOptions;
 import io.vertx.core.net.ServerSSLOptions;
-import io.vertx.ext.web.client.WebClientOptions;
 
 /**
  * Lifecycle entry point of the reverse-proxy module.
@@ -57,7 +54,7 @@ import io.vertx.ext.web.client.WebClientOptions;
  * sharing the same TLS material:
  * <ul>
  *   <li>the <strong>proxy server</strong> listens on the public port and forwards every
- *       request — HTTP and WebSocket — through a {@link ReverseProxySwitcherWebClient};</li>
+ *       request — HTTP and WebSocket, streamed — through a {@link ReverseProxySwitcherHttpProxy};</li>
  *   <li>the <strong>admin server</strong> (optional) listens on a separate port and exposes
  *       the switcher's rule-management endpoints (see
  *       {@link ReverseProxySwitcher#adminRouter()}).</li>
@@ -71,11 +68,9 @@ import io.vertx.ext.web.client.WebClientOptions;
  * rotated at runtime through {@link #updateCertificate(Path, Path)} on both
  * servers atomically.
  * <p>
- * Two static {@code adminTokenHeader}/{@code adminNewTokenHeader} field names
- * are exposed via static accessors so that clients can attach the right
- * headers when calling the admin API; their values can be customised by
- * setting the static fields before constructing the server (not exposed by
- * the public API).
+ * The names of the two admin headers ({@link #adminTokenHeaderKey()},
+ * {@link #adminNewTokenHeaderKey()}) are exposed so that clients can attach
+ * the right headers when calling the admin API.
  */
 public class ReverseProxyServer implements Certificatable {
 
@@ -99,14 +94,14 @@ public class ReverseProxyServer implements Certificatable {
                                       Path sslCertPath) {}
 
     /** Header name carrying the current admin token. */
-    private static String adminTokenHeader = "Reserve-Proxy-Token";
+    private static final String adminTokenHeader = "Reserve-Proxy-Token";
     /** Header name carrying the replacement token on {@code POST /update/token}. */
-    private static String adminNewTokenHeader = "New-Reserve-Proxy-Token";
+    private static final String adminNewTokenHeader = "New-Reserve-Proxy-Token";
 
     /** Captured server configuration, populated at start time; TLS paths refreshed by {@link #updateCertificate(Path, Path)}. */
     private volatile ServerConfig proxyServerConfig;
 
-    /** Vert.x server backing the admin endpoints. */
+    /** Vert.x server backing the admin endpoints; created by {@link #startAdmin()}, from the current TLS material. */
     private HttpServer adminProxyServer;
     /** Lifecycle state of the admin server. */
     private AtomicReference<State> adminProxyServerState = new AtomicReference<>(State.stopped);
@@ -118,7 +113,7 @@ public class ReverseProxyServer implements Certificatable {
     private AtomicReference<State> proxyServerState = new AtomicReference<>(State.stopped);
 
     /** The switcher that resolves and dispatches every inbound request. */
-    private ReverseProxySwitcherWebClient proxySwitcher;
+    private ReverseProxySwitcherHttpProxy proxySwitcher;
 
     /** Private — instances are produced through {@link #builder(int)}. */
     private ReverseProxyServer() {
@@ -183,39 +178,55 @@ public class ReverseProxyServer implements Certificatable {
     }
 
     /**
-     * Hot-swaps the TLS material on both the proxy and admin servers without
-     * restarting either listener. On success, {@link #keyPath()} and
-     * {@link #certificatePath()} are updated to reflect the new paths.
+     * Hot-swaps the TLS material on the proxy server, and on the admin server
+     * when it is listening, without restarting either listener. An admin
+     * server started later uses the new material too. On success,
+     * {@link #keyPath()} and {@link #certificatePath()} are updated to reflect
+     * the new paths.
      *
      * @param sslKeyPath  path to the PEM-encoded key
      * @param sslCertPath path to the PEM-encoded certificate
-     * @return a future resolving to {@code true} when both updates succeeded
+     * @return a future resolving to {@code true} when every listening server
+     *         was updated, {@code false} when one of them refused the new
+     *         material (the cause is logged); failed with a
+     *         {@link ReverseProxyException} when TLS is not enabled
      */
     @Override
     public Future<Boolean> updateCertificate(final Path sslKeyPath,
                                              final Path sslCertPath) {
-        final PemKeyCertOptions pemKeyCertOptions = new PemKeyCertOptions();
-        pemKeyCertOptions.setKeyPath(sslKeyPath.toString());
-        pemKeyCertOptions.setCertPath(sslCertPath.toString());
-
-        final PemTrustOptions pemTrustOptions = new PemTrustOptions();
-        pemTrustOptions.addCertPath(sslCertPath.toString());
+        if (HttpCertificate.SSL != proxyServerConfig.certificate()) {
+            return Future.failedFuture(new ReverseProxyException("TLS not enabled: no certificate to update"));
+        }
+        final PemKeyCertOptions pemKeyCertOptions = pemKeyCertOptions(sslKeyPath, sslCertPath);
+        final PemTrustOptions pemTrustOptions = pemTrustOptions(sslCertPath);
 
         final ServerSSLOptions sslOptions = new ServerSSLOptions();
         sslOptions.setKeyCertOptions(pemKeyCertOptions);
         sslOptions.setTrustOptions(pemTrustOptions);
         final List<Future<?>> futures = new ArrayList<>();
         futures.add(proxyServer.updateSSLOptions(sslOptions));
-        futures.add(adminProxyServer.updateSSLOptions(sslOptions));
-        return Future.all(futures)
-                     .map(h -> h.succeeded(0) && h.succeeded(1))
-                     .onSuccess(updated -> this.proxyServerConfig =
-                             new ServerConfig(proxyServerConfig.port(),
-                                              proxyServerConfig.adminPort(),
-                                              proxyServerConfig.options(),
-                                              proxyServerConfig.certificate(),
-                                              sslKeyPath,
-                                              sslCertPath));
+        if (adminProxyServerState.get() == State.started) {
+            futures.add(adminProxyServer.updateSSLOptions(sslOptions));
+        }
+        return Future.join(futures)
+                     .transform(h -> {
+                         if (h.failed()) {
+                             LOGGER.error("[http] [reverseProxy] [certificate] [update] [failed] key={}, certificate={}",
+                                          sslKeyPath, sslCertPath, h.cause());
+                             return Future.succeededFuture(false);
+                         }
+                         // the admin server started later is created from these options
+                         proxyServerConfig.options()
+                                          .setKeyCertOptions(pemKeyCertOptions)
+                                          .setTrustOptions(pemTrustOptions);
+                         this.proxyServerConfig = new ServerConfig(proxyServerConfig.port(),
+                                                                   proxyServerConfig.adminPort(),
+                                                                   proxyServerConfig.options(),
+                                                                   proxyServerConfig.certificate(),
+                                                                   sslKeyPath,
+                                                                   sslCertPath);
+                         return Future.succeededFuture(true);
+                     });
     }
 
     /**
@@ -229,8 +240,10 @@ public class ReverseProxyServer implements Certificatable {
         if (proxyServerConfig.adminPort() != null) {
             if (adminState() == State.stopped) {
                 adminProxyServerState.set(State.starting);
+                this.adminProxyServer = YojaApp.vertx().createHttpServer(new HttpServerOptions(proxyServerConfig.options()));
+                this.adminProxyServer.requestHandler(proxySwitcher.adminRouter());
                 return this.adminProxyServer
-                           .listen(proxyServerConfig.adminPort())
+                           .listen(proxyServerConfig.adminPort(), proxyServerConfig.options().getHost())
                            .onFailure(e -> {
                                 adminProxyServerState.set(State.stopped);
                                 LOGGER.error("[http] [reverseProxy] [admin] [starting] [failed] port={}, certificate={}",
@@ -255,24 +268,29 @@ public class ReverseProxyServer implements Certificatable {
     }
 
     /**
-     * Closes the admin server's listener.
+     * Closes the admin server's listener. No-op when the admin server is not
+     * started.
      *
-     * @return a future completing once the listener is closed
+     * @return a future completing once the listener is closed (or already was)
      * @throws ReverseProxyException when admin support was not enabled in the builder
      */
     public Future<Void> stopAdmin() {
         if (proxyServerConfig.adminPort() != null) {
+            if (adminState() != State.started) {
+                return Future.succeededFuture();
+            }
             adminProxyServerState.set(State.stopping);
             return adminProxyServer.close()
                                    .onFailure(e -> {
+                                       adminProxyServerState.set(State.started);
                                        LOGGER.error("[http] [reverseProxy] [admin] [stopping] [failed] port={}, certificate={}",
                                                     proxyServerConfig.adminPort(),
-                                                    proxyServerConfig.certificate());
+                                                    proxyServerConfig.certificate(), e);
                                    })
                                    .onSuccess(h -> {
                                        adminProxyServerState.set(State.stopped);
                                        LOGGER.info("[http] [reverseProxy] [admin] [stopped] port={}, certificate={}",
-                                                   proxyServerConfig.port(),
+                                                   proxyServerConfig.adminPort(),
                                                    proxyServerConfig.certificate());
                                    })
                                    .mapEmpty();
@@ -283,19 +301,24 @@ public class ReverseProxyServer implements Certificatable {
     }
 
     /**
-     * Binds the proxy server on its configured port.
+     * Binds the proxy server on its configured port and host. No-op when the
+     * proxy server is not stopped.
      *
-     * @return a future completing once the listener is bound
+     * @return a future completing once the listener is bound (or already was)
      */
     public Future<Void> start() {
+        if (proxyState() != State.stopped) {
+            return Future.succeededFuture();
+        }
         proxyServerState.set(State.starting);
+        // on the options' host: listen(port) alone would ignore it and listen on every interface
         return this.proxyServer
-                   .listen(proxyServerConfig.port())
+                   .listen(proxyServerConfig.port(), proxyServerConfig.options().getHost())
                    .onFailure(e -> {
                        proxyServerState.set(State.stopped);
                        LOGGER.error("[http] [reverseProxy] [failed] port={}, certificate={}",
                                     proxyServerConfig.port(),
-                                    proxyServerConfig.certificate());
+                                    proxyServerConfig.certificate(), e);
                    })
                    .onSuccess(h -> {
                        proxyServerState.set(State.started);
@@ -307,7 +330,7 @@ public class ReverseProxyServer implements Certificatable {
     }
 
     /**
-     * Stops the proxy server, the switcher's underlying engines and (when it
+     * Stops the proxy server, the switcher's client to the upstreams and (when it
      * was running) the admin server. All listeners are closed in parallel.
      *
      * @return a future completing once every component has stopped
@@ -321,11 +344,17 @@ public class ReverseProxyServer implements Certificatable {
             adminProxyServerState.set(State.stopping);
             futures.add(adminProxyServer.close());
         }
-        return Future.all(futures)
+        // join, not all: every component is waited for, even when one fails
+        return Future.join(futures)
                      .onFailure(e -> {
+                         // not known to be stopped: started, so that stop() can be tried again
+                         proxyServerState.set(State.started);
+                         if (adminProxyServerState.get() == State.stopping) {
+                             adminProxyServerState.set(State.started);
+                         }
                          LOGGER.error("[http] [reverseProxy] [stopping] [failed] port={}, certificate={}",
                                       proxyServerConfig.port(),
-                                      proxyServerConfig.certificate());
+                                      proxyServerConfig.certificate(), e);
                      })
                      .onSuccess(h -> {
                          proxyServerState.set(State.stopped);
@@ -344,8 +373,8 @@ public class ReverseProxyServer implements Certificatable {
      * @param proxyServerConfig    server configuration bundle
      * @param adminToken           initial admin bearer token
      * @param silent               whether unresolved requests are silently dropped
-     * @param proxyHttpEngine      HTTP engine used to dial upstream HTTP services
-     * @param proxyWebSocketEngine WebSocket engine used to dial upstream WS services
+     * @param sslProxy             whether every upstream is dialed over TLS, whatever its rule says
+     * @param clientOptions        options of the client dialing the upstreams
      * @param reverseProxyRules    initial rule set
      * @param resolver             optional fallback resolver
      * @param onResolveActions     resolution listeners
@@ -354,30 +383,22 @@ public class ReverseProxyServer implements Certificatable {
     private Future<ReverseProxyServer> start(final ServerConfig proxyServerConfig,
                                              final String adminToken,
                                              final boolean silent,
-                                             final HttpEngine proxyHttpEngine,
-                                             final WebSocketEngine proxyWebSocketEngine,
+                                             final boolean sslProxy,
+                                             final HttpClientOptions clientOptions,
                                              final Set<ReverseProxyRule> reverseProxyRules,
                                              final Function<HttpUrl, HttpUrl> resolver,
                                              final List<Handler<ReverseProxyResult>> onResolveActions) {
         this.proxyServerConfig = proxyServerConfig;
         this.setHttpServerOptions(proxyServerConfig);
-        this.proxySwitcher = new ReverseProxySwitcherWebClient(adminToken, silent, proxyServerConfig.port(),
-        		                                               proxyHttpEngine, proxyWebSocketEngine,
-        		                                               reverseProxyRules, resolver,
-        		                                               onResolveActions);
-        // admin
-        this.adminProxyServer = YojaApp.vertx().createHttpServer(proxyServerConfig.options());
-        this.adminProxyServer.requestHandler(proxySwitcher.adminRouter());
+        this.proxySwitcher = new ReverseProxySwitcherHttpProxy(adminToken, silent, proxyServerConfig.port(),
+                                                               sslProxy, clientOptions,
+                                                               reverseProxyRules, resolver,
+                                                               onResolveActions);
+        // admin: created by startAdmin(), from the TLS material current then
         // proxy
         this.proxyServer = YojaApp.vertx().createHttpServer(proxyServerConfig.options());
-//        final ProxyOptions proxyOptions = new ProxyOptions();
-//        this.proxyClient = YojaApp.vertx().createHttpClient();
-//        final HttpProxy httpProxy = HttpProxy.reverseProxy(proxyOptions, this.proxyClient);
-//        httpProxy.originRequestProvider((request, client) ->  proxySwitcher.resolveOrigin(request, client));
-//        httpProxy.addInterceptor(proxySwitcher.proxyInterceptor());
-        this.proxyServer.webSocketHandshakeHandler(ServerWebSocketHandshake -> proxySwitcher.websocketHandshake(ServerWebSocketHandshake));
-        this.proxyServer.webSocketHandler(serverWebSocket -> proxySwitcher.websocket(serverWebSocket));
-        this.proxyServer.requestHandler(proxySwitcher.proxyRouter());
+        // no WebSocket handler: a handshake reaches the request handler, the proxy forwards it as such
+        this.proxyServer.requestHandler(proxySwitcher.proxyHandler());
         return this.start().map(this);
     }
 
@@ -389,17 +410,37 @@ public class ReverseProxyServer implements Certificatable {
      */
     private void setHttpServerOptions(final ServerConfig serverConfig) {
         if (HttpCertificate.SSL == serverConfig.certificate()) {
-            final PemKeyCertOptions pemKeyCertOptions = new PemKeyCertOptions();
-            pemKeyCertOptions.setKeyPath(serverConfig.sslKeyPath().toString());
-            pemKeyCertOptions.setCertPath(serverConfig.sslCertPath().toString());
             serverConfig.options()
-                        .setKeyCertOptions(pemKeyCertOptions);
-
-            final PemTrustOptions pemTrustOptions = new PemTrustOptions();
-            pemTrustOptions.addCertPath(serverConfig.sslCertPath().toString());
-            serverConfig.options()
-                        .setTrustOptions(pemTrustOptions);
+                        .setKeyCertOptions(pemKeyCertOptions(serverConfig.sslKeyPath(), serverConfig.sslCertPath()))
+                        .setTrustOptions(pemTrustOptions(serverConfig.sslCertPath()));
         }
+    }
+
+    /**
+     * Builds the PEM key/certificate options of a TLS material.
+     *
+     * @param sslKeyPath  path to the PEM-encoded key
+     * @param sslCertPath path to the PEM-encoded certificate
+     * @return the Vert.x key/certificate options
+     */
+    private static PemKeyCertOptions pemKeyCertOptions(final Path sslKeyPath,
+                                                       final Path sslCertPath) {
+        final PemKeyCertOptions result = new PemKeyCertOptions();
+        result.setKeyPath(sslKeyPath.toString());
+        result.setCertPath(sslCertPath.toString());
+        return result;
+    }
+
+    /**
+     * Builds the PEM trust options of a TLS material.
+     *
+     * @param sslCertPath path to the PEM-encoded certificate
+     * @return the Vert.x trust options
+     */
+    private static PemTrustOptions pemTrustOptions(final Path sslCertPath) {
+        final PemTrustOptions result = new PemTrustOptions();
+        result.addCertPath(sslCertPath.toString());
+        return result;
     }
 
     @Override
@@ -412,7 +453,7 @@ public class ReverseProxyServer implements Certificatable {
         result.append(proxyServerConfig.certificate());
         result.append(", proxyState=");
         result.append(proxyServerState.get());
-        if (adminProxyServer != null) {
+        if (proxyServerConfig.adminPort() != null) {
             result.append(", adminPort=");
             result.append(proxyServerConfig.adminPort());
         }
@@ -441,9 +482,9 @@ public class ReverseProxyServer implements Certificatable {
      * Fluent builder for {@link ReverseProxyServer}.
      * <p>
      * Collects rules, resolution listeners, TLS strategy, optional admin
-     * configuration and engine overrides, then starts the server via
-     * {@link #start()}. Sensible defaults are applied for HTTP engines and
-     * Vert.x server options when not overridden.
+     * configuration and upstream TLS settings, then starts the server via
+     * {@link #start()}. Sensible defaults are applied for the Vert.x server
+     * options when not overridden.
      */
     public static class Builder {
 
@@ -472,12 +513,10 @@ public class ReverseProxyServer implements Certificatable {
         /** TLS certificate path (set by {@link #ssl(Path, Path)}). */
         private Path sslCertPath;
 
-        /** Whether the upstream-facing engines should themselves use TLS. */
-        private boolean sslProxyEngine;
-        /** HTTP engine override; defaults to a freshly built one. */
-        private HttpEngine proxyHttpEngine;
-        /** WebSocket engine override; defaults to a freshly built one. */
-        private WebSocketEngine proxyWebSocketEngine;
+        /** Whether every upstream is dialed over TLS, whatever its rule says. */
+        private boolean sslProxy;
+        /** PEM certificate(s) trusted for the upstreams, on top of the JVM's; {@code null}: the JVM's only. */
+        private Path sslProxyTrustPath;
 
         /** Whether unresolved requests are silently dropped or rejected. */
         private boolean silent = true;
@@ -533,14 +572,32 @@ public class ReverseProxyServer implements Certificatable {
         }
 
         /**
-         * Whether the upstream-facing engines themselves use TLS (matches the
-         * scheme of the upstreams declared in the rules).
+         * Whether every upstream is dialed over TLS, whatever its rule says
+         * (default {@code false}: an upstream is dialed over TLS when its rule
+         * says so, {@code Url.to(true, host)}). The upstreams' certificates are
+         * verified -- trusted by the JVM, or by {@link #sslProxyTrust(Path)} --
+         * and must match their host name.
          *
-         * @param sslProxy {@code true} to enable TLS on the upstream engines
+         * @param sslProxy {@code true} to dial every upstream over TLS
          * @return this builder
          */
         public Builder sslProxy(final boolean sslProxy) {
-            this.sslProxyEngine = sslProxy;
+            this.sslProxy = sslProxy;
+            return this;
+        }
+
+        /**
+         * Dials every upstream over TLS (see {@link #sslProxy(boolean)}),
+         * trusting the PEM certificate(s) of the given file on top of the
+         * JVM's: the self-signed certificate of an upstream, or the private CA
+         * that signed it.
+         *
+         * @param sslCertPath path to the PEM certificate(s) to trust
+         * @return this builder
+         */
+        public Builder sslProxyTrust(final Path sslCertPath) {
+            this.sslProxyTrustPath = Objects.requireNonNull(sslCertPath, "needs sslCertPath");
+            this.sslProxy = true;
             return this;
         }
 
@@ -555,16 +612,6 @@ public class ReverseProxyServer implements Certificatable {
             this.silent = silent;
             return this;
         }
-
-//        public Builder webSocketEngine(final WebSocketEngine webSocketEngine) {
-//            this.proxyWebSocketEngine = webSocketEngine;
-//            return this;
-//        }
-
-//        public Builder httpEngine(final HttpEngine httpEngine) {
-//            this.proxyHttpEngine = httpEngine;
-//            return this;
-//        }
 
         /**
          * Adds a rule; throws when a rule with the same {@code from} is
@@ -623,7 +670,8 @@ public class ReverseProxyServer implements Certificatable {
         }
 
         /**
-         * Registers a resolution listener.
+         * Registers a resolution listener. It runs on the Vert.x event loop,
+         * before the request is forwarded: it must not block.
          *
          * @param handler handler invoked for every resolution outcome
          * @return this builder
@@ -644,21 +692,11 @@ public class ReverseProxyServer implements Certificatable {
             if (this.proxyHttpServerOptions == null) {
                 this.proxyHttpServerOptions = ReverseProxyServer.defaultOptions(certificate);
             }
-            if (this.proxyHttpEngine == null) {
-                final WebClientOptions webClientOptions = HttpEngine.defaultOptions();
-                webClientOptions.setSsl(sslProxyEngine)
-                                .setUseAlpn(sslProxyEngine)
-                                .setVerifyHost(sslProxyEngine)
-                                .setTrustAll(sslProxyEngine);
-                this.proxyHttpEngine = new HttpEngine(webClientOptions);
-            }
-            if (this.proxyWebSocketEngine == null) {
-                final WebSocketClientOptions webSocketClientOptions = WebSocketEngine.defaultOptions();
-                webSocketClientOptions.setSsl(sslProxyEngine)
-                                      .setVerifyHost(sslProxyEngine)
-                                      .setTrustAll(sslProxyEngine)
-                                      .setUseAlpn(sslProxyEngine);
-                this.proxyWebSocketEngine = new WebSocketEngine(webSocketClientOptions);
+            // the upstreams' certificates are verified: trusted, and matching their host name
+            final HttpClientOptions clientOptions = new HttpClientOptions().setVerifyHost(true)
+                                                                           .setTrustAll(false);
+            if (sslProxyTrustPath != null) {
+                clientOptions.setTrustOptions(new PemTrustOptions().addCertPath(sslProxyTrustPath.toString()));
             }
 
             return result.start(new ServerConfig(proxyPort,
@@ -669,8 +707,8 @@ public class ReverseProxyServer implements Certificatable {
                                                  sslCertPath),
                                 adminToken,
                                 silent,
-                                proxyHttpEngine,
-                                proxyWebSocketEngine,
+                                sslProxy,
+                                clientOptions,
                                 new HashSet<>(reverseProxyRules.values()),
                                 resolver,
                                 onResolveActions);

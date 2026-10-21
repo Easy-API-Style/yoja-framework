@@ -32,7 +32,6 @@ import org.junit.jupiter.api.Test;
 
 import com.easygoingapi.yoja.core.http.HttpProtocole;
 import com.easygoingapi.yoja.core.http.HttpUrl;
-import com.easygoingapi.yoja.http.client.WebSocketEngine;
 import com.easygoingapi.yoja.reverse.proxy.ReverseProxyRule.Url;
 
 import io.vertx.core.Handler;
@@ -45,7 +44,6 @@ public class TestReverseProxySwitcher {
         return new ReverseProxySwitcher("admin-token",
                                         false,
                                         7777,
-                                        new WebSocketEngine(),
                                         rules,
                                         resolver,
                                         onResolveActions);
@@ -173,7 +171,6 @@ public class TestReverseProxySwitcher {
         final ReverseProxySwitcher silent = new ReverseProxySwitcher("t", 
                                                                      true,
                                                                      9999, 
-                                                                     new WebSocketEngine(), 
                                                                      Set.of(),
                                                                      null, 
                                                                      List.of());
@@ -181,7 +178,7 @@ public class TestReverseProxySwitcher {
         assertTrue(silent.isSilent());
 
         final ReverseProxySwitcher loud = new ReverseProxySwitcher(
-            "t", false, 1234, new WebSocketEngine(), Set.of(), null, List.of());
+            "t", false, 1234, Set.of(), null, List.of());
         assertEquals(1234, loud.getProxyPort());
         assertFalse(loud.isSilent());
     }

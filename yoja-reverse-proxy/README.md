@@ -238,12 +238,36 @@ ReverseProxyRule rule = new ReverseProxyRule(
                         .build()
 );
 
-// Also tell the proxy engine to use SSL when connecting upstream
 ReverseProxyServer.builder(80)
-                  .rule(rule)
-                  .sslProxy(true) // enables SSL on the outbound WebClient / WebSocket client
+                  .rule(rule)   // dialed over TLS: its rule says so
                   .start();
 ```
+
+To dial **every** upstream over TLS, whatever its rule says, use `.sslProxy(true)`.
+
+The upstream's certificate is **verified**: it must be trusted by the JVM and match the upstream's host name.
+For an upstream with a self-signed certificate, or one signed by a private CA, trust that certificate explicitly
+(this also enables `sslProxy`):
+
+```java
+ReverseProxyServer.builder(80)
+                  .rule(rule)
+                  .sslProxyTrust(Path.of("backend-cert.pem")) // PEM certificate(s) trusted on top of the JVM's
+                  .start();
+```
+
+### Streaming
+
+The traffic is forwarded by the [Vert.x HTTP proxy](https://vertx.io/docs/vertx-http-proxy/java/): request and
+response bodies are **streamed** with back-pressure, never held in memory, whatever their size (uploads,
+downloads, Server-Sent Events...). The hop-by-hop headers (`Connection`, `Transfer-Encoding`...) are handled, and
+a WebSocket handshake is forwarded as such, its frames then flowing both ways. The upstream is reached over
+HTTP/1.1.
+
+### Errors
+
+An upstream that can't be reached (down, refused TLS handshake...) is answered `502 Bad Gateway`, without body.
+The cause is **logged**, never sent to the client.
 
 ### Register multiple rules
 
@@ -319,6 +343,9 @@ ReverseProxyServer.builder(80)
     .onResolve(result -> metrics.record(result)) // multiple handlers allowed
     .start();
 ```
+
+The handlers run on the Vert.x event loop, before the request is forwarded: they must not block (hand any
+blocking work to a `Worker`).
 
 ---
 
@@ -448,8 +475,8 @@ Controls how the proxy reacts when no rule (and no `elseRule` resolver) matches 
 
 | Mode | HTTP | WebSocket |
 |---|---|---|
-| `silent(true)` *(default)* | The handler returns **without writing a response**. The connection stays open until the client times out. | The handshake is **neither accepted nor rejected**. The client waits until its own timeout. |
-| `silent(false)` | Returns `404 Not Found` with `Content-Type: text/plain`. | The handshake is **actively rejected** by the server. |
+| `silent(true)` *(default)* | **No response** is written: the stream (HTTP/2) or the connection (HTTP/1.x) is reset. | The handshake is **neither accepted nor rejected**: the connection is closed. |
+| `silent(false)` | Returns `404 Not Found`. | The handshake is **rejected** with `404 Not Found`. |
 
 In both modes:
 - Resolved requests are forwarded normally.
@@ -476,7 +503,7 @@ ReverseProxyServer.builder(80)
     .start();
 ```
 
-> **Note:** silent mode does *not* swallow real errors. If an upstream backend is unreachable or the request fails after a rule matched, the proxy still returns `500 Internal Server Error` with the stack trace. Silent mode only governs the **unresolved** case.
+> **Note:** silent mode does *not* swallow real errors. If an upstream backend is unreachable or the request fails after a rule matched, the proxy still returns `502 Bad Gateway`, the cause being logged. Silent mode only governs the **unresolved** case.
 
 ---
 
@@ -599,9 +626,8 @@ ReverseProxyServer.builder(80)
 |---|---|
 | [Vert.x Core](https://vertx.io/) | HTTP server, WebSocket, event loop |
 | [Vert.x Web](https://vertx.io/docs/vertx-web/java/) | Router, body handling |
-| [Vert.x Web Client](https://vertx.io/docs/vertx-web-client/java/) | Outbound HTTP requests to backends |
+| [Vert.x HTTP Proxy](https://vertx.io/docs/vertx-http-proxy/java/) | Streams the traffic (HTTP and WebSocket) to the backends |
 | [Guava](https://github.com/google/guava) | Utilities |
 | [Jackson](https://github.com/FasterXML/jackson) | Rule JSON serialization/deserialization |
 | [SLF4J](https://www.slf4j.org/) | Logging |
 | yoja-core | `YojaApp`, `Worker`, `HttpUrl`, `Certificatable` |
-| yoja-http-client | `HttpEngine`, `WebSocketEngine` |

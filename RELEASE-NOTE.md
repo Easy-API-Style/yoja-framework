@@ -1,3 +1,19 @@
+## 1.6.0
+* reverse proxy streams the traffic with Vert.x `HttpProxy` (HTTP and WebSocket, any body size) -> replaces `ReverseProxySwitcherWebClient`
+* reverse proxy verifies the upstreams' certificates (no more trust-all) -> `sslProxyTrust(Path)` for a self-signed upstream; TLS chosen per rule, `sslProxy(true)` forces it for all
+* reverse proxy never sends a stack trace to the client: `502` for an unreachable upstream, the cause is logged
+* reverse proxy silent mode resets the unresolved request; an unresolved WebSocket handshake is rejected with `404`
+* reverse proxy listens on the host of its `HttpServerOptions`; fix certificate rotation of an admin server started later
+* fix `ws`/`wss` protocol of a resolved WebSocket upstream
+* yoja-reverse-proxy no longer exposes yoja-http-client (`api` -> `testImplementation`)
+* implement `MailService` with the Vert.x mail client -> `send(...)` returns `Future<String>`, `MailConfig.builder(host)`, `Mail` cc/bcc/html
+* `MailConfig.toString()` hides the password; `Mail.Builder.addFile(...)` fails on a missing file
+* http server listens on the host of its `HttpServerOptions`
+* encode client http request path
+* fix httpClient exception
+* fix cookie
+* fix `allTrust == true`
+
 ## 1.5.0
 * session cookie secure by default (HttpOnly, Secure, SameSite=Strict) -> `HttpSessionStore.builder(...)` to configure it
 * remove `HttpSessionStore.SameSite` -> use Vert.x `CookieSameSite`

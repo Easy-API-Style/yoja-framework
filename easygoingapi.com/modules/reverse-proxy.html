@@ -150,7 +150,8 @@ ReverseProxyServer.builder(<span class="n">8080</span>)
           <tr><td><code>Builder.admin(int port, String token)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Enable the admin server on the given port, protected by token</td></tr>
           <tr><td><code>Builder.ssl(Path key, Path cert)</code></td><td class="ret"><code>Builder</code></td><td class="desc">TLS with PEM files</td></tr>
           <tr><td><code>Builder.options(HttpServerOptions)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Override Vert.x options</td></tr>
-          <tr><td><code>Builder.sslProxy(boolean)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Whether upstream-facing HTTP engines dial over TLS</td></tr>
+          <tr><td><code>Builder.sslProxy(boolean)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Dial every upstream over TLS, whatever its rule says (by default, as its rule says); the upstreams' certificates are verified</td></tr>
+          <tr><td><code>Builder.sslProxyTrust(Path)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Dial upstreams over TLS, trusting the PEM certificate(s) of the file on top of the JVM's (self-signed upstream, private CA)</td></tr>
           <tr><td><code>Builder.silent(boolean)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Drop unresolved requests silently instead of returning 404</td></tr>
           <tr><td><code>Builder.rule(ReverseProxyRule)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Register a routing rule</td></tr>
           <tr><td><code>Builder.rules(Set&lt;ReverseProxyRule&gt;)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Register multiple rules at once</td></tr>
@@ -282,15 +283,15 @@ ReverseProxyServer.builder(<span class="n">8080</span>)
     </p>
 
     <div class="api-class">
-      <h3><code>ReverseProxySwitcher</code> · <code>ReverseProxySwitcherWebClient</code> <span class="kind">internal classes</span></h3>
-      <p>Dispatch engine wired by <code>ReverseProxyServer.start()</code>. Documented for completeness; not normally instantiated directly.</p>
+      <h3><code>ReverseProxySwitcher</code> · <code>ReverseProxySwitcherHttpProxy</code> <span class="kind">internal classes</span></h3>
+      <p>Dispatch engine wired by <code>ReverseProxyServer.start()</code>; the traffic is streamed by the Vert.x <code>HttpProxy</code>. Documented for completeness; not normally instantiated directly.</p>
 
       <table class="api-table">
         <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
         <tbody>
           <tr><td><code>resolve(HttpServerRequest)</code></td><td class="ret"><code>ReverseProxyResult</code></td><td class="desc">Resolve an inbound request to an upstream URL</td></tr>
           <tr><td><code>adminRouter()</code></td><td class="ret"><code>Router</code></td><td class="desc">Vert.x router carrying the admin endpoints</td></tr>
-          <tr><td><code>proxyRouter()</code> <em>(subclass)</em></td><td class="ret"><code>Router</code></td><td class="desc">Vert.x router that forwards requests upstream</td></tr>
+          <tr><td><code>proxyHandler()</code> <em>(subclass)</em></td><td class="ret"><code>Handler&lt;HttpServerRequest&gt;</code></td><td class="desc">Request handler that streams requests upstream, WebSocket handshakes included</td></tr>
           <tr><td><code>isSilent()</code></td><td class="ret"><code>boolean</code></td><td class="desc"></td></tr>
           <tr><td><code>getProxyPort()</code></td><td class="ret"><code>int</code></td><td class="desc"></td></tr>
         </tbody>
