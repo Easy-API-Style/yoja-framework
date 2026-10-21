@@ -289,7 +289,9 @@ public class HttpServer implements Certificatable {
                                                                                                      httpRouter.getContextPath()));
         httpServer.webSocketHandler(serverWebSocket -> webSocketService.open(serverWebSocket,
                                                                              httpRouter.getContextPath()));
-        return httpServer.listen(port)
+        // on the options' host: 0.0.0.0 (every interface) by default, 127.0.0.1 for a server reached locally only --
+        // listen(port) alone would ignore it and listen on every interface
+        return httpServer.listen(port, httpServerOptions.getHost())
                          .onFailure(e -> {
                              state.set(State.stopped);
                              LOGGER.error("[http] [server] [failed] port={}, contextPath={}, certificate={}",
