@@ -2,7 +2,7 @@
 
 [![Website](https://img.shields.io/badge/website-easygoingapi.com-blue)](https://easygoingapi.com/) [![Email](https://img.shields.io/badge/email-easy.api.contact%40gmail.com-red)](mailto:easy.api.contact@gmail.com)
 
-[![Release](https://img.shields.io/badge/release-1.5.0-brightgreen)](https://github.com/Easy-API-Style/yoja-framework/releases/tag/1.5.0)
+[![Release](https://img.shields.io/badge/release-1.6.0-brightgreen)](https://github.com/Easy-API-Style/yoja-framework/releases/tag/1.6.0)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green)](https://github.com/Easy-API-Style/yoja-framework/blob/main/LICENSE)
 [![Java](https://img.shields.io/badge/java-25-orange)](https://openjdk.org/projects/jdk/25/)
 
@@ -86,7 +86,7 @@ The backend runs on [Vert.x](https://vertx.io/): non-blocking HTTP server, WebSo
 
 **SSL hot-reload** allows updating a certificate at runtime without restarting the server — zero downtime in production.
 
-**Reverse proxy included.** A single `ReverseProxyServer` can terminate SSL and route traffic to multiple backend instances with host/path rules, path rewriting, and load balancing — no external Nginx or HAProxy required for simple deployments.
+**Reverse proxy included.** A single `ReverseProxyServer` can terminate SSL and route traffic to multiple backend instances with host/path rules, path rewriting, and load balancing, streaming requests and responses of any size — no external Nginx or HAProxy required for simple deployments.
 
 ---
 
@@ -129,11 +129,11 @@ Yoja's design choices happen to align closely with what makes an AI coding assis
 
 | Module | Role |
 |---|---|
-| [yoja-core](#yoja-core) | Foundation: application lifecycle, workers, timers, HTTP utilities |
+| [yoja-core](#yoja-core) | Foundation: application lifecycle, workers, timers, HTTP utilities, SMTP mail |
 | [yoja-http-server](#yoja-http-server) | HTTP/WebSocket server: routing, middleware, static files, cookies |
 | [yoja-http-client](#yoja-http-client) | HTTP/WebSocket client: send requests, consume APIs |
 | [yoja-web](#yoja-web) | Browser-side framework: components, routing, i18n, storage |
-| [yoja-reverse-proxy](#yoja-reverse-proxy) | Production reverse proxy: routing rules, load balancing, SSL termination |
+| [yoja-reverse-proxy](#yoja-reverse-proxy) | Production reverse proxy: routing rules, load balancing, SSL termination, streaming (HTTP and WebSocket) |
 | [yoja-selenium](#yoja-selenium) | End-to-end testing: Selenium integration with JUnit 6 |
 
 ---
@@ -147,7 +147,7 @@ Browser
   └── yoja-web              (HTML + CSS + JS, served as static files)
         └── HTTP / WebSocket
               └── yoja-http-server   (REST API + static file server)
-                    ├── yoja-core    (lifecycle, workers, async utilities)
+                    ├── yoja-core    (lifecycle, workers, async utilities, mail)
                     └── yoja-http-client  (calls to third-party APIs)
 
 Production
@@ -229,7 +229,7 @@ In your `webapp/index.html`, include the `yoja-web` script and declare your firs
     <meta http-equiv="encoding" content="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
 
-    <script type="module" src="/com/easygoingapi/yoja/web/YojaWeb-1.5.0.js"></script>
+    <script type="module" src="/com/easygoingapi/yoja/web/YojaWeb-1.6.0.js"></script>
 </head>
 <body>
     <div yw-controler="./sections/UserList/UserListControler.js"
@@ -364,6 +364,7 @@ The foundation of the framework. Every server-side module depends on it.
 - `Timer` — schedules recurring or one-shot tasks
 - `FutureUtil` — bridges async `Future`s with blocking worker code (`await`, `awaitValue`)
 - HTTP utilities — `HttpUrl`, `HttpHeader`, `HttpCookie`, `HttpParameter`, `HttpEncoding`
+- `MailService` — sends mails over SMTP (STARTTLS by default, HTML, attachments), non-blocking
 - General utilities — `StringUtil`, `TimeUtil`, `ResourceUtil`, `PathUtil`, `ProcessUtil`
 
 See [yoja-core/README.md](yoja-core/README.md) for full documentation.
@@ -425,7 +426,8 @@ The production reverse proxy. Sits in front of one or more `yoja-http-server` in
 - `ReverseProxyRule` — routes requests by host or path to a target host/port
 - Path rewriting — strip or rewrite the URL prefix before forwarding
 - Load balancing — distribute traffic across multiple backend instances
-- SSL termination — accept HTTPS from clients, forward plain HTTP to backends
+- SSL termination — accept HTTPS from clients, forward plain HTTP to backends (or HTTPS, the backend's certificate verified)
+- Streaming — requests and responses of any size, and WebSockets, forwarded as they flow
 - Admin API — add, update, or remove routing rules at runtime without restarting
 
 See [yoja-reverse-proxy/README.md](yoja-reverse-proxy/README.md) for full documentation.

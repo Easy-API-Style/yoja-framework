@@ -99,6 +99,7 @@
       <li><a href="#timer">Timer</a></li>
       <li><a href="#future">FutureUtil</a></li>
       <li><a href="#http">HTTP primitives</a></li>
+      <li><a href="#mail">Mail</a></li>
       <li><a href="#util">Other utilities</a></li>
       <li><a href="#exception">YojaAppException</a></li>
     </ul>
@@ -410,6 +411,78 @@
           <tr><td><code>keyPath()</code></td><td class="ret"><code>Path</code></td><td class="desc">Path to the currently active private key</td></tr>
           <tr><td><code>certificatePath()</code></td><td class="ret"><code>Path</code></td><td class="desc">Path to the currently active certificate</td></tr>
           <tr><td><code>updateCertificate(Path keyPath, Path certPath)</code></td><td class="ret"><code>Future&lt;Boolean&gt;</code></td><td class="desc">Hot-swap TLS material without restarting the server</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="mail">Mail</h2>
+    <p>
+      Send mails over SMTP with the Vert.x mail client: non-blocking, so <code>send</code> can be
+      called from the event loop as well as from a worker. The connections to the server are pooled
+      and reused from one mail to the next.
+    </p>
+
+<pre><code>MailService mailService = <span class="k">new</span> MailService(MailConfig.builder(<span class="s">"smtp.example.com"</span>)
+                                                    .login(<span class="s">"seller@example.com"</span>, password)
+                                                    .build());
+mailService.send(Mail.builder(<span class="s">"seller@example.com"</span>)
+                     .addRecipient(<span class="s">"customer@example.com"</span>)
+                     .title(<span class="s">"Your invoice"</span>)
+                     .message(<span class="s">"Please find your invoice attached."</span>)
+                     .html(<span class="s">"&lt;p&gt;Please find your invoice attached.&lt;/p&gt;"</span>)
+                     .addFile(Path.of(<span class="s">"invoice.pdf"</span>))
+                     .build())
+           .onFailure(e -&gt; LOGGER.error(<span class="s">"not sent"</span>, e));   <span class="c">// a MailException</span></code></pre>
+
+    <div class="api-class">
+      <h3><code>MailService</code> <span class="kind">class</span></h3>
+      <p>Sends <code>Mail</code>s with the SMTP server of a <code>MailConfig</code>.</p>
+
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>MailService(MailConfig)</code></td><td class="ret"></td><td class="desc">Service sending with the given SMTP server</td></tr>
+          <tr><td><code>send(Mail)</code></td><td class="ret"><code>Future&lt;String&gt;</code></td><td class="desc">Send a mail; resolves to its <code>Message-ID</code>, fails with a <code>MailException</code> (no recipient, unreadable attached file, server refusal)</td></tr>
+          <tr><td><code>shutdown()</code></td><td class="ret"><code>Future&lt;Void&gt;</code></td><td class="desc">Release the connections to the server</td></tr>
+          <tr><td><code>close()</code></td><td class="ret"><code>void</code></td><td class="desc"><code>AutoCloseable</code>: release the connections without waiting</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="api-class">
+      <h3><code>MailConfig</code> <span class="kind">class</span></h3>
+      <p>SMTP server settings, secure by default: <code>STARTTLS</code> required on port 587. <code>toString()</code> never writes the password.</p>
+
+      <span class="api-table-group">Factory &amp; builder</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>static builder(String host)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Settings of an SMTP server</td></tr>
+          <tr><td><code>MailConfig(String host, String userName, String password)</code></td><td class="ret"></td><td class="desc"><code>STARTTLS</code> on port 587, with a login</td></tr>
+          <tr><td><code>Builder.port(int)</code></td><td class="ret"><code>Builder</code></td><td class="desc">SMTP port (default 587)</td></tr>
+          <tr><td><code>Builder.security(Security)</code></td><td class="ret"><code>Builder</code></td><td class="desc"><code>STARTTLS</code> (default, required), <code>SSL</code> (port 465) or <code>NONE</code> (local relay, test server)</td></tr>
+          <tr><td><code>Builder.login(String userName, String password)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Login the server requires</td></tr>
+          <tr><td><code>Builder.timeout(Duration)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Connect and idle timeout (default 10 s)</td></tr>
+          <tr><td><code>Builder.build()</code></td><td class="ret"><code>MailConfig</code></td><td class="desc"></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="api-class">
+      <h3><code>Mail</code> <span class="kind">class</span></h3>
+      <p>A mail: sender, recipients, title, plain text and/or HTML body (the reader shows the HTML, the plain text being its fallback), attached files.</p>
+
+      <span class="api-table-group">Builder</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>static builder(String from)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Mail sent by the given address</td></tr>
+          <tr><td><code>addRecipient(String)</code> · <code>addCc(String)</code> · <code>addBcc(String)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Add a recipient (<code>To</code>), a copy (<code>Cc</code>), a hidden copy (<code>Bcc</code>)</td></tr>
+          <tr><td><code>title(String)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Subject</td></tr>
+          <tr><td><code>message(String)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Plain text body</td></tr>
+          <tr><td><code>html(String)</code></td><td class="ret"><code>Builder</code></td><td class="desc">HTML body</td></tr>
+          <tr><td><code>addFile(Path)</code></td><td class="ret"><code>Builder</code></td><td class="desc">Attach a file (content type guessed from its name); throws a <code>MailException</code> for a missing file</td></tr>
+          <tr><td><code>build()</code></td><td class="ret"><code>Mail</code></td><td class="desc"></td></tr>
         </tbody>
       </table>
     </div>
