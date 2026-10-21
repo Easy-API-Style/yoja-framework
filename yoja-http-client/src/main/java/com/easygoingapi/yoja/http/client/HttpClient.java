@@ -46,7 +46,7 @@ import io.vertx.ext.web.client.WebClient;
  * {@link #send(HttpGet)} / {@link #send(HttpPost)} produces a fresh Vert.x
  * request, copies the headers and cookies of the Yoja request onto it, and
  * — for POST — picks the right {@code Content-Type} from the body's runtime
- * type:
+ * type -- unless the request sets its own (e.g. {@code text/xml} for SOAP):
  * <ul>
  *   <li>{@link JsonObject} → {@code application/json};</li>
  *   <li>{@link JsonArray} → {@code application/json};</li>
@@ -162,23 +162,17 @@ public class HttpClient {
 
             final Object body = httpPost.body();
             if (body instanceof JsonObject jsonObject) {
-                request.headers()
-                       .set(ContentType.key,
-                             ContentType.jsonObject.value());
+                setContentType(request, ContentType.jsonObject.value());
                 result = request.sendJsonObject(jsonObject)
                                 .map(v -> new HttpResponse(v));
             }
             else if (body instanceof JsonArray jsonArray) {
-                request.headers()
-                       .set(ContentType.key,
-                             ContentType.jsonArray.value());
+                setContentType(request, ContentType.jsonArray.value());
                 result = request.sendBuffer(Buffer.buffer(JsonArrayHelper.encode(jsonArray)))
                                 .map(v -> new HttpResponse(v));
             }
             else if (body instanceof String text) {
-                request.headers()
-                       .set(ContentType.key,
-                             ContentType.text.value());
+                setContentType(request, ContentType.text.value());
                 result = request.sendBuffer(Buffer.buffer((text)))
                                 .map(v -> new HttpResponse(v));
             }
@@ -221,6 +215,20 @@ public class HttpClient {
                 cookies.add(ServerCookieEncoder.STRICT.encode(httpCookie.getKey(), httpCookie.getValue()));
             }
             request.putHeader("cookie", String.join(";", cookies));
+        }
+    }
+
+    /**
+     * Sets the {@code Content-Type} the body's type implies -- unless the
+     * request set its own: the caller's always wins.
+     *
+     * @param request     Vert.x request to mutate
+     * @param contentType the content type the body's type implies
+     */
+    private static void setContentType(final HttpRequest<Buffer> request,
+                                       final String contentType) {
+        if (!request.headers().contains(ContentType.key)) {
+            request.headers().set(ContentType.key, contentType);
         }
     }
 

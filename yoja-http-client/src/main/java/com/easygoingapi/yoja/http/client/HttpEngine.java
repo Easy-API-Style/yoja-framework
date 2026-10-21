@@ -39,8 +39,10 @@ import io.vertx.ext.web.client.WebClientOptions;
  * configuration: it owns the connection pool, the default host/port pulled
  * from {@link WebClientOptions} and the SSL / ALPN settings. The default
  * options ({@link #defaultOptions()}) negotiate HTTP/2 with HTTP/1.1
- * fallback, trust every certificate (suitable for self-signed dev setups,
- * less so for production) and verify the host name.
+ * fallback and verify the server: its certificate against the trusted
+ * authorities, and its host name. {@link #trustAllOptions()} accepts any
+ * certificate instead -- for development and tests only (self-signed
+ * certificates).
  * <p>
  * Implements {@link AutoCloseable}: closing the engine closes the wrapped
  * {@link WebClient} and tears down its connection pool.
@@ -142,21 +144,33 @@ public class HttpEngine implements AutoCloseable {
      *
      */
     /**
-     * Returns the default Vert.x options suitable for dev setups.
+     * Returns the default Vert.x options: safe for production.
      *
      * @return the default Vert.x options: HTTP/2 with HTTP/1.1 ALPN fallback,
-     *         TLS on, host verification on, trust-all on (suitable for dev
-     *         setups using self-signed certificates)
+     *         TLS on, the server's certificate verified against the trusted
+     *         authorities, host verification on
      */
     public static WebClientOptions defaultOptions() {
         return new WebClientOptions()
                       .setSsl(true)
                       .setUseAlpn(true)
                       .setVerifyHost(true)
-                      .setTrustAll(true)
+                      .setTrustAll(false)
                       .setAlpnVersions(List.of(HttpVersion.HTTP_2,
                                                HttpVersion.HTTP_1_1))
                       .setProtocolVersion(HttpVersion.HTTP_2);
+    }
+
+    /**
+     * Returns the default options accepting <b>any</b> certificate: for
+     * development and tests only (a self-signed certificate). Never in
+     * production: whoever stands between the client and the server could
+     * present its own certificate, and read what is sent.
+     *
+     * @return {@link #defaultOptions()} with trust-all on
+     */
+    public static WebClientOptions trustAllOptions() {
+        return defaultOptions().setTrustAll(true);
     }
 
 }

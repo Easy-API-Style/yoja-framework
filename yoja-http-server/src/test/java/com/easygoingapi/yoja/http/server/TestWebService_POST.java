@@ -899,6 +899,55 @@ public class TestWebService_POST {
         }
     }
     
+    /** The caller's Content-Type is kept: a text body sent as XML (SOAP) stays XML. */
+    @Test
+    public void test_40() {
+        final HttpClient httpClient = newHttpClient();
+        final AtomicReference<String> contentType = new AtomicReference<>();
+        final HttpRouter httpRouter = HttpRouter.builder()
+                                                .webService(HttpMethod.POST, "/webService_1", v -> {
+                                                    contentType.set(v.request().header("content-type"));
+                                                    v.response().send(v.request().bodyAsText());
+                                                })
+                                                .build();
+        final HttpServer httpServer = newHttpServer(httpRouter);
+        try {
+            final HttpPost httpPost = HttpPost.builder("/webService_1")
+                                              .putHeader("Content-Type", "text/xml; charset=utf-8")
+                                              .body("<soap:Envelope/>")
+                                              .build();
+            final HttpResponse httpResponseClient = awaitValue(httpClient.send(httpPost));
+            assertEquals("<soap:Envelope/>", httpResponseClient.bodyAsText());
+            assertEquals("text/xml; charset=utf-8", contentType.get(), "the caller's content type");
+        }
+        finally {
+            await(httpServer.stop());
+            assertTrue(httpServer.is(State.stopped));
+        }
+    }
+
+    /** Without one of the caller, the body's type sets it: text/plain for a text. */
+    @Test
+    public void test_41() {
+        final HttpClient httpClient = newHttpClient();
+        final AtomicReference<String> contentType = new AtomicReference<>();
+        final HttpRouter httpRouter = HttpRouter.builder()
+                                                .webService(HttpMethod.POST, "/webService_1", v -> {
+                                                    contentType.set(v.request().header("content-type"));
+                                                    v.response().send();
+                                                })
+                                                .build();
+        final HttpServer httpServer = newHttpServer(httpRouter);
+        try {
+            awaitValue(httpClient.send(HttpPost.of("/webService_1", "body")));
+            assertEquals("text/plain", contentType.get(), "the body's content type");
+        }
+        finally {
+            await(httpServer.stop());
+            assertTrue(httpServer.is(State.stopped));
+        }
+    }
+
 //    @Test
 //    public void test_31() {
 //        final HttpClient httpClient = newHttpClient();

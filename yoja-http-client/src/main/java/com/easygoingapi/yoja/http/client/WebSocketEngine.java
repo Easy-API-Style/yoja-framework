@@ -34,9 +34,10 @@ import io.vertx.core.http.WebSocketClientOptions;
  * {@link io.vertx.core.http.WebSocketClient} that {@link WebSocketClient}
  * instances dial through.
  * <p>
- * The default options ({@link #defaultOptions()}) enable TLS, ALPN, host
- * verification and trust-all (suitable for dev setups). The wrapped client
- * is closed asynchronously via {@link #close()}.
+ * The default options ({@link #defaultOptions()}) enable TLS, ALPN and the
+ * server's verification (its certificate, its host name);
+ * {@link #trustAllOptions()} accepts any certificate -- for development and
+ * tests only. The wrapped client is closed asynchronously via {@link #close()}.
  */
 public class WebSocketEngine {
 
@@ -137,18 +138,29 @@ public class WebSocketEngine {
      *
      */
     /**
-     * Returns the default Vert.x options suitable for dev setups.
+     * Returns the default Vert.x options: safe for production.
      *
-     * @return the default Vert.x options: TLS on, ALPN on, host verification
-     *         on, trust-all on (suitable for dev setups using self-signed
-     *         certificates)
+     * @return the default Vert.x options: TLS on, ALPN on, the server's
+     *         certificate verified against the trusted authorities, host
+     *         verification on
      */
     public static WebSocketClientOptions defaultOptions() {
         return new WebSocketClientOptions()
                      .setSsl(true)
                      .setVerifyHost(true)
-                     .setTrustAll(true)
+                     .setTrustAll(false)
                      .setUseAlpn(true);
+    }
+
+    /**
+     * Returns the default options accepting <b>any</b> certificate: for
+     * development and tests only (a self-signed certificate), never in
+     * production.
+     *
+     * @return {@link #defaultOptions()} with trust-all on
+     */
+    public static WebSocketClientOptions trustAllOptions() {
+        return defaultOptions().setTrustAll(true);
     }
 
 }

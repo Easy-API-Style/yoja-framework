@@ -45,8 +45,9 @@ public class TestUtil {
     public static final String host = "localhost";
     public static final boolean ssl = true;
     
-    private static HttpEngine httpEngine = new HttpEngine();
-    private static WebSocketEngine webSocketEngine = new WebSocketEngine();
+    // the test servers have a self-signed certificate: accepted, in the tests only
+    private static HttpEngine httpEngine = new HttpEngine(HttpEngine.trustAllOptions());
+    private static WebSocketEngine webSocketEngine = new WebSocketEngine(WebSocketEngine.trustAllOptions());
     
     static {
         httpEngine.logOptions();
