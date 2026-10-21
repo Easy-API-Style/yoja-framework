@@ -134,8 +134,10 @@ public class TestHttpCookie {
     public void test_03() {
         final HttpClient httpClient = newHttpClient();
         final AtomicReference<Map<String, String>> httpCookies = new AtomicReference<>();
+        final AtomicReference<String> cookieHeader = new AtomicReference<>();
         final Handler<HttpRouting> httpRouting_1 = v -> {
             httpCookies.set(v.request().cookies());
+            cookieHeader.set(v.request().header("cookie"));
             v.response().addCookie(HttpCookie.of("test_cookie_1", "value_test_cookie_1"));
             v.response().send();
         };
@@ -153,6 +155,9 @@ public class TestHttpCookie {
             final HttpResponse httpResponseClient_1 = awaitValue(httpResponseFuture_1);
             assertEquals(Map.of("from-client", "hello", "to-server", "hello"), 
                          httpCookies.get());
+            // as a client sends them (RFC 6265): "name=value; name=value"
+            assertEquals(Set.of("from-client=hello", "to-server=hello"),
+                         Set.of(cookieHeader.get().split("; ")));
             
             assertEquals(false, httpResponseFuture_1.failed());
             assertEquals(false, httpResponseClient_1.cookies().isEmpty());

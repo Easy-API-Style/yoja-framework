@@ -28,7 +28,9 @@ import com.easygoingapi.yoja.core.http.HttpEncoding.Format;
 import com.easygoingapi.yoja.core.http.HttpParameter;
 import com.easygoingapi.yoja.core.util.JsonArrayHelper;
 
-import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
+import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
+import io.netty.handler.codec.http.cookie.Cookie;
+import io.netty.handler.codec.http.cookie.DefaultCookie;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
@@ -126,9 +128,6 @@ public class HttpClient {
             if (timeout != null) {
                 request.timeout(timeout.toMillis());
             }
-            for (final Entry<String, String> entry : httpGet.headers().entrySet()) {
-                request.putHeader(entry.getKey(), entry.getValue());
-            }
             return request.send()
                           .map(v -> new HttpResponse(v));
         }
@@ -155,9 +154,6 @@ public class HttpClient {
             putHeaders(request, httpPost);
             if (timeout != null) {
                 request.timeout(timeout.toMillis());
-            }
-            for (final Entry<String, String> entry : httpPost.headers().entrySet()) {
-                request.putHeader(entry.getKey(), entry.getValue());
             }
 
             final Object body = httpPost.body();
@@ -199,7 +195,8 @@ public class HttpClient {
     /**
      * Copies headers from a Yoja {@link com.easygoingapi.yoja.http.client.HttpRequest}
      * onto a Vert.x {@link HttpRequest}, and encodes the cookie map into a
-     * single {@code cookie} header.
+     * single {@code cookie} header -- as a client sends it
+     * ({@code name=value; name=value}, RFC 6265).
      *
      * @param request     Vert.x request to mutate
      * @param httpRequest Yoja request to read from
@@ -210,11 +207,11 @@ public class HttpClient {
             request.putHeader(entry.getKey(), entry.getValue());
         }
         if (httpRequest.hasCookie()) {
-            final List<String> cookies = new ArrayList<>();
+            final List<Cookie> cookies = new ArrayList<>();
             for (final Entry<String, String> httpCookie : httpRequest.cookies().entrySet()) {
-                cookies.add(ServerCookieEncoder.STRICT.encode(httpCookie.getKey(), httpCookie.getValue()));
+                cookies.add(new DefaultCookie(httpCookie.getKey(), httpCookie.getValue()));
             }
-            request.putHeader("cookie", String.join(";", cookies));
+            request.putHeader("cookie", ClientCookieEncoder.STRICT.encode(cookies));
         }
     }
 
