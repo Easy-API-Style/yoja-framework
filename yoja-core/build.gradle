@@ -3,8 +3,12 @@ dependencies {
     api 'io.vertx:vertx-web:5.2.1'
     api 'io.vertx:vertx-web-client:5.2.1'
     api 'io.vertx:vertx-http-proxy:5.2.1'
+    api 'io.vertx:vertx-mail-client:5.2.1'
 
     api 'tools.jackson.core:jackson-databind:3.2.3'
     api 'com.fasterxml.jackson.core:jackson-annotations:2.22'
+
+    // a real SMTP server in the tests: the mails sent are read back from it
+    testImplementation 'com.icegreen:greenmail:2.1.3'
 }
 

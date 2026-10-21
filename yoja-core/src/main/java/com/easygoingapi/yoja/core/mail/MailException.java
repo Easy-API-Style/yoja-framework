@@ -1,24 +1,59 @@
+/*
+ * Copyright 2026 easy api <easy.api.contact@gmail.com>
+ * https://easygoingapi.com
+ * https://github.com/Easy-API-Style/yoja-framework
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.easygoingapi.yoja.core.mail;
 
+/** A mail that could not be sent: invalid, or refused by the SMTP server. */
 public class MailException extends RuntimeException {
 
     private static final long serialVersionUID = 1L;
 
+    /** Creates an exception without message. */
     public MailException() {
         super();
     }
-    
+
+    /**
+     * Creates an exception with a message and a cause.
+     *
+     * @param message the message
+     * @param cause   the cause
+     */
     public MailException(final String message, 
                          final Throwable cause) {
         super(message, cause);
     }
 
+    /**
+     * Creates an exception with a message.
+     *
+     * @param message the message
+     */
     public MailException(final String message) {
         super(message);
     }
 
+    /**
+     * Creates an exception with a cause.
+     *
+     * @param cause the cause
+     */
     public MailException(final Throwable cause) {
         super(cause);
     }
-    
+
 }

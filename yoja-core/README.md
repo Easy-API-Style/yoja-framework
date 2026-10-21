@@ -33,6 +33,7 @@ dependencies {
   - [HttpHeader](#httpheader)
   - [HttpCookie](#httpcookie)
   - [HttpEncoding](#httpencoding)
+- [Mail](#mail)
 - [Other Utilities](#other-utilities)
   - [StringUtil](#stringutil)
   - [TimeUtil](#timeutil)
@@ -544,6 +545,45 @@ String result = HttpEncoding.url(Format.decoded, "hello+world");
 
 ---
 
+## Mail
+
+Send mails over SMTP with the [Vert.x mail client](https://vertx.io/docs/vertx-mail-client/java/): non-blocking,
+so `send` can be called from the event loop as well as from a worker. The connections to the server are pooled
+and reused from one mail to the next.
+
+```java
+// SMTP server: STARTTLS (required) on port 587 by default
+MailConfig mailConfig = MailConfig.builder("smtp.example.com")
+    .login("seller@example.com", password)
+    .build();
+// or: .port(465).security(Security.SSL) / .security(Security.NONE) for a local relay or a test server
+
+MailService mailService = new MailService(mailConfig);
+
+Mail mail = Mail.builder("seller@example.com")
+    .addRecipient("customer@example.com")
+    .addCc("accountant@example.com")
+    .addBcc("archive@example.com")
+    .title("Your invoice")
+    .message("Please find your invoice attached.")        // plain text
+    .html("<p>Please find your invoice attached.</p>")   // optional: shown instead of the plain text
+    .addFile(Path.of("invoice.pdf"))                     // content type guessed from the name
+    .build();
+
+mailService.send(mail)
+    .onSuccess(messageId -> LOGGER.info("sent: {}", messageId))
+    .onFailure(e -> LOGGER.error("not sent", e));        // a MailException
+
+// at shutdown: release the connections
+mailService.shutdown();
+```
+
+`send` fails with a `MailException` when the mail has no recipient, an attached file can't be read, or the
+server refuses it. `Mail.Builder.addFile` throws a `MailException` right away for a missing file, rather than
+sending the mail without it. `MailConfig.toString()` never writes the password.
+
+---
+
 ## Other Utilities
 
 ### StringUtil
@@ -645,5 +685,6 @@ try {
 | Library | Usage |
 |---|---|
 | [Vert.x Core](https://vertx.io/) | Event loop, workers, Futures |
+| [Vert.x Mail Client](https://vertx.io/docs/vertx-mail-client/java/) | SMTP (`MailService`) |
 | [SLF4J](https://www.slf4j.org/) | Logging |
 | [Guava](https://github.com/google/guava) | Utilities |
