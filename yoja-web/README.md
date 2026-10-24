@@ -1126,14 +1126,18 @@ refused, and `webSocket(url)` gives a new one, with no listener.
 **Restart** -- opt in, per URL:
 
 ```js
-ws.autoRestart('/ws/chat');                       // ws.autoRestart('/ws/chat', false): no more
+ws.autoRestart('/ws/chat');                       // before or after its socket is opened
 ws.putRestart('/ws/chat', 'chatScreen', () => reloadMessages());
+ws.stopAutoRestart('/ws/chat');                   // no more
 ```
 
-A socket closed otherwise than by `close()` is restarted, from zero: after 1s, 2s, 4s... up to 30s (a part of it at
-random) -- at once when the network comes back or the page is shown again, never while offline or hidden. Its map's
-listeners are put on the new one (not its list's); once open, it tells `restart`. What was sent meanwhile is lost:
-the application reads its data again on `restart`. `close()` stops it.
+Cut otherwise than by `close()` (the server, the network, its opening timeout), the very same socket connects again,
+unseen: its listeners -- list and map -- are kept, and neither `close`, `error` nor a second `open` is told. It tries
+after 1s, 2s, 4s... up to 30s (a part of it at random), at once when the network comes back or the page is shown
+again, never while offline or hidden; `send()` and `open()` meanwhile wait for it, within their timeout. Once
+connected again it tells `restart`: what was sent meanwhile is lost, the application reads its data again.
+`close()` stops it; `stopAutoRestart(url)` too -- cut at the moment, the socket is then closed for good (`close`
+told).
 
 ---
 

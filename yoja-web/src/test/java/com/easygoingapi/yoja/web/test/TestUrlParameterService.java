@@ -109,35 +109,35 @@ public class TestUrlParameterService {
     final static List<String> expected = new ArrayList<>();
     static {
         expected.add("event={event=append, key=key_1, value=value_1}");
-        expected.add("state={data=null, hash=null, url=/page_3.html, urlParameter={}}");
+        expected.add("state={data=null, hash=null, url=/page_3.html, urlParameter=[]}");
         expected.add("event={event=before-push}");
-        expected.add("state={data=null, hash=null, url=/page_3.html, urlParameter={}}");
+        expected.add("state={data=null, hash=null, url=/page_3.html, urlParameter=[]}");
         expected.add("event={event=after-push}");
-        expected.add("state={data={key=key_1, value=value_1}, hash=null, url=/page_3.html?key_1=value_1, urlParameter={0={key=key_1, value=value_1}}}");
+        expected.add("state={data={key=key_1, value=value_1}, hash=null, url=/page_3.html?key_1=value_1, urlParameter=[{key=key_1, value=value_1}]}");
         expected.add("event={event=append, key=key_1, value=value_2}");
-        expected.add("state={data={key=key_1, value=value_1}, hash=null, url=/page_3.html?key_1=value_1, urlParameter={0={key=key_1, value=value_1}}}");
+        expected.add("state={data={key=key_1, value=value_1}, hash=null, url=/page_3.html?key_1=value_1, urlParameter=[{key=key_1, value=value_1}]}");
         expected.add("event={event=before-push}");
-        expected.add("state={data={key=key_1, value=value_1}, hash=null, url=/page_3.html?key_1=value_1, urlParameter={0={key=key_1, value=value_1}}}");
+        expected.add("state={data={key=key_1, value=value_1}, hash=null, url=/page_3.html?key_1=value_1, urlParameter=[{key=key_1, value=value_1}]}");
         expected.add("event={event=after-push}");
-        expected.add("state={data={key=key_1, value=value_2}, hash=null, url=/page_3.html?key_1=value_1&key_1=value_2, urlParameter={0={key=key_1, value=value_1}, 1={key=key_1, value=value_2}}}");
+        expected.add("state={data={key=key_1, value=value_2}, hash=null, url=/page_3.html?key_1=value_1&key_1=value_2, urlParameter=[{key=key_1, value=value_1}, {key=key_1, value=value_2}]}");
         expected.add("event={event=append, key=key_1, value=value_3}");
-        expected.add("state={data={key=key_1, value=value_2}, hash=null, url=/page_3.html?key_1=value_1&key_1=value_2, urlParameter={0={key=key_1, value=value_1}, 1={key=key_1, value=value_2}}}");
+        expected.add("state={data={key=key_1, value=value_2}, hash=null, url=/page_3.html?key_1=value_1&key_1=value_2, urlParameter=[{key=key_1, value=value_1}, {key=key_1, value=value_2}]}");
         expected.add("event={event=before-replace}");
-        expected.add("state={data={key=key_1, value=value_2}, hash=null, url=/page_3.html?key_1=value_1&key_1=value_2, urlParameter={0={key=key_1, value=value_1}, 1={key=key_1, value=value_2}}}");
+        expected.add("state={data={key=key_1, value=value_2}, hash=null, url=/page_3.html?key_1=value_1&key_1=value_2, urlParameter=[{key=key_1, value=value_1}, {key=key_1, value=value_2}]}");
         expected.add("event={event=after-replace}");
-        expected.add("state={data={key=key_1, value=value_3}, hash=null, url=/page_3.html?key_1=value_1&key_1=value_2&key_1=value_3, urlParameter={0={key=key_1, value=value_1}, 1={key=key_1, value=value_2}, 2={key=key_1, value=value_3}}}");
+        expected.add("state={data={key=key_1, value=value_3}, hash=null, url=/page_3.html?key_1=value_1&key_1=value_2&key_1=value_3, urlParameter=[{key=key_1, value=value_1}, {key=key_1, value=value_2}, {key=key_1, value=value_3}]}");
         expected.add("event={event=append, key=key_1, value=value_4}");
-        expected.add("state={data={key=key_1, value=value_3}, hash=null, url=/page_3.html?key_1=value_1&key_1=value_2&key_1=value_3, urlParameter={0={key=key_1, value=value_1}, 1={key=key_1, value=value_2}, 2={key=key_1, value=value_3}}}");
+        expected.add("state={data={key=key_1, value=value_3}, hash=null, url=/page_3.html?key_1=value_1&key_1=value_2&key_1=value_3, urlParameter=[{key=key_1, value=value_1}, {key=key_1, value=value_2}, {key=key_1, value=value_3}]}");
         expected.add("event={event=before-push}");
-        expected.add("state={data={key=key_1, value=value_3}, hash=null, url=/page_3.html?key_1=value_1&key_1=value_2&key_1=value_3, urlParameter={0={key=key_1, value=value_1}, 1={key=key_1, value=value_2}, 2={key=key_1, value=value_3}}}");
+        expected.add("state={data={key=key_1, value=value_3}, hash=null, url=/page_3.html?key_1=value_1&key_1=value_2&key_1=value_3, urlParameter=[{key=key_1, value=value_1}, {key=key_1, value=value_2}, {key=key_1, value=value_3}]}");
         expected.add("event={event=after-push}");
-        expected.add("state={data={key=key_1, value=value_4}, hash=null, url=/page_3.html?key_1=value_1&key_1=value_2&key_1=value_3&key_1=value_4, urlParameter={0={key=key_1, value=value_1}, 1={key=key_1, value=value_2}, 2={key=key_1, value=value_3}, 3={key=key_1, value=value_4}}}");
+        expected.add("state={data={key=key_1, value=value_4}, hash=null, url=/page_3.html?key_1=value_1&key_1=value_2&key_1=value_3&key_1=value_4, urlParameter=[{key=key_1, value=value_1}, {key=key_1, value=value_2}, {key=key_1, value=value_3}, {key=key_1, value=value_4}]}");
         expected.add("event={event=pop}");
-        expected.add("state={data={key=key_1, value=value_3}, hash=null, url=/page_3.html?key_1=value_1&key_1=value_2&key_1=value_3, urlParameter={0={key=key_1, value=value_1}, 1={key=key_1, value=value_2}, 2={key=key_1, value=value_3}}}");
+        expected.add("state={data={key=key_1, value=value_3}, hash=null, url=/page_3.html?key_1=value_1&key_1=value_2&key_1=value_3, urlParameter=[{key=key_1, value=value_1}, {key=key_1, value=value_2}, {key=key_1, value=value_3}]}");
         expected.add("event={event=pop}");
-        expected.add("state={data={key=key_1, value=value_1}, hash=null, url=/page_3.html?key_1=value_1, urlParameter={0={key=key_1, value=value_1}}}");
+        expected.add("state={data={key=key_1, value=value_1}, hash=null, url=/page_3.html?key_1=value_1, urlParameter=[{key=key_1, value=value_1}]}");
         expected.add("event={event=pop}");
-        expected.add("state={data={key=key_1, value=value_3}, hash=null, url=/page_3.html?key_1=value_1&key_1=value_2&key_1=value_3, urlParameter={0={key=key_1, value=value_1}, 1={key=key_1, value=value_2}, 2={key=key_1, value=value_3}}}");
+        expected.add("state={data={key=key_1, value=value_3}, hash=null, url=/page_3.html?key_1=value_1&key_1=value_2&key_1=value_3, urlParameter=[{key=key_1, value=value_1}, {key=key_1, value=value_2}, {key=key_1, value=value_3}]}");
     }
     
     @TestFactory

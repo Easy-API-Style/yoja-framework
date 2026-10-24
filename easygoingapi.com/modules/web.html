@@ -541,7 +541,8 @@
           <tr><td><code>webSocket(url)</code></td><td class="ret"><code>WebSocket</code></td><td class="desc">The socket of the URL: opened at once, the same until it is closed</td></tr>
           <tr><td><code>send(url, data)</code></td><td class="ret"><code>Promise</code></td><td class="desc">Send text or binary data; rejected when it cannot open within its timeout (5s), or is closed</td></tr>
           <tr><td><code>close(url [, code [, reason]])</code></td><td class="ret"><code>Promise</code></td><td class="desc">Close it for good, once closed; its restart stopped</td></tr>
-          <tr><td><code>autoRestart(url [, enabled])</code></td><td class="ret"><code>void</code></td><td class="desc">Restart it when closed otherwise than by <code>close()</code>: 1s, 2s, 4s… up to 30s, at once when back online or shown; its map's listeners put on the new one, <code>restart</code> told once open</td></tr>
+          <tr><td><code>autoRestart(url)</code></td><td class="ret"><code>void</code></td><td class="desc">Cut otherwise than by <code>close()</code>, the same socket connects again, unseen: its listeners kept, no <code>close</code> / <code>error</code> told; 1s, 2s, 4s… up to 30s, at once when back online or shown; <code>send()</code> waits for it; <code>restart</code> told once connected</td></tr>
+          <tr><td><code>stopAutoRestart(url)</code></td><td class="ret"><code>void</code></td><td class="desc">No more restart; cut at the moment, the socket is closed for good (<code>close</code> told)</td></tr>
         </tbody>
       </table>
 
@@ -553,7 +554,7 @@
           <tr><td><code>onMessage(url, callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires on each incoming message</td></tr>
           <tr><td><code>onClose(url, callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires when the socket is closed</td></tr>
           <tr><td><code>onError(url, callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires on socket error</td></tr>
-          <tr><td><code>onRestart(url, callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires when a restarted socket is open (<code>autoRestart</code>; the list is not put on the new one: use the map)</td></tr>
+          <tr><td><code>onRestart(url, callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires when the socket is connected again after a cut (<code>autoRestart</code>)</td></tr>
           <tr><td><code>on(eventType, url, callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Any of <code>open</code>, <code>message</code>, <code>close</code>, <code>error</code>, <code>restart</code></td></tr>
         </tbody>
       </table>

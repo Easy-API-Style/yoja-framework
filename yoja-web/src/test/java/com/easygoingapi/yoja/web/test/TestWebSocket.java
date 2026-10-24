@@ -180,8 +180,8 @@ public class TestWebSocket {
                          .stream();
     }
 
-    /** Restarted when the server closes it -- its map's listeners on the new one, 'restart' told --; closed by
-     *  the page, it is not. */
+    /** Cut by the server, the very same socket connects again, unseen -- its listeners kept, no 'close' told,
+     *  'restart' told once connected --; closed by the page, it is not. */
     @TestFactory
     public Stream<DynamicNode> testWebSocket_08() {
         final AtomicInteger opens = new AtomicInteger();   // the server's, for every browser in turn
@@ -199,12 +199,36 @@ public class TestWebSocket {
                              webSocket.close();
                          })
                          .repeatTestModuleUntil(Duration.ofSeconds(15), "/TestWebSocket_17.js")
-                         .test("opened again, once", c -> assertEquals(before.get() + 1, opens.get()))
+                         .test("connected again, once", c -> assertEquals(before.get() + 1, opens.get()))
                          .test("send after", c -> webSocket.send("after"))
                          .repeatTestModuleUntil(Duration.ofSeconds(10), "/TestWebSocket_18.js")
                          .loadModule("/TestWebSocket_19.js")
                          .await(Duration.ofSeconds(5))
                          .test("closed by the page: not opened again", c -> assertEquals(before.get() + 1, opens.get()))
+                         .stream();
+    }
+
+    /** No more restart, cut at the moment: closed for good, 'close' told -- not connected again. */
+    @TestFactory
+    public Stream<DynamicNode> testWebSocket_09() {
+        final AtomicInteger opens = new AtomicInteger();   // the server's, for every browser in turn
+        final AtomicInteger before = new AtomicInteger();
+        final WebSocket webSocket = new WebSocket("/websocket/test");
+        webSocket.onOpen(v -> opens.incrementAndGet());
+        return TestConfig.initialize()
+                         .webResource("com.easygoingapi.yoja.web.test.websocket")
+                         .webSocket(webSocket)
+                         .startYojaWeb(ScriptOption.apply().loadYwAssert())
+                         .repeatTestModuleUntil(Duration.ofSeconds(10), "/TestWebSocket_01.js")
+                         .loadModule("/TestWebSocket_16.js")
+                         .test("the server closes it", c -> {
+                             before.set(opens.get());
+                             webSocket.close();
+                         })
+                         .loadModule("/TestWebSocket_20.js")
+                         .repeatTestModuleUntil(Duration.ofSeconds(10), "/TestWebSocket_21.js")
+                         .await(Duration.ofSeconds(4))
+                         .test("not connected again", c -> assertEquals(before.get(), opens.get()))
                          .stream();
     }
 

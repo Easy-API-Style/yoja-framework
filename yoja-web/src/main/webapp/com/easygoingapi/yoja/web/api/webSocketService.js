@@ -29,54 +29,63 @@
  * Each event is told to the list, then to the map, in the order they were added; a listener failing does not
  * keep the others from being told.
  *
- * A socket closed -- by close(), or by the server, the network, a timeout -- is over: its listeners are dropped,
- * and webSocket(url) gives a new one, from zero.
+ * A socket closed -- by close(), or by the server, the network, its opening timeout -- is over: its listeners are
+ * dropped, and webSocket(url) gives a new one, from zero.
  *
- * autoRestart(url) restarts a socket closed otherwise than by close(): from zero, its map's listeners put on the
- * new one (not its list's), after 1s, 2s, 4s... up to 30s -- at once when the network comes back or the page is
- * shown again, never while offline or hidden. Once open again, it tells 'restart': what was sent meanwhile is
- * lost, the application reads its data again.
+ * Unless its url is to restart (autoRestart(url)): cut otherwise than by close(), the very same socket connects
+ * again, unseen -- its listeners, list and map, kept; no 'close', no 'error', no second 'open' told -- after 1s,
+ * 2s, 4s... up to 30s, at once when the network comes back or the page is shown again, never while offline or
+ * hidden; send() and open() meanwhile wait for it, within their timeout. Once connected again it tells 'restart':
+ * what was sent meanwhile is lost, the application reads its data again. stopAutoRestart(url) or close() stop it.
  */
 
-// the events a socket tells: the WebSocket's own, and 'restart' -- told by a socket restarted (autoRestart)
+// the events a socket tells: the WebSocket's own, and 'restart' -- connected again after a cut (autoRestart)
 const EVENT_TYPES = ['open', 'close', 'message', 'error', 'restart'];
-const SOCKET_EVENT_TYPES = ['open', 'close', 'message', 'error'];
+
+const FIRST_DELAY = 1000;   // the first wait before connecting again (ms), doubled at each try...
+const LAST_DELAY = 30000;   // ...up to this one
 
 class WebSocketWrapper {
 
     #timeout = 5000;
     #url;                    // its ws(s) url
-    #webSocket;
+    #webSocket;              // the WebSocket it holds: another one after each cut, when it restarts
     #lists = {};             // eventType -> [callback]: on(...)
     #maps = {};              // eventType -> Map(key -> callback): put(...)
-    #closeAsked = false;     // close() asked: it is not restarted
-    #over = false;           // closed: its listeners dropped, a new one to ask for
-    #onOver;                 // (wrapper, {asked, maps}) => the service told it is over
+    #restart = false;        // connected again after a cut (autoRestart)
+    #cut = false;            // cut, connecting again
+    #delay = FIRST_DELAY;    // the wait before the next try
+    #timer = null;           // the next try, when it waits for it
+    #waiting = [];           // open() asked meanwhile: [{resolve, reject}], settled once open, or over
+    #closeAsked = false;     // close() asked: over, not restarted
+    #over = false;           // closed for good: its listeners dropped, a new one to ask for
+    #onEnd;                  // (wrapper, closeAsked) => the service told it is over
+    #tryNow = () => this.#connectNow();
 
     /**
-     * @param url    its ws(s) url
-     * @param onOver told once it is over: whether close() asked it, and its map's listeners
+     * @param url     its ws(s) url
+     * @param restart whether it connects again after a cut
+     * @param onEnd   told once it is over -- whether close() asked it
      */
-    constructor(url, onOver) {
+    constructor(url, restart, onEnd) {
         this.#url = url;
-        this.#onOver = onOver;
+        this.#onEnd = onEnd;
         for (const eventType of EVENT_TYPES) {
             this.#lists[eventType] = [];
             this.#maps[eventType] = new Map();
         }
-        this.#webSocket = new WebSocket(url);
-        for (const eventType of SOCKET_EVENT_TYPES) {
-            this.#webSocket.addEventListener(eventType, event => this.#tell(eventType, event));
-        }
-        // told to its listeners first (the listener above), then over
-        this.#webSocket.addEventListener('close', () => this.#end());
+        this.#connect();
+        this.restart(restart);
     }
 
     // ============================================================
     //  OPEN / SEND / CLOSE
     // ============================================================
 
-    /** @return a promise of the WebSocket, once open; rejected when it is over, or does not open in time */
+    /**
+     * @return a promise of the WebSocket, once open -- connected again, when cut; rejected when it is over, or
+     *         is not open within its timeout
+     */
     open() {
         if (this.#over) {
             return Promise.reject(new Error('the websocket ' + this.#url + ' is closed: webSocket(url) gives a new one'));
@@ -85,22 +94,19 @@ class WebSocketWrapper {
             return Promise.resolve(this.#webSocket);
         }
         return new Promise((resolve, reject) => {
-            const timer = setTimeout(() => {
+            const waiter = {resolve: resolve, reject: reject};
+            waiter.timer = setTimeout(() => {
+                this.#waiting = this.#waiting.filter(candidate => candidate !== waiter);
                 reject(new Error('opening websocket failed ' + this.#url + ', timeout: ' + this.#timeout + 'ms'));
-                this.#webSocket.close();   // given up: over, not left connecting
+                if (!this.#restart && this.#webSocket.readyState === WebSocket.CONNECTING) {
+                    this.#webSocket.close();   // given up: over, not left connecting
+                }
             }, this.#timeout);
-            this.#webSocket.addEventListener('open', () => {
-                clearTimeout(timer);
-                resolve(this.#webSocket);
-            }, {once: true});
-            this.#webSocket.addEventListener('close', event => {
-                clearTimeout(timer);
-                reject(new Error('opening websocket failed ' + this.#url, {cause: event}));
-            }, {once: true});
+            this.#waiting.push(waiter);
         });
     }
 
-    /** @return a promise settled once sent: rejected when it is over, or does not open */
+    /** @return a promise settled once sent: rejected when it is over, or is not open within its timeout */
     send(data) {
         return this.open().then(webSocket => webSocket.send(data));
     }
@@ -112,12 +118,17 @@ class WebSocketWrapper {
      */
     close(code, reason) {
         this.#closeAsked = true;
+        this.#stopRestart();
+        if (this.#over) {
+            return Promise.resolve();
+        }
+        if (this.#webSocket.readyState === WebSocket.CLOSED) {
+            // cut, between two tries: closed already
+            this.#tell('close', {type: 'close', code: code, reason: reason});
+            this.#end();
+            return Promise.resolve();
+        }
         return new Promise((resolve, reject) => {
-            if (this.#webSocket.readyState === WebSocket.CLOSED) {
-                this.#end();
-                resolve();
-                return;
-            }
             const timer = setTimeout(() => reject(new Error('closing websocket failed ' + this.#url + ', timeout: '
                                                             + this.#timeout + 'ms')),
                                      this.#timeout);
@@ -129,6 +140,31 @@ class WebSocketWrapper {
                 this.#webSocket.close(code, reason);
             }
         });
+    }
+
+    /**
+     * Connects again after a cut -- or no more: cut at the moment, it is closed for good ('close' told).
+     *
+     * @param restart whether it does
+     */
+    restart(restart) {
+        if (this.#over) {
+            return;
+        }
+        this.#restart = restart;
+        if (restart) {
+            window.addEventListener('online', this.#tryNow);
+            window.addEventListener('pageshow', this.#tryNow);
+            document.addEventListener('visibilitychange', this.#tryNow);
+        }
+        else {
+            const cut = this.#cut;
+            this.#stopRestart();
+            if (cut) {
+                this.#tell('close', {type: 'close', code: 1006, reason: 'cut'});
+                this.#end();
+            }
+        }
     }
 
     // ============================================================
@@ -264,12 +300,82 @@ class WebSocketWrapper {
     }
 
     // ============================================================
-    //  TELLING
+    //  THE WEBSOCKET IT HOLDS
     // ============================================================
 
-    /** Tells 'restart': open again, what was sent meanwhile lost (WebSocketRestart). */
-    tellRestart() {
-        this.#tell('restart', {type: 'restart', url: this.#url});
+    /** A WebSocket: its events told -- the first time; after a cut, its opening told as 'restart' only. */
+    #connect() {
+        const webSocket = new WebSocket(this.#url);
+        this.#webSocket = webSocket;
+        webSocket.addEventListener('open', event => {
+            const restarted = this.#cut;
+            this.#cut = false;
+            this.#delay = FIRST_DELAY;
+            for (const waiter of this.#waiting.splice(0)) {
+                clearTimeout(waiter.timer);
+                waiter.resolve(webSocket);
+            }
+            this.#tell(restarted ? 'restart' : 'open', restarted ? {type: 'restart', url: this.#url} : event);
+        });
+        webSocket.addEventListener('message', event => this.#tell('message', event));
+        webSocket.addEventListener('error', event => {
+            if (!this.#willRestart()) {
+                this.#tell('error', event);   // a cut to restart from is not seen
+            }
+        });
+        webSocket.addEventListener('close', event => {
+            if (this.#willRestart()) {
+                this.#cut = true;
+                this.#schedule();
+            }
+            else {
+                this.#tell('close', event);
+                this.#end();
+            }
+        });
+    }
+
+    #willRestart() {
+        return this.#restart && !this.#closeAsked;
+    }
+
+    /** The next try, once it is time -- offline or hidden: once the network is back, the page shown again. */
+    #schedule() {
+        clearTimeout(this.#timer);
+        this.#timer = null;
+        if (!this.#canTry()) {
+            return;
+        }
+        const delay = this.#delay * (0.75 + Math.random() * 0.5);   // not every page at the same second
+        this.#delay = Math.min(this.#delay * 2, LAST_DELAY);
+        this.#timer = setTimeout(() => {
+            this.#timer = null;
+            this.#connect();
+        }, delay);
+    }
+
+    /** The network back, the page shown again: cut, it tries at once. */
+    #connectNow() {
+        if (this.#cut && !this.#over && this.#canTry() && this.#webSocket.readyState === WebSocket.CLOSED) {
+            clearTimeout(this.#timer);
+            this.#timer = null;
+            this.#delay = FIRST_DELAY;
+            this.#connect();
+        }
+    }
+
+    #canTry() {
+        return navigator.onLine !== false && document.visibilityState !== 'hidden';
+    }
+
+    #stopRestart() {
+        this.#restart = false;
+        this.#cut = false;
+        clearTimeout(this.#timer);
+        this.#timer = null;
+        window.removeEventListener('online', this.#tryNow);
+        window.removeEventListener('pageshow', this.#tryNow);
+        document.removeEventListener('visibilitychange', this.#tryNow);
     }
 
     /** Tells an event to the list, then to the map; a listener failing does not keep the others from it. */
@@ -284,117 +390,22 @@ class WebSocketWrapper {
         }
     }
 
-    /** Over -- closed, its listeners told: they are dropped, the service told (its map's kept for a restart). */
+    /** Over -- closed for good, its listeners told: they are dropped, open() refused, the service told. */
     #end() {
         if (this.#over) {
             return;
         }
         this.#over = true;
-        const maps = {};
+        this.#stopRestart();
         for (const eventType of EVENT_TYPES) {
-            maps[eventType] = new Map(this.#maps[eventType]);
             this.#lists[eventType] = [];
             this.#maps[eventType].clear();
         }
-        this.#onOver(this, {asked: this.#closeAsked, maps: maps});
-    }
-
-}
-
-/**
- * Restarts a socket closed otherwise than by close(): after 1s, 2s, 4s... up to 30s (a part of it at random,
- * so that the pages do not all come back at the same second) -- at once when the network comes back or the page
- * is shown again; never while offline or hidden. Its map's listeners are put on the new one, which tells
- * 'restart' once open.
- */
-class WebSocketRestart {
-
-    static #FIRST_DELAY = 1000;
-    static #LAST_DELAY = 30000;
-
-    #service;
-    #url;
-    #delay = WebSocketRestart.#FIRST_DELAY;
-    #timer = null;
-    #maps = null;            // the listeners to put on the next one, once one is to restart
-    #stopped = false;
-    #now = () => this.#tryNow();
-
-    /**
-     * @param service the service: it gives the new socket
-     * @param url     the socket's url
-     */
-    constructor(service, url) {
-        this.#service = service;
-        this.#url = url;
-        window.addEventListener('online', this.#now);
-        window.addEventListener('pageshow', this.#now);
-        document.addEventListener('visibilitychange', this.#now);
-    }
-
-    /**
-     * A socket closed otherwise than by close(): the next one, once it is time.
-     *
-     * @param maps its map's listeners, put on the next one
-     */
-    schedule(maps) {
-        if (this.#stopped) {
-            return;
+        for (const waiter of this.#waiting.splice(0)) {
+            clearTimeout(waiter.timer);
+            waiter.reject(new Error('the websocket ' + this.#url + ' is closed'));
         }
-        this.#maps = maps;
-        clearTimeout(this.#timer);
-        this.#timer = null;
-        if (!this.#canTry()) {
-            return;   // offline or hidden: the network back, the page shown again, will try
-        }
-        const delay = this.#delay * (0.75 + Math.random() * 0.5);
-        this.#delay = Math.min(this.#delay * 2, WebSocketRestart.#LAST_DELAY);
-        this.#timer = setTimeout(() => this.#try(), delay);
-    }
-
-    /** No more restarts: close() asked, or autoRestart(url, false). */
-    stop() {
-        this.#stopped = true;
-        clearTimeout(this.#timer);
-        this.#timer = null;
-        window.removeEventListener('online', this.#now);
-        window.removeEventListener('pageshow', this.#now);
-        document.removeEventListener('visibilitychange', this.#now);
-    }
-
-    /** The network back, the page shown again: a socket waiting for its restart tries at once. */
-    #tryNow() {
-        if (!this.#stopped && this.#maps && this.#canTry()) {
-            clearTimeout(this.#timer);
-            this.#timer = null;
-            this.#delay = WebSocketRestart.#FIRST_DELAY;
-            this.#try();
-        }
-    }
-
-    #canTry() {
-        return navigator.onLine !== false && document.visibilityState !== 'hidden';
-    }
-
-    /** A new socket, the listeners put on it: open, it tells 'restart'; closed again, its end schedules the next. */
-    #try() {
-        const maps = this.#maps;
-        this.#maps = null;
-        this.#timer = null;
-        const webSocket = this.#service.webSocket(this.#url);
-        for (const eventType of EVENT_TYPES) {
-            for (const [key, callback] of maps[eventType]) {
-                webSocket.put(eventType, key, callback);
-            }
-        }
-        webSocket.open()
-                 .then(() => {
-                     this.#delay = WebSocketRestart.#FIRST_DELAY;
-                     webSocket.tellRestart();
-                 })
-                 .catch(() => {
-                     // not open: its end schedules the next try
-                 });
+        this.#onEnd(this, this.#closeAsked);
     }
 
 }
@@ -406,14 +417,15 @@ class WebSocketService {
     #protocolWebSocket = window.location.protocol === 'https:' ? 'wss' : 'ws';
 
     #webSockets = new Map();   // url -> its socket, until it is over
-    #restarts = new Map();     // url -> its restart (autoRestart)
+    #restarts = new Set();     // the urls whose socket connects again after a cut (autoRestart)
 
     /** @return the socket of that url -- a new one when it has none, or the one it had is over */
     webSocket(url) {
         let webSocket = this.#webSockets.get(url);
         if (!webSocket) {
             webSocket = new WebSocketWrapper(this.#protocolWebSocket + '://' + this.#host + ':' + this.#port + url,
-                                             (over, ended) => this.#over(url, over, ended));
+                                             this.#restarts.has(url),
+                                             (ended, closeAsked) => this.#onEnd(url, ended, closeAsked));
             this.#webSockets.set(url, webSocket);
         }
         return webSocket;
@@ -425,50 +437,35 @@ class WebSocketService {
     }
 
     /**
-     * Closes the socket of that url, for good -- its restart stopped too, when it has none at the moment.
+     * Closes the socket of that url, for good -- its restart stopped.
      *
      * @return a promise settled once it is closed
      */
     close(url, code, reason) {
+        this.#restarts.delete(url);
         const webSocket = this.#webSockets.get(url);
-        if (webSocket) {
-            return webSocket.close(code, reason);
-        }
-        this.autoRestart(url, false);
-        return Promise.resolve();
+        return webSocket ? webSocket.close(code, reason) : Promise.resolve();
     }
 
-    /**
-     * Restarts the socket of that url when it is closed otherwise than by close() -- or no more.
-     *
-     * @param enabled {@code false}: no more restarts
-     */
-    autoRestart(url, enabled = true) {
-        const restart = this.#restarts.get(url);
-        if (enabled && !restart) {
-            this.#restarts.set(url, new WebSocketRestart(this, url));
-        }
-        else if (!enabled && restart) {
-            restart.stop();
-            this.#restarts.delete(url);
-        }
+    /** The socket of that url connects again after a cut, unseen -- its own, or the next one it is given. */
+    autoRestart(url) {
+        this.#restarts.add(url);
+        this.#webSockets.get(url)?.restart(true);
     }
 
-    /** A socket over: forgotten -- restarted, if it is to be, unless close() asked it. */
-    #over(url, webSocket, ended) {
+    /** No more: cut at the moment, it is closed for good. */
+    stopAutoRestart(url) {
+        this.#restarts.delete(url);
+        this.#webSockets.get(url)?.restart(false);
+    }
+
+    /** A socket over: forgotten -- closed by close(), not restarted any more. */
+    #onEnd(url, webSocket, closeAsked) {
         if (this.#webSockets.get(url) === webSocket) {
             this.#webSockets.delete(url);
         }
-        const restart = this.#restarts.get(url);
-        if (!restart) {
-            return;
-        }
-        if (ended.asked) {
-            restart.stop();
+        if (closeAsked) {
             this.#restarts.delete(url);
-        }
-        else {
-            restart.schedule(ended.maps);
         }
     }
 
@@ -480,8 +477,12 @@ export function webSocket(url) {
     return webSocketService.webSocket(url);
 }
 
-export function autoRestart(url, enabled = true) {
-    webSocketService.autoRestart(url, enabled);
+export function autoRestart(url) {
+    webSocketService.autoRestart(url);
+}
+
+export function stopAutoRestart(url) {
+    webSocketService.stopAutoRestart(url);
 }
 
 export function send(url, data) {
