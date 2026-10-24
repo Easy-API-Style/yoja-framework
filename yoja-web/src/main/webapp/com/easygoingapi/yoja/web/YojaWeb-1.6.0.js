@@ -1122,7 +1122,6 @@ const cssLoader = await import(formatPath('./loader/cssLoader.js'));
 const Graph = await import(formatPath('./util/Graph.js'));
 
 const fileGraph = Graph.newInstance();
-const loadedHtmlFiles = [];
 
 function getIncludeMode(sectionTag) {
     let mode = sectionTag.getAttribute('yw-include-mode');
@@ -1138,9 +1137,17 @@ function getIncludeMode(sectionTag) {
     return result;
 }
 
-async function load(fromPath, fromTag) {
+/**
+ * Loads the sections of a tag -- their includes and slots with their own sections, each time they are used: a
+ * file used again (another slot, a screen built again) is loaded again; only one that comes back on its own
+ * inclusion path is not (a file including itself).
+ *
+ * @param fromPath  the file the tag comes from
+ * @param ancestors the files on its inclusion path
+ */
+async function load(fromPath, fromTag, ancestors = new Set()) {
     fromPath = fromPath || window.location.pathname;   // tags added out of any section's file: from the page
-    loadedHtmlFiles.push(fromPath);
+    const inclusionPath = new Set(ancestors).add(fromPath);
     const allPromises = [];
     for (const [index, sectionTag] of domUtil.findSection(fromTag).entries()) {
         const sectionPromises = [];
@@ -1261,9 +1268,9 @@ async function load(fromPath, fromTag) {
                      }
                      
                      if (section.slot
-                            && !loadedHtmlFiles.includes(section.slot.path)) {
+                            && !inclusionPath.has(section.slot.path)) {
                          const bodyTag = domUtil.parseHtml(section.slot.body).body;
-                         load(section.slot.path, bodyTag)
+                         load(section.slot.path, bodyTag, inclusionPath)
                            .then(children => {
                              section.children = children;
                              resolve(section);
@@ -1272,9 +1279,9 @@ async function load(fromPath, fromTag) {
                                                    cause: error})));
                      }
                      else if (section.include
-                                 && !loadedHtmlFiles.includes(section.include.path)) {
+                                 && !inclusionPath.has(section.include.path)) {
                         const bodyTag = domUtil.parseHtml(section.include.body).body;
-                        load(section.include.path, bodyTag)
+                        load(section.include.path, bodyTag, inclusionPath)
                           .then(children => {
                             section.children = children;
                             resolve(section);

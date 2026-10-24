@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Yoja</title>
+    <meta charset="utf-8"/>
+    <script type="module"
+            src="/yoja/YojaWeb-x.y.z.js"
+            yw-config-path="/YojaWeb.conf.js"></script>
+</head>
+<body>
+    <!-- the same slot file twice, the same include file twice: each copy built, its section with its controler -->
+    <yw-section class="slot-one" yw-slot="./card.html"></yw-section>
+    <yw-section class="slot-two" yw-slot="./card.html"></yw-section>
+    <div class="include-one"><div yw-include="./item.html"></div></div>
+    <div class="include-two"><div yw-include="./item.html"></div></div>
+</body>
+</html>

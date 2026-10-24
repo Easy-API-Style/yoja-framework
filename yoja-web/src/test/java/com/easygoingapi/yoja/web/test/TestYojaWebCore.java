@@ -70,4 +70,19 @@ public class TestYojaWebCore {
                          .stream();
     }
 
+    /** The same slot file twice, the same include file twice: each copy built, its section with its controler. */
+    @TestFactory
+    public Stream<DynamicNode> testYojaWebCore_03() {
+        return TestConfig.initialize()
+                         .webResource("com.easygoingapi.yoja.web.test.core_02")
+                         .test("load page", c -> c.getHttpPage(Duration.ofSeconds(5),
+                                                               c.httpUrlBuilder().path("/home.html").build()))
+                         .loadYwAssert()
+                         .testJsUnit("/TestCore.js",
+                                     List.of("test_01",
+                                             "test_02",
+                                             "test_03"))
+                         .stream();
+    }
+
 }
