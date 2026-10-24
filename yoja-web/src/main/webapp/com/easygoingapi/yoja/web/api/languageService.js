@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 'use strict'
-const httpClient = await import(yojaWeb.path('../api/httpClient.js'));
 const domUtil = await import(yojaWeb.path('../util/domUtil.js'));
 const jsUtil = await import(yojaWeb.path('../util/javascriptUtil.js'));
 const languageLoader = await import(yojaWeb.path('../loader/languageLoader.js'));
@@ -252,9 +251,11 @@ class LanguageService {
     #findTranslation(values, key, language) {
         let result = null;
         if (values && language && key) {
-            const text = values.querySelectorAll('[key="' + key + '"]');
+            // an import is an include: the key's last text -- the one of the file, over what it includes -- is its
+            // true value (languageLoader)
+            const text = values.querySelectorAll('[key="' + CSS.escape(key) + '"]');
             if (text && text.length) {
-                for (const child of text[0].children) {
+                for (const child of text[text.length - 1].children) {
                     if (child.tagName === language) {
                         result = child.innerHTML;
                         break;
@@ -281,11 +282,12 @@ class LanguageService {
         this.#onTranslateActions.push(action);
     }
 
+    /** @return a promise of a translator(key [, language]) of the file -- its imports included, as for a section */
     loadTranslator(path) {
         const itself = this;
-        return httpClient.get({url: path, fetchAs: 'text'})
-                         .then(response => {
-                            const values = domUtil.parseXml(response.body);
+        return languageLoader.load(path)
+                         .then(xmlEntity => {
+                            const values = xmlEntity.xml;
                             return function(key, language) {
                                 let result;
                                 if (language) {

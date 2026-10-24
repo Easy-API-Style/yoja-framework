@@ -1,0 +1,7 @@
+<yw-language>
+    <yw-import path="./included.xml"/>
+    <yw-text key="greeting">
+        <en>From the file</en>
+        <fr>Du fichier</fr>
+    </yw-text>
+</yw-language>

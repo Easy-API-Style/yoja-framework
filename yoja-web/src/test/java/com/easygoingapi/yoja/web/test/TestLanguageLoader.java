@@ -52,4 +52,17 @@ public class TestLanguageLoader {
                          .stream();
     }
     
+    /** An empty file, a file not well formed: no text; a file fetched once; the file's own text over its include's. */
+    @TestFactory
+    public Stream<DynamicNode> testLanguageLoader_09() {
+        return TestConfig.initialize()
+                         .webResource("com.easygoingapi.yoja.web.test.language_09")
+                         .startYojaWeb(ScriptOption.apply().loadYwAssert())
+                         .testJsUnit("/TestLanguageLoader.js",
+                                     List.of("test_01",
+                                             "test_02",
+                                             "test_03"))
+                         .stream();
+    }
+
 }

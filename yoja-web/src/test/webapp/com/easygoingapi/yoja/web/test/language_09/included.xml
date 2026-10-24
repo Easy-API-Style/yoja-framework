@@ -1,0 +1,11 @@
+<yw-language>
+    <yw-import path="./root.xml"/>
+    <yw-text key="greeting">
+        <en>From its include</en>
+        <fr>De son inclusion</fr>
+    </yw-text>
+    <yw-text key="farewell">
+        <en>Bye</en>
+        <fr>Au revoir</fr>
+    </yw-text>
+</yw-language>
