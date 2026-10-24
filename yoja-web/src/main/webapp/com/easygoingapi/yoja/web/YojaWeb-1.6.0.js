@@ -1380,24 +1380,25 @@ function flatSections(sections) {
  */
 const cssSheetEmpty = new CSSStyleSheet();
 
-function handleCssMedia(mediaQueryList, shadow, index, cssSheet) {
-    if (mediaQueryList.matches) {
-         shadow.adoptedStyleSheets[index] = cssSheet;
-    } 
-    else {
-        shadow.adoptedStyleSheets[index] = cssSheetEmpty;
-    }
+/** A sheet applies when every media along its imports' path does (cssLoader: medias). */
+function handleCssMedia(mediaQueryLists, shadow, index, cssSheet) {
+    shadow.adoptedStyleSheets[index] = mediaQueryLists.every(mediaQueryList => mediaQueryList.matches)
+                                           ? cssSheet
+                                           : cssSheetEmpty;
 }
 
 function addCssMediaListener(cssSheetEntities, shadow) {
     for (let i = 0; i < cssSheetEntities.length; i++) {
         const cssSheet = cssSheetEntities[i].sheet;
-        const cssMedia = cssSheetEntities[i].media;
-        if (cssMedia) {
+        const cssMedias = cssSheetEntities[i].medias
+                          ?? (cssSheetEntities[i].media ? [cssSheetEntities[i].media] : []);
+        if (cssMedias.length) {
             shadow.adoptedStyleSheets.push(cssSheetEmpty);
-            const mediaQueryList = window.matchMedia(cssMedia);
-            mediaQueryList.addEventListener('change', mql => handleCssMedia(mql, shadow, i, cssSheet));
-            handleCssMedia(mediaQueryList, shadow, i, cssSheet);
+            const mediaQueryLists = cssMedias.map(cssMedia => window.matchMedia(cssMedia));
+            for (const mediaQueryList of mediaQueryLists) {
+                mediaQueryList.addEventListener('change', () => handleCssMedia(mediaQueryLists, shadow, i, cssSheet));
+            }
+            handleCssMedia(mediaQueryLists, shadow, i, cssSheet);
         }
         else {
             shadow.adoptedStyleSheets.push(cssSheet);
@@ -1414,9 +1415,13 @@ function manageCss(section, sectionTag, shadow) {
         const parentSection = window.yojaWeb
                                     .sectionService
                                     .parent(sectionTag);
-        if (parentSection?.shadowTag?.adoptedStyleSheets) {
+        if (parentSection?.css?.sheetEntities) {
+            // its parent's sheets, with listeners of its own: a media changing updates this shadow too
+            shadow.adoptedStyleSheets = [];
+            addCssMediaListener(parentSection.css.sheetEntities, shadow);
+        }
+        else if (parentSection?.shadowTag?.adoptedStyleSheets) {
             shadow.adoptedStyleSheets = parentSection.shadowTag.adoptedStyleSheets;
-            addCssMediaListener(parentSection.css, shadow);
         }
     }
 }

@@ -105,4 +105,19 @@ public class TestCssLoader {
                          .stream();
     }
     
+    /** Imports quoted or not, their media, layer and supports(); the media along the path; a file fetched once; a
+     *  relative url() resolved from its file. */
+    @TestFactory
+    public Stream<DynamicNode> testCssLoader_07() {
+        return TestConfig.initialize()
+                         .webResource("com.easygoingapi.yoja.web.test.css_07")
+                         .startYojaWeb(ScriptOption.apply().loadYwAssert())
+                         .testJsUnit("/TestCssLoader.js",
+                                     List.of("test_01",
+                                             "test_02",
+                                             "test_03",
+                                             "test_04"))
+                         .stream();
+    }
+
 }

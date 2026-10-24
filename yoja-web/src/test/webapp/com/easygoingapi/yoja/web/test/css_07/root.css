@@ -1,0 +1,7 @@
+/* an import commented out is not one: @import "missing.css"; */
+@import url(unquoted.css) print;
+@import url("mid.css") screen;
+@import "layered.css" layer(base);
+@import "supported.css" supports(display: grid);
+@import "unsupported.css" supports(display: no-such-display);
+.root::before { content: "/* kept */"; }

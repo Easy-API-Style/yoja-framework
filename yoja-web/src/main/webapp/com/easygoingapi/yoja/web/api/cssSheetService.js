@@ -18,6 +18,16 @@
 'use strict'
 const sectionService = yojaWeb.sectionService;
 
+/** @return every media along the sheet's imports' path (cssLoader), or its own, or none */
+function mediasOf(sheetEntity) {
+    return sheetEntity.medias ?? (sheetEntity.media ? [sheetEntity.media] : []);
+}
+
+/** @return whether the sheet applies: every media along its path does */
+function isApplied(sheetEntity) {
+    return mediasOf(sheetEntity).every(media => window.matchMedia(media).matches);
+}
+
 class CssSheetService {
     
     constructor() {
@@ -43,11 +53,7 @@ class CssSheetService {
                                          selectors: selectors,
                                          key: key,
                                          isApplied: function() {
-                                            let result = true;
-                                            if (h.media) {
-                                                result = window.matchMedia(h.media).matches;
-                                            }
-                                            return result;
+                                            return h.isApplied();
                                          },
                                          getPropertyValue: function() {
                                             return styleElements.getPropertyValue(key);
@@ -81,14 +87,11 @@ class CssSheetService {
                     const media = sheetEntity.media
                     consumer({section: section,
                               media: media,
+                              medias: mediasOf(sheetEntity),
                               path: path,
                               sheet: sheet,
                               isApplied: function() {
-                                 let result = true;
-                                 if (media) {
-                                    result = window.matchMedia(media).matches;
-                                 }
-                                 return result;
+                                 return isApplied(sheetEntity);
                                }})
                 }
             }
@@ -111,13 +114,11 @@ class CssSheetService {
                             consumer({section: section,
                                       sheet: sheet,
                                       media: media,
+                                      medias: mediasOf(sheetEntity),
                                       path: path,
                                       cssRule: cssRule,
                                       isApplied: function() {
-                                         let result = true
-                                         if (media) {
-                                            result = window.matchMedia(media).matches;
-                                         }
+                                         const result = isApplied(sheetEntity);
                                          return result;
                                       }})
                        }
