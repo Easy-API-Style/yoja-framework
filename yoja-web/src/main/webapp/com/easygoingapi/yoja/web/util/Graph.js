@@ -15,286 +15,253 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-'use strict'
+'use strict';
 
-
+/**
+ * The links of a graph that go back up its paths -- found once, from a node: a link parent -> child is one when
+ * the child is on the path already walked to its parent (an inclusion that includes itself, at some depth).
+ */
 class RecursiveService {
-    
+
     #graph;
-    #recursiveKeys = [];
-    #recursiveNodes = {};
-    
+    #recursiveLinks = new Set();      // 'parentId__childId'
+    #recursiveParents = new Set();    // the ids of the parents of those links
+
     constructor(graph, fromNode) {
         this.#graph = graph;
         graph.walkChildren(fromNode, h => {
             if (h.recursive) {
-                const key = graph.id(h.parent) + '__' + graph.id(h.node);
-                this.#recursiveKeys.push(key);
-                this.#recursiveNodes[key] = {parent: h.parent,
-                                             node: h.node,
-                                             parentPath: h.parentPath};
+                const parentId = graph.id(h.parent);
+                this.#recursiveLinks.add(parentId + '__' + graph.id(h.node));
+                this.#recursiveParents.add(parentId);
             }
-        })
+        });
     }
-    
+
+    /** @return whether the link parentNode -> childNode goes back up a path */
     isRecursive(parentNode, childNode) {
-        let result = false;
         const parentId = this.#graph.id(parentNode);
         const childId = this.#graph.id(childNode);
-        if (parentId && childId) {
-            result = this.#recursiveKeys.includes(parentId + '__' + childId);
-        }
-        return result;
+        return Boolean(parentId && childId && this.#recursiveLinks.has(parentId + '__' + childId));
     }
-    
+
+    /**
+     * @return whether one of the node's links goes back up a path: it is the one that links to one of its
+     *         ancestors -- not merely a node on a cycle
+     */
     isRecursiveNode(node) {
-        let result = false;
-        const nodeId = this.#graph.id(node);
-        for (const recursiveNode of Object.values(this.#recursiveNodes)) {
-            if (nodeId === this.#graph.id(recursiveNode.parent)) {
-                result = true;
-                break;
-            }
-        }
-        return result;
+        return this.#recursiveParents.has(this.#graph.id(node));
     }
-        
+
 }
 
+/**
+ * A directed graph -- nodes and their links, parent -> child --, walked down from a node to its children or up to
+ * its parents.
+ *
+ * A node is a string, its own id, or an object holding a string {@code id}; the first one given for an id is the
+ * one kept. A link may carry data of its own ({@code addLink(parent, child, data)}: an import's media...), told
+ * with it when walked.
+ *
+ * A walk tells every path: a node is told once for each path that leads to it, and a link that goes back up its
+ * path is told {@code recursive}, not walked beyond. The consumer returning {@code false} does not walk below the
+ * node told -- the others are walked all the same.
+ */
 class Graph {
-    
-    #nodes = {};
-    #nodeParents = {};
-    #nodeChildren = {};
-    
-    constructor() {
-        
-    }
-    
+
+    #nodes = new Map();          // id -> node
+    #parents = new Map();        // id -> [parent ids], in the order linked
+    #children = new Map();       // id -> [child ids], in the order linked
+    #links = new Map();          // 'parentId__childId' -> the link's data
+
+    /** @return the nodes, by their id's order */
     nodes() {
-        const ids = [];
-        for (const id of Object.keys(this.#nodes)) {
-            ids.push(id);
-        }
-        ids.sort((a, b) => a.localeCompare(b));
-        const result = [];
-        for (const id of ids) {
-            result.push(this.#nodes[id]);
-        }
-        return result;
+        return [...this.#nodes.keys()].sort((a, b) => a.localeCompare(b))
+                                       .map(id => this.#nodes.get(id));
     }
-    
+
     hasNode(node) {
         const id = this.id(node);
-        return id && this.#nodes[id] ? true : false;
+        return id !== null && this.#nodes.has(id);
     }
-    
+
+    /** @return the node's id: the node itself when it is a string, else its string {@code id}; null otherwise */
     id(node) {
-        let result = null;
-        if (node) {
-            if (this.#isString(node.id)) {
-                result = node.id;
-            }
-            else if (this.#isString(node)) {
-                result = node;
-            }
+        if (isString(node?.id)) {
+            return String(node.id);
         }
-        return result;
+        if (isString(node)) {
+            return String(node);
+        }
+        return null;
     }
-    
-    #node(id) {
-        return this.#nodes[id];
-    }
-    
-    #isString(value) {
-        return  value instanceof String || typeof value === 'string';
-    }
-    
+
     children(node) {
-        const result = [];
-        const id = this.id(node);
-        if (id && this.#nodeChildren[id]) {
-           for (const child of this.#nodeChildren[id]) {
-               result.push(this.#node(child));
-           }
-        }
-        return result;
+        return (this.#children.get(this.id(node)) || []).map(id => this.#nodes.get(id));
     }
-    
+
     parents(node) {
-        const result = [];
-        const id = this.id(node);
-        if (id && this.#nodeParents[id]) {
-            for (const parent of this.#nodeParents[id]) {
-                result.push(this.#node(parent));
-            }
-        }
-        return result;
+        return (this.#parents.get(this.id(node)) || []).map(id => this.#nodes.get(id));
     }
-    
+
+    /**
+     * @return the links down from the node, in the order linked: [{node, data}] -- each child, and the data of
+     *         its link
+     */
+    links(node) {
+        const parentId = this.id(node);
+        return (this.#children.get(parentId) || []).map(id => ({node: this.#nodes.get(id),
+                                                                data: this.#links.get(parentId + '__' + id)}));
+    }
+
+    /** Adds a node -- its id's first node kept. @throws Error when it has no id */
     addNode(node) {
-        const nodeId = this.id(node);
-        if (nodeId) {
-            this.#nodes[nodeId] = node;
+        this.#keep(node);
+    }
+
+    /**
+     * Links a parent to a child -- each id's first node kept, a link added once (its data, the last given).
+     *
+     * @param data the link's own data, told with it when walked (optional)
+     * @throws Error when one of them has no id
+     */
+    addLink(nodeParent, nodeChild, data) {
+        if (!nodeParent || !nodeChild) {
+            return;
+        }
+        this.#checkId(nodeParent);
+        this.#checkId(nodeChild);   // both checked first: a link refused keeps neither of them
+        const parentId = this.#keep(nodeParent);
+        const childId = this.#keep(nodeChild);
+        addOnce(this.#parents, childId, parentId);
+        addOnce(this.#children, parentId, childId);
+        if (data !== undefined) {
+            this.#links.set(parentId + '__' + childId, data);
         }
     }
 
-    addLink(nodeParent, nodeChild) {
-        if (nodeParent && nodeChild) {
-            const nodeChildId = this.id(nodeChild);
-            const nodeParentId = this.id(nodeParent);
-            
-            if (nodeParent && nodeChild) {
-                // nodes 
-                if (!Object.keys(this.#nodes).includes(nodeChildId)) {
-                    this.#nodes[nodeChildId] = nodeChild;
-                }
-                if (!Object.keys(this.#nodes).includes(nodeParentId)) {
-                    this.#nodes[nodeParentId] = nodeParent;
-                }
-                // parents
-                let nodeParents = this.#nodeParents[nodeChildId];
-                if (!nodeParents) {
-                    nodeParents = [];
-                    this.#nodeParents[nodeChildId] = nodeParents;
-                }
-                if (!nodeParents.includes(nodeParentId)) {
-                    nodeParents.push(nodeParentId);
-                }
-                // children
-                let nodeChildren = this.#nodeChildren[nodeParentId]
-                if (!nodeChildren) {
-                    nodeChildren = [];
-                    this.#nodeChildren[nodeParentId] = nodeChildren;
-                }
-                if (!nodeChildren.includes(nodeChildId)) {
-                    nodeChildren.push(nodeChildId);
-                }
-            }
-        }
-    }
-    
+    /**
+     * Walks down from the node, each path: consumer({parent, parentPath, deep, node, recursive, data}) -- data, the
+     * link's, when it has some. It returning false: not below that node.
+     */
     walkChildren(node, consumer) {
         const nodeId = this.id(node);
-        const parentPath = [];
-        if (this.#isString(node)) {
-            parentPath.push(this.#node(node));
-        }
-        else {
-            parentPath.push(node);
-        }
-        this.#walkChildrenRecursively(nodeId, consumer, parentPath);
+        this.#walkChildrenRecursively(nodeId, consumer, [isString(node) ? this.#nodes.get(nodeId) : node]);
     }
-    
+
     #walkChildrenRecursively(nodeId, consumer, parentPath) {
-        const nodeChildrenIds = this.#nodeChildren[nodeId];
-        if (nodeChildrenIds) {
-            for (const nodeChildId of nodeChildrenIds) {
-                const parentPathIds = [];
-                for (const parent of parentPath) {
-                    parentPathIds.push(this.id(parent));
-                }
-                const recursive = parentPathIds.includes(nodeChildId);
-                const keepOn = consumer({parent: this.#node(nodeId),
-                                         parentPath: parentPath,
-                                         deep: parentPath.length,
-                                         node: this.#node(nodeChildId),
-                                         recursive: recursive});
-                
-                if (!recursive) {
-                    if (this.#toBoolean(keepOn)) {
-                        const _parentPath = [...parentPath];
-                        _parentPath.push(this.#node(nodeChildId));
-                        this.#walkChildrenRecursively(nodeChildId, consumer, _parentPath);
-                    }
-                }
-//                else {
-//                    const warnParentPath = [...parentPath]
-//                    warnParentPath.push(this.#node(nodeChildId))
-//                    console.warn('recursive parentPath: ', warnParentPath)
-//                }
+        const pathIds = parentPath.map(parent => this.id(parent));
+        for (const childId of this.#children.get(nodeId) || []) {
+            const recursive = pathIds.includes(childId);
+            const keepOn = consumer(told({parent: this.#nodes.get(nodeId),
+                                          parentPath: [...parentPath],   // its own: a consumer changing it changes no other
+                                          deep: parentPath.length,
+                                          node: this.#nodes.get(childId),
+                                          recursive: recursive},
+                                         this.#links.get(nodeId + '__' + childId)));
+            if (!recursive && keepOn !== false) {
+                this.#walkChildrenRecursively(childId, consumer, [...parentPath, this.#nodes.get(childId)]);
             }
         }
     }
-    
-    hasAncestor(node, ancestorNode) {
-        let result = false;
-        this.walkParents(node, h => {
-            if (this.id(h.node) === this.id(ancestorNode)) {
-                result = true;
-                return false;
-            }
-        }) 
-        return result;
-    }
-    
-    isRecursive(node) {
-        let result = false;
-        const nodeId = this.id(node);
-        this.walkParents(node, h => {
-            if (this.id(h.node) === nodeId) {
-                result = true;
-                return false;
-            }
-        })
-        return result;
-    }
-    
+
+    /**
+     * Walks up from the node, each path: consumer({child, childPath, deep, node, recursive, data}) -- data, the
+     * link's, when it has some. It returning false: not above that node.
+     */
     walkParents(node, consumer) {
         const nodeId = this.id(node);
-        const childPath = []
-        if (this.#isString(node)) {
-            childPath.push(this.#node(node));
-        }
-        else {
-            childPath.push(node);
-        }
-        this.#walkParentsRecursively(nodeId, consumer, childPath);
+        this.#walkParentsRecursively(nodeId, consumer, [isString(node) ? this.#nodes.get(nodeId) : node]);
     }
 
     #walkParentsRecursively(nodeId, consumer, childPath) {
-        const nodeParentIds = this.#nodeParents[nodeId];
-        if (nodeParentIds) {
-            for (const nodeParentId of nodeParentIds) {
-                const childPathIds = [];
-                for (const child of childPath) {
-                    childPathIds.push(this.id(child));
-                }
-                const recursive = childPathIds.includes(nodeParentId);
-                const keepOn = consumer({child: this.#node(nodeId),
-                                         childPath: childPath,
-                                         deep: childPath.length,
-                                         node: this.#node(nodeParentId),
-                                         recursive: recursive});
-                
-                if (!recursive) {
-                    if (this.#toBoolean(keepOn)) {
-                        const _childPath = [...childPath];
-                        _childPath.push(this.#node(nodeParentId));
-                        this.#walkParentsRecursively(nodeParentId, consumer, _childPath);
-                    }
-                }
-//                else {
-//                    const warnCildPath = [...childPath]
-//                    warnCildPath.push(this.#node(nodeParentId))
-//                    console.warn('recursive childPath', warnCildPath)
-//                }
+        const pathIds = childPath.map(child => this.id(child));
+        for (const parentId of this.#parents.get(nodeId) || []) {
+            const recursive = pathIds.includes(parentId);
+            const keepOn = consumer(told({child: this.#nodes.get(nodeId),
+                                          childPath: [...childPath],
+                                          deep: childPath.length,
+                                          node: this.#nodes.get(parentId),
+                                          recursive: recursive},
+                                         this.#links.get(parentId + '__' + nodeId)));
+            if (!recursive && keepOn !== false) {
+                this.#walkParentsRecursively(parentId, consumer, [...childPath, this.#nodes.get(parentId)]);
             }
         }
     }
-    
-    #toBoolean(value) {
-        let result = true;
-        if (value === true || value === false) {
-            result = value;
-        }
-        return result;
+
+    /** @return whether the ancestor is up from the node -- looked for until found, each node once */
+    hasAncestor(node, ancestorNode) {
+        const ancestorId = this.id(ancestorNode);
+        return ancestorId !== null && this.#reachesUp(this.id(node), id => id === ancestorId);
     }
-    
+
+    /** @return whether the node is up from itself: on a cycle -- looked for until found, each node once */
+    isRecursive(node) {
+        const nodeId = this.id(node);
+        return nodeId !== null && this.#reachesUp(nodeId, id => id === nodeId);
+    }
+
+    /** @return whether a node up from the one given -- not itself -- is one the predicate is true of */
+    #reachesUp(fromId, predicate) {
+        const seen = new Set();
+        const toVisit = [...(this.#parents.get(fromId) || [])];
+        while (toVisit.length) {
+            const id = toVisit.pop();
+            if (predicate(id)) {
+                return true;
+            }
+            if (!seen.has(id)) {
+                seen.add(id);
+                toVisit.push(...(this.#parents.get(id) || []));
+            }
+        }
+        return false;
+    }
+
     newRecursiveService(node) {
         return new RecursiveService(this, node);
     }
-    
+
+    /** @return the node's id @throws Error when it has none */
+    #checkId(node) {
+        const id = this.id(node);
+        if (id === null) {
+            throw new Error('a node of a graph is a string, or holds a string id: ' + JSON.stringify(node));
+        }
+        return id;
+    }
+
+    /** @return the node's id, its first node kept @throws Error when it has none */
+    #keep(node) {
+        const id = this.#checkId(node);
+        if (!this.#nodes.has(id)) {
+            this.#nodes.set(id, node);
+        }
+        return id;
+    }
+
+}
+
+function isString(value) {
+    return value instanceof String || typeof value === 'string';
+}
+
+/** Adds a value to a key's list, once. */
+function addOnce(map, key, value) {
+    const values = map.get(key) || [];
+    if (!values.includes(value)) {
+        values.push(value);
+    }
+    map.set(key, values);
+}
+
+/** @return what a walk tells -- the link's data with it, when it has some */
+function told(told, data) {
+    if (data !== undefined) {
+        told.data = data;
+    }
+    return told;
 }
 
 export function newInstance() {

@@ -49,12 +49,13 @@ class CssLoader {
 
     #importPathsRecursively(recursiveService, path, result) {
         if (this.#fileGraph.hasNode(path)) {
-            const children = [...this.#fileGraph.children(path)];
-            children.reverse();
-            for (const child of children) {
-                if (!recursiveService.isRecursive(path, child)) {
-                    result.push({path: child.path, media: child.media});
-                    this.#importPathsRecursively(recursiveService, child.path, result);
+            // the media is the import's -- its link's --: a file imported twice keeps each one's
+            const links = this.#fileGraph.links(path);
+            links.reverse();
+            for (const link of links) {
+                if (!recursiveService.isRecursive(path, link.node)) {
+                    result.push({path: link.node.path, media: link.data?.media ?? null});
+                    this.#importPathsRecursively(recursiveService, link.node.path, result);
                 }
             }
         }
@@ -161,16 +162,9 @@ class CssLoader {
         const futures = [];
         for (const childCssEntity of childrenCssEntities) {
             const childPath = childCssEntity.path
+            this.#fileGraph.addLink(cssPath, {id: childPath, path: childPath}, {media: childCssEntity.media});
             if (!this.#loadedCssFiles.includes(childPath)) {
-                this.#fileGraph.addLink(cssPath, {id: childPath,
-                                                  path: childPath,
-                                                  media: childCssEntity.media});
                 futures.push(this.#loadCssFileRecursively(childPath));
-            }
-            else {
-                this.#fileGraph.addLink(cssPath, {id: childPath,
-                                                  path: childPath,
-                                                  media: childCssEntity.media});
             }
         }
         return Promise.all(futures);

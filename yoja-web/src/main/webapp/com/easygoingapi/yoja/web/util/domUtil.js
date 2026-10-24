@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-'use strict'
+'use strict';
 
 const domParser = new DOMParser();
 const xmlSerializer = new XMLSerializer();
@@ -27,6 +27,10 @@ function parse(value, type) {
     return domParser.parseFromString(value, type);
 }
 
+/**
+ * @return the document -- an xml not well formed is not refused: the document then holds a {@code <parsererror>}
+ *         (DOMParser's way), to look for
+ */
 export function parseXml(xml) {
     return parse(xml, 'application/xml');
 }
@@ -40,59 +44,17 @@ export function parseHtml(html) {
 }
 
 /*
- * JQUERY
- */
-export function isJQueryTag(tag) {
-    return 'jquery' in Object(tag);
-}
-
-export function toArrayDomTag(tag) {
-    let result = [];
-    if (isJQueryTag(tag)) {
-        for (let i = 0; i < tag.length; i++) {
-            result.push(tag.get(i));
-        }
-    }
-    else if (Array.isArray(tag)) {
-        result = tag;
-    }
-    else {
-        result.push(tag);
-    }
-    return result;
-}
-
-export function toDomTag(tag) {
-    let result = tag;
-    if (isJQueryTag(tag)) {
-        result = null
-        if (tag.length == 1) {
-            result = tag.get(0);
-        }
-        else if (tag.length > 1) {
-            result = [];
-            for (let i = 0; i < tag.length; i++) {
-                result.push(tag.get(i));
-            }
-        }
-    }
-    return result;
-}
-
-/*
  * PARENT
  */
 function getParent(element, selector) {
-    let result = null;
     let parent = element.parentElement;
     while (parent) {
         if (!selector || parent.matches(selector)) {
-            result = parent;
-            break;
+            return parent;
         }
         parent = parent.parentElement;
     }
-    return result;
+    return null;
 }
 
 function getParents(element, selector) {
@@ -107,106 +69,85 @@ function getParents(element, selector) {
     return parents;
 }
 
-function parentsRecursively(tag, selector, result) {
-    let found = getParents(tag, selector);
-    if (found.length) {
-        result.push(...found);
-    }
+/** @return the shadow host of the tag's tree, or null when it is in the document's */
+function hostOf(tag) {
     const root = tag.getRootNode();
-    if (root === document 
-            || !(root instanceof ShadowRoot)) {
-        return;
-    }
-    if (!selector 
-           || root.host.matches(selector)) {
-        result.push(root.host);
-    }
-    return parentsRecursively(root.host, selector, result);
+    return root instanceof ShadowRoot ? root.host : null;
 }
 
+function parentsRecursively(tag, selector, result) {
+    result.push(...getParents(tag, selector));
+    const host = hostOf(tag);
+    if (!host) {
+        return;
+    }
+    if (!selector || host.matches(selector)) {
+        result.push(host);
+    }
+    parentsRecursively(host, selector, result);
+}
+
+/** @return its parents matching the selector -- every one when none --, the nearest first, through the shadow hosts */
 export function parents(tag, selector) {
     const result = [];
     parentsRecursively(tag, selector, result);
     return result;
 }
 
+/** @return its nearest parent matching the selector -- its parent when none --, through the shadow hosts */
 export function parent(tag, selector) {
     const found = getParent(tag, selector);
     if (found) {
         return found;
     }
-    const root = tag.getRootNode();
-    if (root === document 
-           || !(root instanceof ShadowRoot)) {
+    const host = hostOf(tag);
+    if (!host) {
         return null;
     }
-    if (!selector 
-           || root.host.matches(selector)) {
-        return root.host;
+    if (!selector || host.matches(selector)) {
+        return host;
     }
-    return parent(root.host, selector);
+    return parent(host, selector);
 }
 
+/** @return the tag itself, or its nearest parent, matching the selector -- through the shadow hosts */
 export function closest(tag, selector) {
     const found = tag.closest(selector);
     if (found) {
         return found;
     }
-    const root = tag.getRootNode();
-    if (root === document 
-           || !(root instanceof ShadowRoot)) {
-        return null;
-    }
-    return closest(root.host, selector);
+    const host = hostOf(tag);
+    return host ? closest(host, selector) : null;
 }
 
 /*
  * SECTION
  */
-const sectionAttributeNames = ['yw-slot' , 
-                               'yw-controler', 
+const sectionAttributeNames = ['yw-slot',
+                               'yw-controler',
                                'yw-language',
                                'yw-css'];
-                               
-function getSectionTagSelectors() {
-    const result = [];
-    for (const sectionAttributeName of sectionAttributeNames) {
-        result.push('[' + sectionAttributeName + ']');
-    }
-    return result;
-}          
 
-function getYojaWebTagSelectors() {
-    const result = [...getSectionTagSelectors()];
-    result.push('[yw-include]');
-    return result;
-}                         
-                  
-const SECTION_TAG_SELECTOR = getSectionTagSelectors().join(',');
+const SECTION_TAG_SELECTOR = sectionAttributeNames.map(name => '[' + name + ']').join(',');
 
-const YOJAWEB_TAG_TAG_SELECTOR = getYojaWebTagSelectors().join(',');
-                          
+const YOJAWEB_TAG_TAG_SELECTOR = SECTION_TAG_SELECTOR + ',[yw-include]';
+
 function toSection(tag) {
-    let result;
-    if (tag) {
-        result = tag?.ywSection;
-    }
-    return result;
+    return tag?.ywSection;
 }
 
 function toSections(tags) {
-    let result = [];
-    if (tags) {
-        for (const tag of tags) {
-            const section = toSection(tag);
-            if (section) {
-                result.push(section);
-            }
+    const result = [];
+    for (const tag of tags || []) {
+        const section = toSection(tag);
+        if (section) {
+            result.push(section);
         }
     }
     return result;
 }
 
+/** @return the sections right under the tag: in its tree, and its shadow one -- not the sections of those */
 function childrenSectionOfTag(tag) {
     const result = [];
     childrenSectionRecursively(result, tag);
@@ -227,63 +168,43 @@ function childrenSectionRecursively(result, parent) {
     }
 }
 
+/** @return {@code false} once the consumer asked to stop: the whole walk stops */
 function walkSectionRecursively(section, consumer, deep) {
     let index = 0;
     for (const sectionChild of childrenSectionOfTag(section.tag)) {
-        const keepOn = consumer(sectionChild, {deep: deep, index: index});
+        if (consumer(sectionChild, {deep: deep, index: index}) === false
+              || walkSectionRecursively(sectionChild, consumer, deep + 1) === false) {
+            return false;
+        }
         index++;
-        if (keepOn !== false) {
-            walkSectionRecursively(sectionChild, consumer, deep + 1);
-        }
-        else {
-            break;
-        }
     }
-}
-
-function walkSectionFrom(section, consumer, info) {
-    const keepOn = consumer(section, info);
-    if (keepOn !== false) {
-        walkSectionRecursively(section, consumer, 2);
-    }
-    return keepOn;
+    return true;
 }
 
 export function isSection(tag) {
-    let result = false;
-    if (tag && tag.matches) {
-         result = tag.matches(SECTION_TAG_SELECTOR);
-    }
-    return result;
+    return Boolean(tag && tag.matches && tag.matches(SECTION_TAG_SELECTOR));
 }
 
 export function isInclude(tag) {
-    let result = false;
-    if (tag && tag.matches) {
-         result = tag.matches('[yw-include]');
-    }
-    return result;
+    return Boolean(tag && tag.matches && tag.matches('[yw-include]'));
 }
 
+/** @return the tag, when it is a section or an include, then the sections and includes of its tree */
 export function findSection(tag) {
-    let result = [];
+    const result = [];
     if (tag) {
-        if (tag.matches 
-               && tag.matches(YOJAWEB_TAG_TAG_SELECTOR)) {
+        if (tag.matches && tag.matches(YOJAWEB_TAG_TAG_SELECTOR)) {
             result.push(tag);
         }
         if (tag.querySelectorAll) {
-            const tags = tag.querySelectorAll(YOJAWEB_TAG_TAG_SELECTOR);
-            if (tags && tags.length) {
-                result.push(...tags);
-            }
+            result.push(...tag.querySelectorAll(YOJAWEB_TAG_TAG_SELECTOR));
         }
     }
     return result;
 }
 
 export function childrenSection(tag) {
-    return  childrenSectionOfTag(tag);
+    return childrenSectionOfTag(tag);
 }
 
 export function closestSection(tag) {
@@ -298,20 +219,19 @@ export function parentSections(tag) {
     return toSections(parents(tag, SECTION_TAG_SELECTOR));
 }
 
+/**
+ * Walks the sections under the tag, each before its own: consumer(section, {deep, index}). It returning
+ * {@code false} stops the whole walk.
+ */
 export function walkSection(tag, consumer) {
-//    if (isSection(tag)) {
-//        walkSectionFrom(toSection(tag), consumer)
-//    }
-//    else {
-        let index = 0;
-        for (const section of childrenSectionOfTag(tag)) {
-              const keepOn = walkSectionFrom(section, consumer, {deep: 1, index: index});
-              index++;
-              if (keepOn === false) {
-                  break;
-              }
-          }
-//    }
+    let index = 0;
+    for (const section of childrenSectionOfTag(tag)) {
+        if (consumer(section, {deep: 1, index: index}) === false
+              || walkSectionRecursively(section, consumer, 2) === false) {
+            return;
+        }
+        index++;
+    }
 }
 
 /*
@@ -327,196 +247,225 @@ function getChildren(element, selector) {
     return children;
 }
 
+/** @return its children matching the selector -- every one when none --: its own, then its shadow root's */
 export function allChildren(tag, selector) {
-    const children = [];
-    for (const child of getChildren(tag, selector)) {
-        children.push(child);
-    }
+    const children = getChildren(tag, selector);
     if (tag.shadowRoot) {
-        for (const child of getChildren(tag.shadowRoot, selector)) {
-            children.push(child);
-        }
+        children.push(...getChildren(tag.shadowRoot, selector));
     }
     return children;
 }
 
-export function walk(tag, consumer, selector) {
+/**
+ * Walks the tags under one, each before its own, through the shadow roots.
+ *
+ * @param skip a tag it is given is visited, its own are not (null: every one)
+ * @return {@code false} once the consumer asked to stop
+ */
+function walkUntil(tag, consumer, selector, skip) {
     for (const child of allChildren(tag, selector)) {
-        if (consumer(child) !== false) {
-            walk(child, consumer, selector);
+        if (consumer(child) === false) {
+            return false;
         }
-        else {
-            break;
+        if (!(skip && skip(child)) && walkUntil(child, consumer, selector, skip) === false) {
+            return false;
         }
     }
+    return true;
+}
+
+/**
+ * Walks the tags under one, each before its own, through the shadow roots -- only those matching the selector,
+ * when given, and under them. The consumer returning {@code false} stops the whole walk.
+ */
+export function walk(tag, consumer, selector) {
+    walkUntil(tag, consumer, selector, null);
 }
 
 export function getTagPath(tag) {
-    let result = [];
-    for (const parent of getParents(tag)) {
-        result.push(parent.localName);
-    }
-    result.reverse();
-    return result;
+    return getParents(tag).map(parent => parent.localName).reverse();
 }
 
 /*
  * FIND
  */
-function findRecursively(selector, parent, result, deep, options) {
-    const tags = allChildren(parent, selector);
-    let keepOn = true;
-    if (tags) {
-        for (const tag of tags) {
-            if (options.deep || !isSection(tag)) {
-                tag.deep = deep;
-                result.push(tag);
-                if (options.first) {
-                    keepOn = false;
-                    break;
-                }
+
+/**
+ * Looks for the tags matching the selector under one, through the shadow roots: at each tag, its children first --
+ * the nearest found first: not the document's order -- then under each of them.
+ *
+ * @param options {first: the first one found only, deep: into the sections too (else neither a section nor its
+ *                tags are found)}
+ * @return {@code true} once the first one is found (options.first)
+ */
+function findRecursively(selector, parent, result, options) {
+    const children = allChildren(parent).filter(child => options.deep || !isSection(child));
+    for (const child of children) {
+        if (child.matches(selector)) {
+            result.push(child);
+            if (options.first) {
+                return true;
             }
         }
     }
-    if (keepOn) {
-        for (const child of allChildren(parent)) {
-            if (options.deep || !isSection(child)) {
-                findRecursively(selector, child, result, deep + 1, options);
-            }
+    for (const child of children) {
+        if (findRecursively(selector, child, result, options) && options.first) {
+            return true;
         }
     }
+    return false;
 }
 
+/** @return the first tag matching the selector under one, not in its sections (see findRecursively's order) */
 export function firstTag(from, selector) {
-    const tags = []
-    findRecursively(selector, from, tags, 1, {first: true, deep: false});
+    const tags = [];
+    findRecursively(selector, from, tags, {first: true, deep: false});
     return tags.length ? tags[0] : null;
 }
 
+/** @return the tags matching the selector under one, not in its sections */
 export function findTags(from, selector) {
     const tags = [];
-    findRecursively(selector, from, tags, 1, {first: false, deep: false});
+    findRecursively(selector, from, tags, {first: false, deep: false});
     return tags;
 }
 
+/**
+ * Walks the tags under one, each before its own, not into its sections: a section is neither given nor entered.
+ * The consumer returning {@code false} stops the whole walk.
+ */
 export function walkTag(from, consumer) {
-    for (const child of allChildren(from)) {
-        if (!isSection(child) 
-                && consumer(child) !== false) {
-            walk(child, tag => {
-                if (isSection(tag)) {
-                    return false;
-                }
-                else {
-                    return consumer(tag);
-                }
-            })
-        }
-    }
+    walkUntil(from, tag => isSection(tag) ? undefined : consumer(tag), undefined, isSection);
 }
 
-function deepTag(from, selector, first) {
-    const allResult = [];
-    const commaSelectors = selector.split(',');
-    
-    for (const commaSelector of commaSelectors) {
-        const result = [];
-        const splitSelector = commaSelector.replaceAll('>', ' > ')
-                                           .split(/(\s+)/)
-                                           .filter( e => e.trim().length > 0);
-
-        let fromTags = null;
-        for (let i = 0; i < splitSelector.length; i++) {
-            const tags = [];
-            if (fromTags === null) {
-                if ('>' === splitSelector[i]) {
-                    i++;
-                    const children = allChildren(from, splitSelector[i]);
-                    tags.push(...children);
-                }
-                else {
-                    const isLast = splitSelector.length === (i + 1);
-                    findRecursively(splitSelector[i], 
-                                    from, 
-                                    tags, 
-                                    1, 
-                                    {first: isLast ? first : false, deep: true});
-                }
-            }
-            else {
-                for (const fromTag of fromTags) {
-                    if ('>' === splitSelector[i]) {
-                        i++;
-                        const children = allChildren(fromTag, splitSelector[i]);
-                        tags.push(...children);
-                    }
-                    else {
-                        const isLast = splitSelector.length === (i + 1);
-                        findRecursively(splitSelector[i], 
-                                        fromTag, 
-                                        tags, 
-                                        1, 
-                                        {first: isLast ? first : false, deep: true});
-                    }
-                }
-            }
-            if (splitSelector.length === (i + 1)) {
-                result.push(...tags);
-            }
-            else {
-                fromTags = tags;
+/**
+ * Splits a selector at its top level -- outside [...], (...) and quotes --: on ',' into its selectors, each of them
+ * into its compounds and its '>' combinators (a space: a descendant, through the shadow roots).
+ *
+ * @return [[compound or '>', ...], ...]
+ * @throws Error for the combinators '+' and '~': not supported
+ */
+function splitSelector(selector) {
+    const selectors = [];
+    let tokens = [];
+    let current = '';
+    let depth = 0;
+    let quote = null;
+    const flush = () => {
+        if (current.trim()) {
+            tokens.push(current.trim());
+        }
+        current = '';
+    };
+    for (const character of selector) {
+        if (quote) {
+            current += character;
+            if (character === quote) {
+                quote = null;
             }
         }
+        else if (character === '"' || character === "'") {
+            quote = character;
+            current += character;
+        }
+        else if (character === '[' || character === '(') {
+            depth++;
+            current += character;
+        }
+        else if (character === ']' || character === ')') {
+            depth--;
+            current += character;
+        }
+        else if (depth > 0) {
+            current += character;
+        }
+        else if (character === ',') {
+            flush();
+            selectors.push(tokens);
+            tokens = [];
+        }
+        else if (character === '>') {
+            flush();
+            tokens.push('>');
+        }
+        else if (character === '+' || character === '~') {
+            throw new Error('the combinator "' + character + '" is not supported: ' + selector);
+        }
+        else if (/\s/.test(character)) {
+            flush();
+        }
+        else {
+            current += character;
+        }
+    }
+    flush();
+    selectors.push(tokens);
+    return selectors.filter(compounds => compounds.length);
+}
+
+/**
+ * Looks for the tags matching a selector under one, into the sections and through the shadow roots: each compound
+ * of it looked for under the tags the one before it found (a space), or among their children ('>').
+ *
+ * @param first the first one only: of the first selector of a list (a, b) that finds one -- not the document's
+ *              first
+ */
+function deepTag(from, selector, first) {
+    const allResult = [];
+    for (const compounds of splitSelector(selector)) {
+        let fromTags = [from];
+        for (let i = 0; i < compounds.length; i++) {
+            const child = compounds[i] === '>';
+            if (child) {
+                i++;
+            }
+            const isLast = i === compounds.length - 1;
+            const tags = [];
+            for (const fromTag of fromTags) {
+                if (child) {
+                    tags.push(...allChildren(fromTag, compounds[i]));
+                }
+                else {
+                    findRecursively(compounds[i], fromTag, tags, {first: isLast && first, deep: true});
+                }
+            }
+            fromTags = tags;
+        }
         if (first) {
-            if (result.length 
-                  && !allResult.includes(result[0])) {
-                allResult.push(result[0]);
-                break;
+            if (fromTags.length) {
+                return fromTags[0];
             }
         }
         else {
-            for (const value of result) {
-                if (!allResult.includes(value)) {
-                    allResult.push(value);
+            for (const tag of fromTags) {
+                if (!allResult.includes(tag)) {
+                    allResult.push(tag);
                 }
             }
         }
     }
-    if (first) {
-        return allResult.length ? allResult[0] : null;
-    }
-    else {
-        return allResult;
-    } 
+    return first ? null : allResult;
 }
 
 export function deepFirstTag(from, selector) {
     return deepTag(from, selector, true);
 }
-    
+
 export function deepFindTags(from, selector) {
     return deepTag(from, selector, false);
 }
-    
+
+/**
+ * Walks the tags under one, each before its own, into its sections and through the shadow roots. The consumer
+ * returning {@code false} stops the whole walk.
+ */
 export function deepWalkTag(from, consumer) {
-    for (const child of allChildren(from)) {
-        if (consumer(child) !== false) {
-            walk(child, consumer);
-        }
-    }
+    walkUntil(from, consumer, undefined, null);
 }
 
 /*
  * attribute
  */
 export function isEmptyAttribute(tag, attributeName) {
-    let result = false;
-    if (tag && attributeName) {
-        if (tag.hasAttribute(attributeName)) {
-            if (!tag.getAttribute(attributeName)) {
-                result = true;
-            }
-        }
-    }
-    return result;
+    return Boolean(tag && attributeName && tag.hasAttribute(attributeName) && !tag.getAttribute(attributeName));
 }

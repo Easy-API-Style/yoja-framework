@@ -86,6 +86,11 @@ public class TestGraph {
                                               "test_18",
                                               "test_19",
                                               "test_20"))
+                         .testJsUnit("/test_graph_05.js",
+                                     List.of("test_01",
+                                             "test_02",
+                                             "test_03",
+                                             "test_04"))
                          .stream();
     }
     
