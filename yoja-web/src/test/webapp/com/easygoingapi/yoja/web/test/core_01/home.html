@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Yoja</title>
+    <meta charset="utf-8"/>
+    <script type="module"
+            src="/yoja/YojaWeb-x.y.z.js"
+            yw-config-path="/YojaWeb.conf.js"></script>
+</head>
+<body>
+    <!-- a controler failing in its constructor: the section after it built all the same -->
+    <yw-section class="broken" yw-controler="./broken.ctl.js"><span>broken</span></yw-section>
+    <yw-section class="good" yw-controler="./good.ctl.js"><span>good</span></yw-section>
+</body>
+</html>

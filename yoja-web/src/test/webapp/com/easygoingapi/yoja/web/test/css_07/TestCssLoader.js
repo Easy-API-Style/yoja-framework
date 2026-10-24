@@ -13,6 +13,8 @@ document.adoptedStyleSheets = [...document.adoptedStyleSheets, image.sheetEntiti
 const holder = Object.assign(document.createElement('div'), {className: 'image-holder'});
 document.body.append(holder);
 const imageUrl = getComputedStyle(holder).backgroundImage;
+await cssLoader.load('/shared.css');                 // a root first...
+const importer = await cssLoader.load('/importer.css');   // ...then imported
 
 // an import: quoted or not, url() or not; its media, its layer and its supports() told apart; a comment's import
 // not one; a string's comment kept
@@ -40,4 +42,10 @@ export function test_03() {
 // a relative url() resolved from its file, not from the page
 export function test_04() {
     ywAssert.assertEquals(true, imageUrl.includes('/sub/logo.png'));
+}
+
+// a file loaded as a root -- it imports one itself --, then imported: its sheet given all the same
+export function test_05() {
+    ywAssert.assertEquals(['/leaf.css', '/shared.css', '/importer.css'], importer.sheetEntities.map(entity => entity.path));
+    ywAssert.assertEquals(true, importer.sheetEntities.every(entity => entity.sheet instanceof CSSStyleSheet));
 }

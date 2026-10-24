@@ -28,6 +28,16 @@ const sectionDescriptions = [];
 
 // error
 const errorActions = [];
+
+/**
+ * @return an Error -- its stack, its message told -- holding the details given (path, httpStatus, nodes...): a
+ *         rejection's reason; {@code cause} (or {@code error}) its cause
+ */
+function yojaError(message, details = {}) {
+    const error = new Error(message, {cause: details.cause ?? details.error});
+    Object.assign(error, details);
+    return error;
+}
 let yojaWebReady = false;
 window.yojaWeb = {};
 window.yojaWeb.onError = action => {
@@ -45,68 +55,54 @@ const directiveAttributeId = 'yw-section-id';
 // path
 let version = null;
 
-// options: boolean force, boolean version
+/**
+ * A path of the application, its version added: an url of another origin is left as it is; one of the page's
+ * origin is its path -- its parameters and hash kept; the parameters added after the ones it holds.
+ *
+ * @param options {version (true by default), apiVersion, force (a date: never from a cache)}
+ */
 function formatPath(path, options) {
     const addApiVersion = options ? options.apiVersion : false;
     const addVersion = options ? options.version : true;
     const addDate = options ? options.force : false;
-    let result = path;
-    if (result) {
-        if (URL.canParse(result)) {
-           const url = URL.parse(result);
-           result = url.pathname;
-        }
-        const parameters = []
-        if (addVersion && version) {
-            parameters.push('version=' + version);
-        }
-        if (addApiVersion) {
-            parameters.push('apiVersion=' + apiVersion);
-        }
-        if (addDate) {
-            parameters.push('date=' + Date.now());
-        }
-        if (parameters.length) {
-            result = result + '?' + parameters.join('&');
-        }
+    if (!path) {
+        return path;
     }
-    return result;
+    if (URL.canParse(path) && URL.parse(path).origin !== window.location.origin) {
+        return path;   // another origin's: not the application's to version
+    }
+    const url = new URL(path, window.location.href);
+    if (addVersion && version && !url.searchParams.has('version')) {
+        url.searchParams.append('version', version);
+    }
+    if (addApiVersion) {
+        url.searchParams.append('apiVersion', apiVersion);
+    }
+    if (addDate) {
+        url.searchParams.append('date', Date.now());
+    }
+    // a relative path kept relative: resolved by its caller, as it was
+    const relative = !URL.canParse(path) && !path.startsWith('/');
+    const pathname = relative ? path.split(/[?#]/)[0] : url.pathname;
+    return pathname + url.search + url.hash;
 }
 
+/**
+ * A path a file declares (yw-css, yw-slot...), from that file: a relative one -- './x', '../x' or 'x' -- resolved
+ * from its folder, '.' and '..' resolved (one file, one path); then versioned (formatPath).
+ *
+ * @param fromPath the file declaring it (none: the page)
+ */
 function formatPathFrom(path, fromPath, options) {
-    let result;
-    if (path) {
-        if (URL.canParse(path)) {
-           const url = URL.parse(path);
-           path = url.pathname;
-        }
-        if (!fromPath) {
-            fromPath = window.location.pathname;
-        }
-        else if (URL.canParse(fromPath)) {
-            const url = URL.parse(fromPath);
-            fromPath = url.pathname;
-        }
-        const base = fromPath.substring(0, fromPath.lastIndexOf('/') + 1);
-        if (base) {
-            if (path.startsWith('./')) {
-                result = base + path.substring(2);
-            }
-            else if (path.startsWith('../')) {
-                result = base + path;
-            }
-            else {
-                result = path;
-            }
-        }
-        else {
-            result = path;
-        }
-        if (result) {
-            result = formatPath(result, options);
-        }
+    if (!path) {
+        return undefined;
     }
-    return result;
+    if (URL.canParse(path) && URL.parse(path).origin !== window.location.origin) {
+        return path;
+    }
+    const from = new URL(fromPath || window.location.pathname, window.location.href);
+    const url = new URL(path, from);
+    return formatPath(url.pathname + url.search + url.hash, options);
 }
 
 // config
@@ -210,7 +206,8 @@ function logCss(section, tab = 1) {
         console.info(' '.repeat(cssDeep * tab) + '<css path="' + jsUtil.onlyUrlPath(cssRootPath) + '"' + (inherited ? ' inherited' : '') +  ' />');
         section.css.graph.walkChildren(cssRootPath, h => {
             const deep = cssDeep + h.deep;
-            let message = '<css path="' + jsUtil.onlyUrlPath(h.node.path) + '"';
+            // a file is its node's id (cssLoader)
+            let message = '<css path="' + jsUtil.onlyUrlPath(section.css.graph.id(h.node)) + '"';
             if (h.recursive) {
                 message = message + ' recursive';
             }
@@ -426,8 +423,7 @@ class SectionService {
         let previousTag = tag;
         while (true) {
             const section = domUtil.closestSection(previousTag);
-            if (section 
-                  && section
+            if (section
                   && test(predicate, section)) {
                 result = section;
                 break;
@@ -491,6 +487,28 @@ class SectionService {
 const controlerReadyActions = {};
 const pageReadyActions = {};
 
+// id -> {tag, cleanups}: the sections built, until they leave the page (forgetGoneSections)
+const builtSections = new Map();
+
+/**
+ * Forgets the sections no more in the page -- their description, their ready actions, their media listeners:
+ * kept, a page rebuilding its screens would hold every one it ever built. Run before sections are built, so that
+ * a section's ready actions have run by then.
+ */
+function forgetGoneSections() {
+    for (const [id, built] of builtSections) {
+        if (!built.tag.isConnected) {
+            for (const cleanup of built.cleanups) {
+                cleanup();
+            }
+            builtSections.delete(id);
+            delete sectionDescriptions[id];
+            delete controlerReadyActions[id];
+            delete pageReadyActions[id];
+        }
+    }
+}
+
 const tagReadyActions = [];
 const documentReadyActions = [];
 
@@ -510,6 +528,9 @@ class Section {
         this.#id = sectionTag.getAttribute(directiveAttributeId);
         controlerReadyActions[this.#id] = [];
         pageReadyActions[this.#id] = [];
+        if (!builtSections.has(this.#id)) {
+            builtSections.set(this.#id, {tag: sectionTag, cleanups: []});
+        }
         this.#sectionTag = sectionTag;
         
         this.#languagePath = jsUtil.onlyUrlPath(section?.languagePath);
@@ -522,10 +543,19 @@ class Section {
         this.#sectionTag.ywSection = this;                 
         const controlerClass = section?.controler?.service;
         if (controlerClass) {
-            this.#controler = new controlerClass(this);
-            
-            this.#controler.className = function() {
-                return this.constructor.name;
+            try {
+                this.#controler = new controlerClass(this);
+                this.#controler.className = function() {
+                    return this.constructor.name;
+                }
+            }
+            catch (error) {
+                // the other sections built all the same: this one without its controler, said
+                this.#controler = undefined;
+                console.error('YojaWeb controler failed: ' + section?.controler?.path, error);
+                for (const action of errorActions) {
+                    action(error);
+                }
             }
         }
     }
@@ -799,7 +829,7 @@ class YojaWeb {
     
     findTags(selector, fromTag) {
         const tag = fromTag ? fromTag : document;
-        return domUtil.deepFindTags(tag, selector);;
+        return domUtil.deepFindTags(tag, selector);
     }
 
     walkTag(consumer, fromTag) {
@@ -918,17 +948,15 @@ class YojaWeb {
                                    }
                                    resolve(nodes);
                                })
-                               .catch(error => reject({
-                                   message: 'apply yoja on tags failed during refreshing language',
+                               .catch(error => reject(yojaError('apply yoja on tags failed during refreshing language', {
                                    nodes: nodes,
                                    error: error
-                               }));
+                               })));
             })
-            .catch(error => reject({
-                message: 'apply yoja on tags failed',
+            .catch(error => reject(yojaError('apply yoja on tags failed', {
                 nodes: nodes,
                 error: error
-            }));
+            })));
     }
     
     #addTag(mode, fromTag, path) {
@@ -941,14 +969,14 @@ class YojaWeb {
                     this.#addOnlyTag(mode, fromTag, children, path, resolve, reject);
                 }
                 else {
-                    reject({message: 'http request for append tag failed', 
+                    reject(yojaError('http request for append tag failed', { 
                             path: path,
                             httpStatus: response.status,
-                            httpBody: response.body});
+                            httpBody: response.body}));
                 }
             })
-            .catch(error => reject({message: 'append tag failed', 
-                                    error: error}));
+            .catch(error => reject(yojaError('append tag failed', { 
+                                    error: error})));
         });
     }    
     
@@ -1111,6 +1139,7 @@ function getIncludeMode(sectionTag) {
 }
 
 async function load(fromPath, fromTag) {
+    fromPath = fromPath || window.location.pathname;   // tags added out of any section's file: from the page
     loadedHtmlFiles.push(fromPath);
     const allPromises = [];
     for (const [index, sectionTag] of domUtil.findSection(fromTag).entries()) {
@@ -1131,15 +1160,15 @@ async function load(fromPath, fromTag) {
                                         resolve(result);
                                     }
                                     else {
-                                        reject({message: 'load yojaWeb include failed', 
+                                        reject(yojaError('load yojaWeb include failed', { 
                                                 path: includePath,
                                                 httpStatus: includeResponse.status,
-                                                httpBody: includeResponse.body});
+                                                httpBody: includeResponse.body}));
                                     }
                                })
-                               .catch(error => reject({message: 'load yojaWeb include failed',
+                               .catch(error => reject(yojaError('load yojaWeb include failed', {
                                                        path: includePath,
-                                                       cause: error}));
+                                                       cause: error})));
                 }
                 else {
                     resolve();
@@ -1165,15 +1194,15 @@ async function load(fromPath, fromTag) {
                                         resolve(result);
                                     }
                                     else {
-                                        reject({message: 'load yojaWeb slot failed', 
+                                        reject(yojaError('load yojaWeb slot failed', { 
                                                 path: slotPath,
                                                 httpStatus: slotResponse.status,
-                                                httpBody: slotResponse.body});
+                                                httpBody: slotResponse.body}));
                                     }
                                })
-                               .catch(error => reject({message: 'load yojaWeb slot failed',
+                               .catch(error => reject(yojaError('load yojaWeb slot failed', {
                                                        path: slotPath,
-                                                       cause: error}));
+                                                       cause: error})));
                 }
                 else {
                     resolve();
@@ -1198,9 +1227,9 @@ async function load(fromPath, fromTag) {
                         result.service = controler;
                         resolve(result);
                     })
-                    .catch(error => reject({message: 'load yojaWeb controler failed',
+                    .catch(error => reject(yojaError('load yojaWeb controler failed', {
                                             path: controlerPath,
-                                            cause: error}));
+                                            cause: error})));
                  }
                  else {
                     resolve();
@@ -1239,8 +1268,8 @@ async function load(fromPath, fromTag) {
                              section.children = children;
                              resolve(section);
                            })
-                           .catch(error => reject({message: 'load yojaWeb children slot failed',
-                                                   cause: error}));
+                           .catch(error => reject(yojaError('load yojaWeb children slot failed', {
+                                                   cause: error})));
                      }
                      else if (section.include
                                  && !loadedHtmlFiles.includes(section.include.path)) {
@@ -1250,15 +1279,15 @@ async function load(fromPath, fromTag) {
                             section.children = children;
                             resolve(section);
                           })
-                          .catch(error => reject({message: 'load yojaWeb children include failed',
-                                                  cause: error}));
+                          .catch(error => reject(yojaError('load yojaWeb children include failed', {
+                                                  cause: error})));
                      }
                      else {
                          resolve(section);
                      }
                   })
-                  .catch(error => reject({message: 'load yojaWeb controler/css/slot failed',
-                                          cause: error}));
+                  .catch(error => reject(yojaError('load yojaWeb controler/css/slot failed', {
+                                          cause: error})));
             })
         allPromises.push(includeTagPromises);
     }
@@ -1387,7 +1416,9 @@ function handleCssMedia(mediaQueryLists, shadow, index, cssSheet) {
                                            : cssSheetEmpty;
 }
 
+/** @return what removes the media listeners it adds */
 function addCssMediaListener(cssSheetEntities, shadow) {
+    const removals = [];
     for (let i = 0; i < cssSheetEntities.length; i++) {
         const cssSheet = cssSheetEntities[i].sheet;
         const cssMedias = cssSheetEntities[i].medias
@@ -1395,8 +1426,10 @@ function addCssMediaListener(cssSheetEntities, shadow) {
         if (cssMedias.length) {
             shadow.adoptedStyleSheets.push(cssSheetEmpty);
             const mediaQueryLists = cssMedias.map(cssMedia => window.matchMedia(cssMedia));
+            const listener = () => handleCssMedia(mediaQueryLists, shadow, i, cssSheet);
             for (const mediaQueryList of mediaQueryLists) {
-                mediaQueryList.addEventListener('change', () => handleCssMedia(mediaQueryLists, shadow, i, cssSheet));
+                mediaQueryList.addEventListener('change', listener);
+                removals.push(() => mediaQueryList.removeEventListener('change', listener));
             }
             handleCssMedia(mediaQueryLists, shadow, i, cssSheet);
         }
@@ -1404,12 +1437,15 @@ function addCssMediaListener(cssSheetEntities, shadow) {
             shadow.adoptedStyleSheets.push(cssSheet);
         }
     }
+    return () => removals.forEach(removal => removal());
 }
 
 function manageCss(section, sectionTag, shadow) {
+    // the section is registered once built: its media listeners kept until then, then handed to it
+    let removal = null;
     if (section?.css?.sheetEntities) {
         shadow.adoptedStyleSheets = [];
-        addCssMediaListener(section.css.sheetEntities, shadow);
+        removal = addCssMediaListener(section.css.sheetEntities, shadow);
     }
     else if (domUtil.isEmptyAttribute(sectionTag, 'yw-css')) {
         const parentSection = window.yojaWeb
@@ -1418,11 +1454,15 @@ function manageCss(section, sectionTag, shadow) {
         if (parentSection?.css?.sheetEntities) {
             // its parent's sheets, with listeners of its own: a media changing updates this shadow too
             shadow.adoptedStyleSheets = [];
-            addCssMediaListener(parentSection.css.sheetEntities, shadow);
+            removal = addCssMediaListener(parentSection.css.sheetEntities, shadow);
         }
         else if (parentSection?.shadowTag?.adoptedStyleSheets) {
             shadow.adoptedStyleSheets = parentSection.shadowTag.adoptedStyleSheets;
         }
+    }
+    if (removal) {
+        const id = sectionTag.getAttribute(directiveAttributeId);
+        builtSections.set(id, {tag: sectionTag, cleanups: [removal]});
     }
 }
 
@@ -1434,6 +1474,7 @@ function manageCss(section, sectionTag, shadow) {
 let idSequence = 0;
 
 function append(tag, loadedSections) {
+    forgetGoneSections();
     const sections = flatSections(loadedSections);
     
     const result = [];
@@ -1602,22 +1643,23 @@ async function applyYojaWebOnDocument() {
               });
 }
     
+/** The page failed: shown all the same -- what could be built, not a blank page --, the error said. */
+function failed(error) {
+    document.body.style.display = '';
+    console.error('YojaWeb failed: ' + error?.message, error);
+    for (const action of errorActions) {
+        action(error);
+    }
+}
+
 function ready() {
     document.removeEventListener('DOMContentLoaded', ready);
     window.removeEventListener('load', ready);
     try {
-        applyYojaWebOnDocument().catch(error => {
-            console.error('YojaWeb failed: ' + error.message, {cause: error})
-            for (const action of errorActions) {
-                action(error);
-            }
-        })
+        applyYojaWebOnDocument().catch(failed);
     }
-    catch(error) {
-        console.error('YojaWeb failed: ' + error.message, {cause: error});
-        for (const action of errorActions) {
-            action(error);
-        }
+    catch (error) {
+        failed(error);
     }
 }
 

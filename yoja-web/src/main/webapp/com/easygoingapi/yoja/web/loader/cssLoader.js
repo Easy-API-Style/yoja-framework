@@ -69,15 +69,18 @@ class CssLoader {
         links.reverse();
         for (const link of links) {
             const data = link.data || {};
-            if (recursiveService.isRecursive(path, link.node)) {
+            // a file is its node's id: the node a graph keeps is the first one given -- the path alone, when the
+            // file was a root before it was imported
+            const childPath = this.#fileGraph.id(link.node);
+            if (recursiveService.isRecursive(path, childPath)) {
                 continue;
             }
             if (data.supports && !CSS.supports(data.supports)) {
                 continue;   // not met by this browser: left out, and what it imports with it
             }
             const linkMedias = data.media ? [...medias, data.media] : medias;
-            result.push({path: link.node.path, media: data.media ?? null, medias: linkMedias});
-            this.#importPathsRecursively(recursiveService, link.node.path, linkMedias, result);
+            result.push({path: childPath, media: data.media ?? null, medias: linkMedias});
+            this.#importPathsRecursively(recursiveService, childPath, linkMedias, result);
         }
     }
 
@@ -150,7 +153,7 @@ class CssLoader {
             const onPath = new Set(ancestors).add(path);
             const children = [];
             for (const statement of file.imports) {
-                this.#fileGraph.addLink(path, {id: statement.path, path: statement.path},
+                this.#fileGraph.addLink(path, statement.path,
                                         {media: statement.media, supports: statement.supports, layer: statement.layer});
                 if (!onPath.has(statement.path)) {
                     children.push(this.#loadTree(statement.path, onPath));
