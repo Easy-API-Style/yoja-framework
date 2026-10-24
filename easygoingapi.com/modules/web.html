@@ -532,27 +532,40 @@
 
     <div class="api-class">
       <h3 id="websocketservice"><code>webSocketService</code> <span class="kind">service</span></h3>
-      <p>WebSocket client. <code>webSocket(request)</code> opens a new connection or returns the existing one for the same URL.</p>
+      <p>WebSocket client: one socket per URL of the application, on its own host and port, the URL as is. A socket closed -- by <code>close()</code>, by the server, the network, its opening timeout -- is over: its listeners are dropped, <code>webSocket(url)</code> gives a new one. Each event is told to the list (<code>on…</code>), then to the map (<code>put…</code>), in their order; a listener throwing does not keep the others from it.</p>
 
       <span class="api-table-group">Connection</span>
       <table class="api-table">
         <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td><code>webSocket(request)</code></td><td class="ret"><code>WebSocket</code></td><td class="desc">Open or reuse a connection; request is <code>{ url }</code> or a URL string</td></tr>
-          <tr><td><code>send(request, data)</code></td><td class="ret"><code>Promise</code></td><td class="desc">Send text or binary data on the connection identified by <code>request</code></td></tr>
-          <tr><td><code>close(request [, code [, reason]])</code></td><td class="ret"><code>void</code></td><td class="desc">Close the connection</td></tr>
+          <tr><td><code>webSocket(url)</code></td><td class="ret"><code>WebSocket</code></td><td class="desc">The socket of the URL: opened at once, the same until it is closed</td></tr>
+          <tr><td><code>send(url, data)</code></td><td class="ret"><code>Promise</code></td><td class="desc">Send text or binary data; rejected when it cannot open within its timeout (5s), or is closed</td></tr>
+          <tr><td><code>close(url [, code [, reason]])</code></td><td class="ret"><code>Promise</code></td><td class="desc">Close it for good, once closed; its restart stopped</td></tr>
+          <tr><td><code>autoRestart(url [, enabled])</code></td><td class="ret"><code>void</code></td><td class="desc">Restart it when closed otherwise than by <code>close()</code>: 1s, 2s, 4s… up to 30s, at once when back online or shown; its map's listeners put on the new one, <code>restart</code> told once open</td></tr>
         </tbody>
       </table>
 
-      <span class="api-table-group">Handlers</span>
+      <span class="api-table-group">Handlers -- the list (only added to)</span>
       <table class="api-table">
         <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td><code>onOpen(request, callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires when the socket is opened</td></tr>
-          <tr><td><code>onMessage(request, callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires on each incoming message</td></tr>
-          <tr><td><code>onClose(request, callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires when the socket is closed</td></tr>
-          <tr><td><code>onError(request, callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires on socket error</td></tr>
-          <tr><td><code>on(eventType, request, callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Raw event listener for any WebSocket event type</td></tr>
+          <tr><td><code>onOpen(url, callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires when the socket is opened</td></tr>
+          <tr><td><code>onMessage(url, callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires on each incoming message</td></tr>
+          <tr><td><code>onClose(url, callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires when the socket is closed</td></tr>
+          <tr><td><code>onError(url, callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires on socket error</td></tr>
+          <tr><td><code>onRestart(url, callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires when a restarted socket is open (<code>autoRestart</code>; the list is not put on the new one: use the map)</td></tr>
+          <tr><td><code>on(eventType, url, callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Any of <code>open</code>, <code>message</code>, <code>close</code>, <code>error</code>, <code>restart</code></td></tr>
+        </tbody>
+      </table>
+
+      <span class="api-table-group">Handlers -- the map (under a key)</span>
+      <table class="api-table">
+        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>put(eventType, url, key, callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Listen under a key: put again, it replaces the one it had, at its place</td></tr>
+          <tr><td><code>putOpen / putMessage / putClose / putError / putRestart(url, key, callback)</code></td><td class="ret"><code>void</code></td><td class="desc">The same, for that event</td></tr>
+          <tr><td><code>remove(eventType, url, key)</code></td><td class="ret"><code>void</code></td><td class="desc">Listen no more under that key</td></tr>
+          <tr><td><code>has(eventType, url, key)</code></td><td class="ret"><code>boolean</code></td><td class="desc">Whether a listener is put under that key</td></tr>
         </tbody>
       </table>
     </div>

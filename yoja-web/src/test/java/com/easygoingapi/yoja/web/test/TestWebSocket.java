@@ -20,6 +20,7 @@ package com.easygoingapi.yoja.web.test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.time.Duration;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
@@ -155,4 +156,56 @@ public class TestWebSocket {
                          .stream();
     }
     
+    /** The list and the map: the list told first, then the map in its order -- a key put again replaced at its
+     *  place, a listener failing not keeping the others from it, a key removed told no more. Closed: from zero. */
+    @TestFactory
+    public Stream<DynamicNode> testWebSocket_07() {
+        final AtomicReference<String> message = new AtomicReference<>();
+        final WebSocket webSocket = new WebSocket("/websocket/test");
+        webSocket.onTextMessage(v -> message.set(v.message()));
+        return TestConfig.initialize()
+                         .webResource("com.easygoingapi.yoja.web.test.websocket")
+                         .webSocket(webSocket)
+                         .startYojaWeb(ScriptOption.apply().loadYwAssert())
+                         .repeatTestModuleUntil(Duration.ofSeconds(10), "/TestWebSocket_01.js")
+                         .loadModule("/TestWebSocket_11.js")
+                         .await(Duration.ofSeconds(2))
+                         .test("the page listening", c -> assertEquals("ready", message.get()))
+                         .test("send one", c -> webSocket.send("one"))
+                         .repeatTestModuleUntil(Duration.ofSeconds(10), "/TestWebSocket_12.js")
+                         .loadModule("/TestWebSocket_13.js")
+                         .test("send two", c -> webSocket.send("two"))
+                         .repeatTestModuleUntil(Duration.ofSeconds(10), "/TestWebSocket_14.js")
+                         .testAsyncModule("/TestWebSocket_15.js")
+                         .stream();
+    }
+
+    /** Restarted when the server closes it -- its map's listeners on the new one, 'restart' told --; closed by
+     *  the page, it is not. */
+    @TestFactory
+    public Stream<DynamicNode> testWebSocket_08() {
+        final AtomicInteger opens = new AtomicInteger();   // the server's, for every browser in turn
+        final AtomicInteger before = new AtomicInteger();  // the ones before this browser's restart
+        final WebSocket webSocket = new WebSocket("/websocket/test");
+        webSocket.onOpen(v -> opens.incrementAndGet());
+        return TestConfig.initialize()
+                         .webResource("com.easygoingapi.yoja.web.test.websocket")
+                         .webSocket(webSocket)
+                         .startYojaWeb(ScriptOption.apply().loadYwAssert())
+                         .repeatTestModuleUntil(Duration.ofSeconds(10), "/TestWebSocket_01.js")
+                         .loadModule("/TestWebSocket_16.js")
+                         .test("the server closes it", c -> {
+                             before.set(opens.get());
+                             webSocket.close();
+                         })
+                         .repeatTestModuleUntil(Duration.ofSeconds(15), "/TestWebSocket_17.js")
+                         .test("opened again, once", c -> assertEquals(before.get() + 1, opens.get()))
+                         .test("send after", c -> webSocket.send("after"))
+                         .repeatTestModuleUntil(Duration.ofSeconds(10), "/TestWebSocket_18.js")
+                         .loadModule("/TestWebSocket_19.js")
+                         .await(Duration.ofSeconds(5))
+                         .test("closed by the page: not opened again", c -> assertEquals(before.get() + 1, opens.get()))
+                         .stream();
+    }
+
 }

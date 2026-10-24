@@ -1085,45 +1085,55 @@ storage.onEvent((scope, method, key, value) => {
 
 ### webSocketService
 
-WebSocket wrapper with state management and event hooks.
+One WebSocket per URL of the application -- on its own host and port (`wss://` or `ws://` from the page's
+protocol), the URL as is: it is the socket's key.
 
 ```js
 const ws = window.yojaWebApi.webSocketService;
 ```
 
 ```js
-// Open a connection (auto-detects wss:// or ws:// from page protocol)
-const socket = ws.webSocket('/api/ws/chat');
+// The socket of a URL (opened at once; the same one until it is closed)
+const socket = ws.webSocket('/ws/chat');
 
-// Send a message
-ws.send(socket, { type: 'chat', text: 'Hello' });
+// Send (a promise: settled once sent, rejected when it cannot open within its timeout, 5s by default)
+ws.send('/ws/chat', JSON.stringify({type: 'chat', text: 'Hello'}));
 
-// Close
-ws.close(socket);
+// Listen -- the list: only added to, for the listeners set once (a module, a service)
+ws.onMessage('/ws/chat', message => console.log('received:', JSON.parse(message.data)));
+ws.onOpen('/ws/chat', event => console.log('connected'));
+ws.onClose('/ws/chat', event => console.log('closed, code:', event.code));
+ws.onError('/ws/chat', event => console.error('ws error', event));
+ws.on('message', '/ws/chat', handler);   // generic: open | message | close | error | restart
 
-// Event hooks
-ws.onOpen(socket, event => {
-    console.log('connected');
-});
+// Listen -- the map: under a key the application chooses (a screen's name). Put again under the same key, a
+// listener replaces the one it had -- at its place: a screen built again does not add one more
+ws.putMessage('/ws/chat', 'chatScreen', message => render(message.data));
+ws.has('message', '/ws/chat', 'chatScreen');      // -> true
+ws.remove('message', '/ws/chat', 'chatScreen');
+ws.put('message', '/ws/chat', 'chatScreen', handler);   // generic
 
-ws.onMessage(socket, message => {
-    const data = JSON.parse(message.data);
-    console.log('received:', data);
-});
-
-ws.onClose(socket, event => {
-    console.log('closed, code:', event.code);
-});
-
-ws.onError(socket, error => {
-    console.error('ws error', error);
-});
-
-// Generic event hook
-ws.on(socket, 'message', handler);
+// Close -- for good: its listeners are dropped, webSocket(url) then gives a new one, from zero
+ws.close('/ws/chat', 1000, 'bye');
 ```
 
-Connection timeout is 5 seconds. If the server does not respond within that window, the socket is closed.
+Each event is told to the list, then to the map, in the order they were added; a listener throwing does not keep
+the others from being told.
+
+A socket closed -- by `close()`, by the server, the network, its opening timeout -- is over: `send()` on it is
+refused, and `webSocket(url)` gives a new one, with no listener.
+
+**Restart** -- opt in, per URL:
+
+```js
+ws.autoRestart('/ws/chat');                       // ws.autoRestart('/ws/chat', false): no more
+ws.putRestart('/ws/chat', 'chatScreen', () => reloadMessages());
+```
+
+A socket closed otherwise than by `close()` is restarted, from zero: after 1s, 2s, 4s... up to 30s (a part of it at
+random) -- at once when the network comes back or the page is shown again, never while offline or hidden. Its map's
+listeners are put on the new one (not its list's); once open, it tells `restart`. What was sent meanwhile is lost:
+the application reads its data again on `restart`. `close()` stops it.
 
 ---
 
