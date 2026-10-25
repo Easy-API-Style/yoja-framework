@@ -50,12 +50,12 @@ export function test_02() {
     ywAssert.assertEquals('s1,s1a', names(walked).join(','));
 }
 
-// firstTag: the nearest one first, not into the sections; findTags: every one
+// firstTag, findTags: in the document's order -- as querySelector --, not into the sections
 export function test_03() {
     const root = tag('root', {}, tag('a', {}, tag('deep', {class: 'm'})), tag('b', {class: 'm'}),
                      tag('section', {'yw-controler': 'x'}, tag('inSection', {class: 'm'})));
-    ywAssert.assertEquals('b', domUtil.firstTag(root, '.m').dataset.name);
-    ywAssert.assertEquals('b,deep', names(domUtil.findTags(root, '.m')).join(','));
+    ywAssert.assertEquals('deep', domUtil.firstTag(root, '.m').dataset.name);
+    ywAssert.assertEquals('deep,b', names(domUtil.findTags(root, '.m')).join(','));
 }
 
 // deepFirstTag / deepFindTags: into the sections and the shadow roots; a selector's spaces, '>' and ',' inside
@@ -72,6 +72,14 @@ export function test_04() {
     ywAssert.assertEquals(input, domUtil.deepFirstTag(root, '.form input[placeholder="a > b, c"]'));
     ywAssert.assertEquals('q', domUtil.deepFirstTag(root, ':is(.p, .q)').dataset.name);
     ywAssert.assertEquals('inner,q', names(domUtil.deepFindTags(root, '.inner, .q')).join(','));
+    // a list: the first one in the document's order, whichever of its selectors it matches
+    ywAssert.assertEquals('inner', domUtil.deepFirstTag(root, '.q, .inner').dataset.name);
+    ywAssert.assertEquals('inner,q', names(domUtil.deepFindTags(root, '.q, .inner')).join(','));
+    // a descendant first in the document's order, the ancestors matched right to left
+    const ordered = tag('ordered', {}, tag('x1', {class: 'x'}, tag('y-in-x1', {class: 'y'})), tag('y-out', {class: 'y'}),
+                        tag('x2', {class: 'x'}, tag('y-in-x2', {class: 'y'})));
+    ywAssert.assertEquals('y-in-x1,y-in-x2', names(domUtil.deepFindTags(ordered, '.x .y')).join(','));
+    ywAssert.assertEquals('y-in-x1', domUtil.deepFirstTag(ordered, '.x > .y').dataset.name);
     let refused = null;
     try {
         domUtil.deepFirstTag(root, '.form + .host');

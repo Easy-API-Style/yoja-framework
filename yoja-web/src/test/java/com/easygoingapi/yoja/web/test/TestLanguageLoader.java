@@ -61,7 +61,8 @@ public class TestLanguageLoader {
                          .testJsUnit("/TestLanguageLoader.js",
                                      List.of("test_01",
                                              "test_02",
-                                             "test_03"))
+                                             "test_03",
+                                             "test_04"))
                          .stream();
     }
 

@@ -408,4 +408,25 @@ public class TestLanguageService {
                          .stream();
     }
     
+    /** The page shown translated; a key missing, empty; a tag, a section in sections translated once; an action failing;
+     *  a tag added; the storage failing. */
+    @TestFactory
+    public Stream<DynamicNode> testLanguageService_10() {
+        return TestConfig.initialize()
+                         .webResource("com.easygoingapi.yoja.web.test.language_10")
+                         .test("load page 1", c -> c.getHttpPage(Duration.ofSeconds(2),
+                                                                 c.httpUrlBuilder()
+                                                                  .path("/home.html")
+                                                                  .build()))
+                         .loadYwAssert()
+                         .testJsUnit("/TestLanguageService_10.js",
+                                     List.of("test_01",
+                                             "test_02",
+                                             "test_03",
+                                             "test_04",
+                                             "test_05",
+                                             "test_06"))
+                         .stream();
+    }
+
 }

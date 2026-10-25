@@ -17,6 +17,7 @@
  */
 'use strict'
 const urlParameterUtil = await import(yojaWeb.path('../util/urlParameterUtil.js'));
+const {Listeners} = await import(yojaWeb.path('../util/listenerUtil.js'));
 
 const originBack = window.history.back;
 const originForward = window.history.forward;
@@ -77,7 +78,8 @@ class UrlParameterService {
     
     #hash = null;
     #urlParameter = null;
-    #onChangeActions = [];
+    // the application's actions: onChange(action) gives back its off (listenerUtil)
+    #onChangeActions = new Listeners('urlParameterService change');
     
     constructor() {
         this.#updateUrlParameter();
@@ -185,8 +187,8 @@ class UrlParameterService {
 
     #applyOnChange(handler) {
         let result = true;
-        for (const action of this.#onChangeActions) {
-            if (action(handler) === false) {
+        for (const action of this.#onChangeActions.actions()) {
+            if (this.#onChangeActions.call(action, handler) === false) {
                 result = false;
             }
         }
@@ -194,7 +196,7 @@ class UrlParameterService {
     }
     
     onChange(callback) {
-        this.#onChangeActions.push(callback);
+        return this.#onChangeActions.add(callback);
     }
     
     // action [ push | replace ]
@@ -458,8 +460,9 @@ export function toUrlQueryWithHash() {
  *           | load
  * 
  */
+/** @return its off */
 export function onChange(callback) {
-    urlParameterService.onChange(callback);
+    return urlParameterService.onChange(callback);
 }
 
 

@@ -17,6 +17,8 @@
  */
 package com.easygoingapi.yoja.web.test;
 
+import io.vertx.core.json.JsonObject;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.ArrayList;
@@ -180,4 +182,50 @@ public class TestHttpClient {
                              .stream();
         }
     
+    /** A json body empty or not json, text/xml, a +json; a header's case; a body's type; a post with none; an
+     *  action failing; fetch's failure. */
+    @TestFactory
+    public Stream<DynamicNode> testHttpClient_fixes() {
+        final WebService empty = new WebService(HttpMethod.GET, "/empty.json", h -> {
+            h.response().putHeader("content-type", "application/json");
+            h.response().send("");
+        });
+        final WebService bad = new WebService(HttpMethod.GET, "/bad.json", h -> {
+            h.response().putHeader("content-type", "application/json");
+            h.response().send("<html>not json</html>");
+        });
+        final WebService xml = new WebService(HttpMethod.GET, "/data.xml", h -> {
+            h.response().putHeader("content-type", "text/xml");
+            h.response().send("<a>1</a>");
+        });
+        final WebService problem = new WebService(HttpMethod.GET, "/problem", h -> {
+            h.response().putHeader("content-type", "application/problem+json");
+            h.response().send("{\"title\":\"Not found\"}");
+        });
+        final WebService echo = new WebService(HttpMethod.POST, "/echo", h -> {
+            h.response().putHeader("content-type", "application/json");
+            h.response().send(new JsonObject().put("contentType", h.request().header("content-type"))
+                                              .put("body", h.request().bodyAsText() == null ? "" : h.request().bodyAsText())
+                                              .encode());
+        });
+        return TestConfig.initialize()
+                         .startYojaWeb(ScriptOption.apply().loadYwAssert())
+                         .webService(empty)
+                         .webService(bad)
+                         .webService(xml)
+                         .webService(problem)
+                         .webService(echo)
+                         .webResource("com.easygoingapi.yoja.web.test.http.client2")
+                         .testModule("/TestHttpClient_fix_01.js")
+                         .testModule("/TestHttpClient_fix_02.js")
+                         .testModule("/TestHttpClient_fix_03.js")
+                         .testModule("/TestHttpClient_fix_04.js")
+                         .testModule("/TestHttpClient_fix_05.js")
+                         .testModule("/TestHttpClient_fix_06.js")
+                         .testModule("/TestHttpClient_fix_07.js")
+                         .testModule("/TestHttpClient_fix_08.js")
+                         .testModule("/TestHttpClient_fix_09.js")
+                         .stream();
+    }
+
 }

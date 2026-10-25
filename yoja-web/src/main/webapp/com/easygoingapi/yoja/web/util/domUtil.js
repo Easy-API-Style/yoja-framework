@@ -291,24 +291,24 @@ export function getTagPath(tag) {
  */
 
 /**
- * Looks for the tags matching the selector under one, through the shadow roots: at each tag, its children first --
- * the nearest found first: not the document's order -- then under each of them.
+ * Looks for the tags matching the selector under one, in the document's order -- as querySelector does --, through
+ * the shadow roots: each tag before its own, its children before its shadow root's.
  *
  * @param options {first: the first one found only, deep: into the sections too (else neither a section nor its
  *                tags are found)}
  * @return {@code true} once the first one is found (options.first)
  */
 function findRecursively(selector, parent, result, options) {
-    const children = allChildren(parent).filter(child => options.deep || !isSection(child));
-    for (const child of children) {
+    for (const child of allChildren(parent)) {
+        if (!options.deep && isSection(child)) {
+            continue;
+        }
         if (child.matches(selector)) {
             result.push(child);
             if (options.first) {
                 return true;
             }
         }
-    }
-    for (const child of children) {
         if (findRecursively(selector, child, result, options) && options.first) {
             return true;
         }
@@ -316,7 +316,7 @@ function findRecursively(selector, parent, result, options) {
     return false;
 }
 
-/** @return the first tag matching the selector under one, not in its sections (see findRecursively's order) */
+/** @return the first tag matching the selector under one, in the document's order, not in its sections */
 export function firstTag(from, selector) {
     const tags = [];
     findRecursively(selector, from, tags, {first: true, deep: false});
@@ -403,48 +403,86 @@ function splitSelector(selector) {
     return selectors.filter(compounds => compounds.length);
 }
 
+/** @return the tag's parent: its parent element, or the host of the shadow root it is in -- null at the top */
+function parentOf(tag) {
+    if (tag.parentElement) {
+        return tag.parentElement;
+    }
+    return tag.parentNode instanceof ShadowRoot ? tag.parentNode.host : null;
+}
+
 /**
- * Looks for the tags matching a selector under one, into the sections and through the shadow roots: each compound
- * of it looked for under the tags the one before it found (a space), or among their children ('>').
- *
- * @param first the first one only: of the first selector of a list (a, b) that finds one -- not the document's
- *              first
+ * @param compounds a selector's compounds and its '>' combinators (splitSelector)
+ * @return its steps, left to right: [{compound, child: whether a '>' leads to it}]
  */
-function deepTag(from, selector, first) {
-    const allResult = [];
-    for (const compounds of splitSelector(selector)) {
-        let fromTags = [from];
-        for (let i = 0; i < compounds.length; i++) {
-            const child = compounds[i] === '>';
-            if (child) {
-                i++;
-            }
-            const isLast = i === compounds.length - 1;
-            const tags = [];
-            for (const fromTag of fromTags) {
-                if (child) {
-                    tags.push(...allChildren(fromTag, compounds[i]));
-                }
-                else {
-                    findRecursively(compounds[i], fromTag, tags, {first: isLast && first, deep: true});
-                }
-            }
-            fromTags = tags;
-        }
-        if (first) {
-            if (fromTags.length) {
-                return fromTags[0];
-            }
+function stepsOf(compounds) {
+    const steps = [];
+    let child = false;
+    for (const token of compounds) {
+        if (token === '>') {
+            child = true;
         }
         else {
-            for (const tag of fromTags) {
-                if (!allResult.includes(tag)) {
-                    allResult.push(tag);
-                }
-            }
+            steps.push({compound: token, child: child});
+            child = false;
         }
     }
-    return first ? null : allResult;
+    return steps;
+}
+
+/**
+ * Whether a tag matches a selector's steps, read right to left as a browser does -- its ancestors through the shadow
+ * hosts --, within the tag looked from: an ancestor matched is under it.
+ *
+ * @param index the step the tag is to match
+ */
+function matchesSteps(tag, steps, index, from) {
+    if (!tag.matches(steps[index].compound)) {
+        return false;
+    }
+    if (index === 0) {
+        // the first step: under the tag looked from -- right under it, after a leading '>'
+        return !steps[0].child || parentOf(tag) === from || (from.nodeType === Node.DOCUMENT_NODE && !parentOf(tag));
+    }
+    let ancestor = parentOf(tag);
+    if (steps[index].child) {
+        return ancestor !== null && ancestor !== from && matchesSteps(ancestor, steps, index - 1, from);
+    }
+    while (ancestor && ancestor !== from) {
+        if (matchesSteps(ancestor, steps, index - 1, from)) {
+            return true;
+        }
+        ancestor = parentOf(ancestor);
+    }
+    return false;
+}
+
+/**
+ * Looks for the tags matching a selector under one, in the document's order -- as querySelector does --, into the
+ * sections and through the shadow roots: a space reaches through them (a descendant), '>' a child -- a shadow
+ * root's being its host's; a list (a, b): a tag matching any of them, once.
+ *
+ * @param first the first one only
+ */
+function deepTag(from, selector, first) {
+    const stepsList = splitSelector(selector).map(stepsOf);
+    const result = [];
+    const visit = parent => {
+        for (const tag of allChildren(parent)) {
+            if (stepsList.some(steps => matchesSteps(tag, steps, steps.length - 1, from))) {
+                result.push(tag);
+                if (first) {
+                    return true;
+                }
+            }
+            if (visit(tag)) {
+                return true;
+            }
+        }
+        return false;
+    };
+    visit(from);
+    return first ? result[0] ?? null : result;
 }
 
 export function deepFirstTag(from, selector) {

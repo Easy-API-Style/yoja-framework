@@ -1,7 +1,6 @@
 'use strict';
 
-// 'b' removed: told no more
-const webSocketService = yojaWebApi.webSocketService;
-
-webSocketService.remove('message', '/websocket/test', 'b');
+// 'b' taken off -- twice: the second, nothing --: told no more
+window.offB();
+window.offB();
 window.wsLog = [];

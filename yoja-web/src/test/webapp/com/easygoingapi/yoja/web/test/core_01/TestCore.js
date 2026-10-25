@@ -22,3 +22,18 @@ export function test_02() {
 export function test_03() {
     ywAssert.assertEquals('yes', panel.dataset.built);
 }
+
+// a predicate: a function, or none -- anything else a mistake said, not every section kept unseen
+export function test_04() {
+    const sectionService = yojaWeb.sectionService;
+    ywAssert.assertEquals(true, sectionService.first(document) !== null);
+    ywAssert.assertEquals('good', sectionService.first(document, section => section.tag.classList.contains('good')).tag.className);
+    let refused = null;
+    try {
+        sectionService.first(document, '.good');
+    }
+    catch (error) {
+        refused = error;
+    }
+    ywAssert.assertEquals(true, refused instanceof TypeError);
+}

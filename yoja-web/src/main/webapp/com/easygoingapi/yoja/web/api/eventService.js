@@ -17,6 +17,7 @@
  */
 'use strict'
 const jsUtil = await import(yojaWeb.path('../util/javascriptUtil.js'));
+const listenerUtil = await import(yojaWeb.path('../util/listenerUtil.js'));
 
 class YojaAction {
     
@@ -83,8 +84,16 @@ class YojaEvent {
     }
     
     trigger(parameter) {
-        for (const yojaAction of this.#yojaActions) {
+        for (const yojaAction of [...this.#yojaActions]) {
             yojaAction.action(parameter);
+        }
+    }
+
+    /** Removes the action -- not its position: another one may be there now. */
+    removeYojaAction(yojaAction) {
+        const index = this.#yojaActions.indexOf(yojaAction);
+        if (index >= 0) {
+            this.#yojaActions.splice(index, 1);
         }
     }
     
@@ -243,24 +252,30 @@ class YojaEventService {
         return result;
     }
 
+    /**
+     * @return its off: called, the action is removed from its event -- removed already (removeAction, remove), or
+     *         the event removed: nothing
+     * @throws TypeError when the event id is not a string or the action holds no function
+     */
     on(eventId, action) {
-        if (action) {
-            if (jsUtil.isString(eventId)
-                  && (jsUtil.isFunction(action) || jsUtil.isFunction(action.action))) {
-                const yojaEvent = this.#yojaEvents[eventId];
-                if (yojaEvent) {
-                    yojaEvent.addAction(action);
-                }
-                else {
-                    const yojaEvent = new YojaEvent(eventId);
-                    yojaEvent.addAction(action);
-                    this.#yojaEvents[eventId] = yojaEvent;
-                }
-            }
+        if (!jsUtil.isString(eventId)
+              || !action
+              || !(jsUtil.isFunction(action) || jsUtil.isFunction(action.action)
+                     || action.action instanceof YojaAction)) {
+            throw new TypeError('eventService: on(eventId, action), not ' + eventId + ' ' + action);
         }
+        let yojaEvent = this.#yojaEvents[eventId];
+        if (!yojaEvent) {
+            yojaEvent = new YojaEvent(eventId);
+            this.#yojaEvents[eventId] = yojaEvent;
+        }
+        const yojaAction = yojaEvent.addAction(action);
+        return () => yojaEvent.removeYojaAction(yojaAction);
     }
     
     trigger(query, parameter) {
+        // the sections gone forgotten first: their actions, tracked, not told
+        listenerUtil.sweepGone();
         const yojaEvents = this.events(query);
         for (const yojaEvent of yojaEvents) {
             if (yojaEvent.isActive()) {
@@ -364,9 +379,10 @@ export function remove(query) {
  *           | { label: String, 
  *               position: Integer
  *               action: Function } 
+ *  @return its off
  */
 export function on(eventId, action) {
-    yojaEventService.on(eventId, action);
+    return yojaEventService.on(eventId, action);
 }
 
 export function trigger(query, parameter) {

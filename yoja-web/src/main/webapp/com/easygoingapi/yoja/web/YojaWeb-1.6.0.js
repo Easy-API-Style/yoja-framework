@@ -26,8 +26,8 @@ if (!scriptTag) {
 
 const sectionDescriptions = [];
 
-// error
-const errorActions = [];
+// error: the actions given while the config loads -- {action, off}, off once they are listeners (errorActions)
+const earlyErrorActions = [];
 
 /**
  * @return an Error -- its stack, its message told -- holding the details given (path, httpStatus, nodes...): a
@@ -41,7 +41,9 @@ function yojaError(message, details = {}) {
 let yojaWebReady = false;
 window.yojaWeb = {};
 window.yojaWeb.onError = action => {
-    errorActions.push(action);
+    const early = {action: action, off: null};
+    earlyErrorActions.push(early);
+    return () => early.off ? early.off() : earlyErrorActions.splice(earlyErrorActions.indexOf(early) >>> 0, 1);
 }
 window.yojaWeb.isReady = function() {
     return yojaWebReady;
@@ -62,9 +64,10 @@ let version = null;
  * @param options {version (true by default), apiVersion, force (a date: never from a cache)}
  */
 function formatPath(path, options) {
-    const addApiVersion = options ? options.apiVersion : false;
-    const addVersion = options ? options.version : true;
-    const addDate = options ? options.force : false;
+    // an option not given keeps its default: {force: true} is versioned too
+    const addApiVersion = options?.apiVersion ?? false;
+    const addVersion = options?.version ?? true;
+    const addDate = options?.force ?? false;
     if (!path) {
         return path;
     }
@@ -108,18 +111,15 @@ function formatPathFrom(path, fromPath, options) {
 // config
 let config = {};
 
-try {
-    const configPath = scriptTag ? scriptTag?.getAttribute('yw-config-path') : null;
-    if (configPath) {
-        const configModule = await import(formatPath(configPath, {force: true, version: false}))
-                                     .catch(error => console.warn('yojaWeb no config file: ' + configPath, {cause: error}));
-        if (configModule.default) {
-            config = configModule.default;
-        }
+const configPath = scriptTag?.getAttribute('yw-config-path');
+if (configPath) {
+    try {
+        const configModule = await import(formatPath(configPath, {force: true, version: false}));
+        config = configModule.default || {};
     }
-}
-catch(error) {
-    config = {};
+    catch (error) {
+        console.warn('yojaWeb no config file: ' + configPath, {cause: error});
+    }
 }
 
 console.info('yojaWeb config: ', config);
@@ -127,22 +127,34 @@ if (config.version) {
     version = config.version;
 }
 
+/**
+ * @param predicate a function of the element -- none (null, undefined): every element
+ * @return whether the element is one the predicate keeps
+ * @throws TypeError when the predicate is something else: a mistake said, not every element kept unseen
+ */
 function test(predicate, element) {
-    let result = false;
-    if (element) {
-        if (predicate instanceof Function) { 
-            result = predicate(element);
-        }
-        else {
-            result = true;
-        }
+    if (!element) {
+        return false;
     }
-    return result;
+    if (predicate === undefined || predicate === null) {
+        return true;
+    }
+    if (predicate instanceof Function) {
+        return Boolean(predicate(element));
+    }
+    throw new TypeError('yojaWeb: a predicate is a function, not ' + typeof predicate + ': ' + predicate);
 }
 
 // dom 
 const domUtil = await import(formatPath('./util/domUtil.js'));
 const jsUtil = await import(formatPath('./util/javascriptUtil.js'));
+
+// listeners: every onXXX(action) gives back its off (listenerUtil)
+const listenerUtil = await import(formatPath('./util/listenerUtil.js'));
+const errorActions = new listenerUtil.Listeners('YojaWeb error', {report: false});
+for (const early of earlyErrorActions) {
+    early.off = errorActions.add(early.action);
+}
 
 function logSection(section, option) {
     const directiveName = section.include ? includeDirectiveName : sectionDirectiveName;
@@ -218,10 +230,11 @@ function logCss(section, tab = 1) {
             console.info(' '.repeat(cssDeep * tab) + '<css-cascade>');
             for (const cssSheetEntity of section.css.sheetEntities) {
                 if (cssSheetEntity.media) {
+                    const medias = cssSheetEntity.medias ?? [cssSheetEntity.media];   // every one along its path
                     console.info(' '.repeat((cssDeep + 1) * tab)
                                     + '<css path="' + jsUtil.onlyUrlPath(cssSheetEntity.path) + '"'
                                     + ' media="' + cssSheetEntity.media +'"'
-                                    + ' active="' + window.matchMedia(cssSheetEntity.media).matches + '" />');
+                                    + ' active="' + medias.every(media => window.matchMedia(media).matches) + '" />');
                 }
                 else {
                     console.info(' '.repeat((cssDeep + 1) * tab)
@@ -487,17 +500,19 @@ class SectionService {
 const controlerReadyActions = {};
 const pageReadyActions = {};
 
-// id -> {tag, cleanups}: the sections built, until they leave the page (forgetGoneSections)
+// id -> {tag, cleanups, ready}: the sections built, until they leave the page (forgetGoneSections) -- ready once
+// their ready actions have run
 const builtSections = new Map();
 
 /**
  * Forgets the sections no more in the page -- their description, their ready actions, their media listeners:
- * kept, a page rebuilding its screens would hold every one it ever built. Run before sections are built, so that
- * a section's ready actions have run by then.
+ * kept, a page rebuilding its screens would hold every one it ever built. Only a section whose ready actions have
+ * run: an addition still loading is not touched.
  */
 function forgetGoneSections() {
     for (const [id, built] of builtSections) {
-        if (!built.tag.isConnected) {
+        // not ready: an addition still loading -- its tags maybe not in the page yet -- keeps it
+        if (built.ready && !built.tag.isConnected) {
             for (const cleanup of built.cleanups) {
                 cleanup();
             }
@@ -509,8 +524,11 @@ function forgetGoneSections() {
     }
 }
 
-const tagReadyActions = [];
-const documentReadyActions = [];
+// before an event is told, the sections gone forgotten; an action failed, the error actions told
+listenerUtil.hookWith({sweep: forgetGoneSections,
+                       report: error => errorActions.run(error)});
+const tagReadyActions = new listenerUtil.Listeners('YojaWeb tagReady');
+const documentReadyActions = new listenerUtil.Listeners('YojaWeb documentReady');
 
 class Section {
 
@@ -529,7 +547,7 @@ class Section {
         controlerReadyActions[this.#id] = [];
         pageReadyActions[this.#id] = [];
         if (!builtSections.has(this.#id)) {
-            builtSections.set(this.#id, {tag: sectionTag, cleanups: []});
+            builtSections.set(this.#id, {tag: sectionTag, cleanups: [], ready: false});
         }
         this.#sectionTag = sectionTag;
         
@@ -553,9 +571,7 @@ class Section {
                 // the other sections built all the same: this one without its controler, said
                 this.#controler = undefined;
                 console.error('YojaWeb controler failed: ' + section?.controler?.path, error);
-                for (const action of errorActions) {
-                    action(error);
-                }
+                errorActions.run(error);
             }
         }
     }
@@ -569,6 +585,27 @@ class Section {
     
     pageReady(action) {
         pageReadyActions[this.#id].push(action);
+    }
+
+    /**
+     * The off given -- an onXXX(...)'s -- runs once the section has left the page: its action no more told. Gone
+     * already: at once.
+     *
+     * @return the off itself
+     * @throws TypeError when it is not a function
+     */
+    track(off) {
+        if (typeof off !== 'function') {
+            throw new TypeError('yojaWeb: track takes an off, a function, not ' + typeof off + ': ' + off);
+        }
+        const built = builtSections.get(this.#id);
+        if (built) {
+            built.cleanups.push(off);
+        }
+        else {
+            off();
+        }
+        return off;
     }
     
     /*
@@ -914,49 +951,53 @@ class YojaWeb {
         // expand any DocumentFragment into its element children (a fragment has
         // no style and is emptied by appendChild, so work on its children)
         nodes = nodes.flatMap(node => node instanceof DocumentFragment ? [...node.childNodes] : [node]);
-        const nodesToLetNone = [];
+        // hidden while they load, then shown as they were -- their own display kept -- failing too: a part that
+        // could not be built is shown all the same, not left hidden
+        const displays = new Map();
         for (const node of nodes) {
             if (node.style) {
-                if (node.style.display === 'none') {
-                    nodesToLetNone.push(node);
-                }
-                else {
-                    node.style.display = 'none';
-                }
+                displays.set(node, node.style.display);
+                node.style.display = 'none';
             }
         }
+        const show = () => {
+            for (const [node, display] of displays) {
+                node.style.display = display;
+            }
+        };
         if (mode === 'append') {
             for (const node of nodes) {
                 _fromTag.append(node);
             }
         }
         else {
-            for (const node of nodes.reverse()) {
+            for (const node of [...nodes].reverse()) {   // the order given kept
                 _fromTag.prepend(node);
             }
         }
         applyYojaWebOnTags(path, nodes)
             .then(() => {
-                languageService.refreshFrom(fromTag)
+                // the tags added only: not the rest of their section
+                languageService.refreshFrom(nodes)
                                .then(() => {
-                                   for (const node of nodes) {
-                                       if (node.style) {
-                                           if (!nodesToLetNone.includes(node)) {
-                                               node.style.display = '';
-                                           }
-                                       }
-                                   }
+                                   show();
                                    resolve(nodes);
                                })
-                               .catch(error => reject(yojaError('apply yoja on tags failed during refreshing language', {
-                                   nodes: nodes,
-                                   error: error
-                               })));
+                               .catch(error => {
+                                   show();
+                                   reject(yojaError('apply yoja on tags failed during refreshing language', {
+                                       nodes: nodes,
+                                       error: error
+                                   }));
+                               });
             })
-            .catch(error => reject(yojaError('apply yoja on tags failed', {
-                nodes: nodes,
-                error: error
-            })));
+            .catch(error => {
+                show();
+                reject(yojaError('apply yoja on tags failed', {
+                    nodes: nodes,
+                    error: error
+                }));
+            });
     }
     
     #addTag(mode, fromTag, path) {
@@ -980,20 +1021,23 @@ class YojaWeb {
         });
     }    
     
+    /** @return its off */
     onTagReady(action) {
-        tagReadyActions.push(action);
+        return tagReadyActions.add(action);
     }
     
+    /** @return its off */
     onDocumentReady(action) {
-        documentReadyActions.push(action);
+        return documentReadyActions.add(action);
     }
     
     isReady() {
         return yojaWebReady;
     }
     
+    /** @return its off */
     onError(action) {
-        errorActions.push(action);
+        return errorActions.add(action);
     }
     
 }
@@ -1469,7 +1513,7 @@ function manageCss(section, sectionTag, shadow) {
     }
     if (removal) {
         const id = sectionTag.getAttribute(directiveAttributeId);
-        builtSections.set(id, {tag: sectionTag, cleanups: [removal]});
+        builtSections.set(id, {tag: sectionTag, cleanups: [removal], ready: false});
     }
 }
 
@@ -1480,69 +1524,62 @@ function manageCss(section, sectionTag, shadow) {
  */
 let idSequence = 0;
 
+/**
+ * Builds the sections loaded: each one's content moved -- not copied -- into its shadow (a slot: its file's,
+ * parsed once), an include's in its place. Moved, the tags are the very ones given: what the application set on
+ * them (a listener, a property, a field's value) is kept, and each section's tag is the one its id was given to --
+ * no search for it.
+ */
 function append(tag, loadedSections) {
     forgetGoneSections();
     const sections = flatSections(loadedSections);
-    
+
     const result = [];
-    
-    let ids = [];
-    const sectionTags = domUtil.findSection(tag);
-    for (const sectionTag of sectionTags) {
-        sectionTag.setAttribute(directiveAttributeId, ++idSequence);
-        ids.push(idSequence);
-    }
+    // id -> its section tag: the tags are moved, never recreated, so the ones marked are the ones built
+    const sectionTagsById = new Map();
+    const mark = root => {
+        const marked = [];
+        for (const sectionTag of domUtil.findSection(root)) {
+            const id = ++idSequence;
+            sectionTag.setAttribute(directiveAttributeId, id);
+            sectionTagsById.set(id, sectionTag);
+            marked.push(id);
+        }
+        return marked;
+    };
+    let ids = mark(tag);
     for (const section of sections) {
         const id = ids.shift();
         section.id = id;
         sectionDescriptions[id] = section;
-        const sectionTag = findSectionTagFromId(tag, id);
-        
+        const sectionTag = sectionTagsById.get(id);
+
         const isInclude = section.include ? true : false;
         const isSlot = section.slot ? true : false;
 
         if (isSlot) {
             const bodyTag = domUtil.parseHtml(section.slot.body).body;
-            const sectionTags = domUtil.findSection(bodyTag);
-            const _ids = [];
-            for (const sectionTag of sectionTags) {
-                sectionTag.setAttribute(directiveAttributeId, ++idSequence);
-                _ids.push(idSequence);
-            }
-            ids = [..._ids, ...ids];
-            const html = bodyTag.innerHTML;
+            ids = [...mark(bodyTag), ...ids];   // its file's sections next
             const shadow = sectionTag.attachShadow({ mode: 'open' });
             manageCss(section, sectionTag, shadow);
-            shadow.innerHTML = html;
+            shadow.append(...bodyTag.childNodes);
         }
         else if (isInclude) {
             const bodyTag = domUtil.parseHtml(section.include.body).body;
-            const sectionTags = domUtil.findSection(bodyTag);
-            const _ids = [];
-            for (const sectionTag of sectionTags) {
-                sectionTag.setAttribute(directiveAttributeId, ++idSequence);
-                _ids.push(idSequence);
-            }
-            ids = [..._ids, ...ids];
-            const html = bodyTag.innerHTML;
+            ids = [...mark(bodyTag), ...ids];
+            builtSections.set(String(id), {tag: sectionTag, cleanups: [], ready: true});   // no ready actions
             if (section.include.mode === 'inner') {
-                sectionTag.innerHTML = html;
+                sectionTag.replaceChildren(...bodyTag.childNodes);
             }
             else {
-                const children = Array.from(bodyTag.childNodes);
-                children.reverse();
-                for (const child of children) {
-                    sectionTag.after(child);
-                }
+                sectionTag.after(...bodyTag.childNodes);
                 sectionTag.remove();
             }
         }
         else {
-            const innerHTML = sectionTag.innerHTML;
-            sectionTag.innerHTML = '';
             const shadow = sectionTag.attachShadow({ mode: 'open' });
             manageCss(section, sectionTag, shadow);
-            shadow.innerHTML = innerHTML;
+            shadow.append(...sectionTag.childNodes);
         }
         if (!isInclude) {
             new Section(sectionTag, section);
@@ -1554,64 +1591,54 @@ function append(tag, loadedSections) {
 
 /*
 
-    UTIL
-
- */
-function findSectionTagFromId(tagRoot, id) {
-    let result = null;
-    if (tagRoot) {
-        if ((domUtil.isSection(tagRoot) || domUtil.isInclude(tagRoot))
-                && tagRoot.getAttribute(directiveAttributeId) == id) {
-            result = tagRoot;
-        }
-        if (result === null) {
-            domUtil.walk(tagRoot, tag => {
-                let keepOn = true;
-                if ((domUtil.isSection(tag) || domUtil.isInclude(tag))
-                    && tag.getAttribute(directiveAttributeId) == id) {
-                    result = tag;
-                    keepOn = false;
-                }
-                return keepOn;
-            })
-        }
-    }
-    return result;
-}
-
-/*
-
     READY
 
  */
+/** Runs an action of the application: it failing, said -- the others run all the same. */
+function runAction(action, name) {
+    try {
+        action();
+    }
+    catch (error) {
+        console.error('YojaWeb ' + name + ' action failed', error);
+        errorActions.run(error);
+    }
+}
+
 function sectionReady(sections) {
     const controlerActions = [];
     const pageActions = [];
     for (const section of sections) {
-        controlerActions.push(...controlerReadyActions[section.id]);
-        pageActions.push(...pageReadyActions[section.id]);
+        controlerActions.push(...(controlerReadyActions[section.id] || []));
+        pageActions.push(...(pageReadyActions[section.id] || []));
     }
     console.debug('YojaWeb controlerReady')
-    for (let i = 0; i < controlerActions.length; i++) {
-        controlerActions[i]();
+    for (const action of controlerActions) {
+        runAction(action, 'controlerReady');
     }
     console.debug('YojaWeb pageReady');
-    for (let i = 0; i < pageActions.length; i++) {
-        pageActions[i]();
+    for (const action of pageActions) {
+        runAction(action, 'pageReady');
+    }
+    for (const section of sections) {
+        const built = builtSections.get(String(section.id));
+        if (built) {
+            built.ready = true;   // from now on, forgotten once it leaves the page
+        }
     }
 }
 
 function tagReady(sections, tags) {
     console.debug('YojaWeb tagReady');
-    for (const action of tagReadyActions) {
-        action(tags);
+    for (const action of tagReadyActions.actions()) {
+        runAction(() => action(tags), 'tagReady');
     }
 }
    
 function documentReady(sections) {
     console.debug('YojaWeb documentReady');
-    for (const action of documentReadyActions) {
-        action();
+    for (const action of documentReadyActions.actions()) {
+        runAction(action, 'documentReady');
     }
     yojaWebReady = true;
 }
@@ -1645,7 +1672,14 @@ async function applyYojaWebOnDocument() {
              .then(flatSectionDescriptions => {
                 console.debug('applyYojaWebOnDocument');
                 sectionReady(flatSectionDescriptions);
+                // the language set before the ready actions -- they may change it --, the page shown once translated:
+                // not its keys first
+                const translated = languageService.start()
+                                                  .catch(error => console.error('YojaWeb: the page not translated', error));
                 documentReady(flatSectionDescriptions);
+                return translated;
+              })
+             .then(() => {
                 document.body.style.display = '';
               });
 }
@@ -1654,9 +1688,7 @@ async function applyYojaWebOnDocument() {
 function failed(error) {
     document.body.style.display = '';
     console.error('YojaWeb failed: ' + error?.message, error);
-    for (const action of errorActions) {
-        action(error);
-    }
+    errorActions.run(error);
 }
 
 function ready() {

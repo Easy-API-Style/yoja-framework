@@ -34,16 +34,16 @@ class LanguageLoader {
 
     // the files and their imports: path -> paths
     #fileGraph = Graph.newInstance();
-    // path -> a promise of the file: {xml (its texts, as a string), importPaths}
+    // path -> a promise of the file read: {document, importPaths}
     #files = new Map();
-    // path -> the file, once read
+    // path -> the file, once read: {document (parsed once, its imports out), importPaths}
     #loaded = new Map();
 
     /** @return the texts of the files read, by path (as strings) */
     get xmlDocuments() {
         const result = {};
         for (const [path, file] of this.#loaded) {
-            result[path] = file.xml;
+            result[path] = domUtil.serializeXml(file.document);
         }
         return result;
     }
@@ -80,12 +80,17 @@ class LanguageLoader {
         });
     }
 
-    /** @return one {@code <yw-language>} holding the files' texts, in their order */
+    /**
+     * @return one {@code <yw-language>} holding the files' texts, in their order -- copies: each file is parsed
+     *         once, its document kept for the next merge
+     */
     #merge(paths) {
-        const ywLanguageTag = domUtil.parseXml('<yw-language></yw-language>').querySelector('yw-language');
+        const merged = domUtil.parseXml('<yw-language></yw-language>');
+        const ywLanguageTag = merged.querySelector('yw-language');
         for (const path of paths) {
-            const dom = domUtil.parseXml(this.#loaded.get(path).xml);
-            dom.querySelectorAll('yw-text').forEach(ywTextTag => ywLanguageTag.appendChild(ywTextTag));
+            for (const ywTextTag of this.#loaded.get(path).document.querySelectorAll('yw-text')) {
+                ywLanguageTag.appendChild(merged.importNode(ywTextTag, true));
+            }
         }
         return ywLanguageTag;
     }
@@ -98,24 +103,35 @@ class LanguageLoader {
      * @return {importPaths, dom: the file without its imports, as a string}
      */
     searchImport(xmlAsString, path) {
+        const read = this.#read(xmlAsString, path);
+        return {importPaths: read.importPaths, dom: domUtil.serializeXml(read.document)};
+    }
+
+    /**
+     * Parses a language file -- once --, its imports taken out of it.
+     *
+     * @return {importPaths, document: the file without its imports} -- an empty one, or one not well formed: no text
+     */
+    #read(xmlAsString, path) {
         const importPaths = [];
+        const empty = () => ({importPaths: importPaths, document: domUtil.parseXml('<yw-language></yw-language>')});
         if (!xmlAsString || !xmlAsString.trim()) {
-            return {importPaths: importPaths, dom: '<yw-language></yw-language>'};
+            return empty();
         }
-        const xmlAsDom = domUtil.parseXml(xmlAsString);
-        if (xmlAsDom.querySelector('parsererror')) {
+        const xmlDocument = domUtil.parseXml(xmlAsString);
+        if (xmlDocument.querySelector('parsererror')) {
             // DOMParser refuses nothing: the file's texts would be missing, unsaid
-            console.error('language file not well formed: ' + (path || ''), xmlAsDom.querySelector('parsererror').textContent);
-            return {importPaths: importPaths, dom: '<yw-language></yw-language>'};
+            console.error('language file not well formed: ' + (path || ''), xmlDocument.querySelector('parsererror').textContent);
+            return empty();
         }
-        for (const importTag of xmlAsDom.querySelectorAll('yw-import')) {
+        for (const importTag of xmlDocument.querySelectorAll('yw-import')) {
             const importPath = importTag.getAttribute('path');
             importTag.remove();
             if (importPath) {
                 importPaths.push(importPath);
             }
         }
-        return {importPaths: importPaths, dom: domUtil.serializeXml(xmlAsDom)};
+        return {importPaths: importPaths, document: xmlDocument};
     }
 
     /**
@@ -164,9 +180,9 @@ class LanguageLoader {
                                                               httpStatus: xmlResponse.status,
                                                               httpBody: xmlResponse.body}});
                                  }
-                                 const searchResult = this.searchImport(xmlResponse.body, xmlPath);
-                                 const read = {xml: searchResult.dom,
-                                               importPaths: this.#toImportPaths(xmlPath, searchResult.importPaths)};
+                                 const parsed = this.#read(xmlResponse.body, xmlPath);
+                                 const read = {document: parsed.document,
+                                               importPaths: this.#toImportPaths(xmlPath, parsed.importPaths)};
                                  this.#loaded.set(xmlPath, read);
                                  return read;
                              })

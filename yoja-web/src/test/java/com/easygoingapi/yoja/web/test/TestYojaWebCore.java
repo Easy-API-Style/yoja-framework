@@ -46,7 +46,8 @@ public class TestYojaWebCore {
                          .testJsUnit("/TestCore.js",
                                      List.of("test_01",
                                              "test_02",
-                                             "test_03"))
+                                             "test_03",
+                                             "test_04"))
                          .stream();
     }
 
@@ -82,6 +83,39 @@ public class TestYojaWebCore {
                                      List.of("test_01",
                                              "test_02",
                                              "test_03"))
+                         .stream();
+    }
+
+    /** Additions: out of the page, their ready actions run; a ready action failing, the others run; failing, shown
+     *  all the same, their own display kept; an option given, the version kept; prepend, the order kept. */
+    @TestFactory
+    public Stream<DynamicNode> testYojaWebCore_04() {
+        return TestConfig.initialize()
+                         .webResource("com.easygoingapi.yoja.web.test.core_03")
+                         .test("load page", c -> c.getHttpPage(Duration.ofSeconds(5),
+                                                               c.httpUrlBuilder().path("/home.html").build()))
+                         .loadYwAssert()
+                         .testJsUnit("/TestCore.js",
+                                     List.of("test_01",
+                                             "test_02",
+                                             "test_03",
+                                             "test_04",
+                                             "test_05"))
+                         .stream();
+    }
+
+    /** Sections built by moving their content, not copying it: three levels and a slot, each built; an element
+     *  given keeps its listener, its property, its field's value. */
+    @TestFactory
+    public Stream<DynamicNode> testYojaWebCore_05() {
+        return TestConfig.initialize()
+                         .webResource("com.easygoingapi.yoja.web.test.core_04")
+                         .test("load page", c -> c.getHttpPage(Duration.ofSeconds(5),
+                                                               c.httpUrlBuilder().path("/home.html").build()))
+                         .loadYwAssert()
+                         .testJsUnit("/TestCore.js",
+                                     List.of("test_01",
+                                             "test_02"))
                          .stream();
     }
 

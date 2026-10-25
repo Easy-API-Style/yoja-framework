@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Yoja</title>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+    <script type="module"
+            src="/yoja/YojaWeb-x.y.z.js"
+            yw-config-path="/YojaWeb.conf.js"></script>
+</head>
+<body yw-language="/lang.xml"
+      yw-controler="./home.ctl.js">
+    <label class="kept" yw-i18n="onlyFr">Par défaut</label>
+    <label class="empty" yw-i18n="emptyText">initial</label>
+    <span class="both" yw-i18n="hello" yw-i18n-title="helloTitle"></span>
+    <label class="first" yw-i18n="hello"></label>
+    <label class="second" yw-i18n="bye"></label>
+    <div class="rows"></div>
+    <div class="inner" yw-language="">
+        <div class="deeper" yw-language="">
+            <label class="deep" yw-i18n="hello"></label>
+        </div>
+    </div>
+</body>
+</html>

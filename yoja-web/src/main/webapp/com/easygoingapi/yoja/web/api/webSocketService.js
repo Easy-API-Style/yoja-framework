@@ -16,24 +16,22 @@
  * limitations under the License.
  */
 'use strict';
+const {Listeners} = await import(yojaWeb.path('../util/listenerUtil.js'));
 
 /*
  * One web socket per url of the application -- its own host and port, the url as is (its parameters, if any,
  * written in it): the url is its key.
  *
- * A socket is listened to in two ways:
- *  - a list: on(eventType, callback) -- only added to, for the listeners set once (a module, a service);
- *  - a map: put(eventType, key, callback), remove(eventType, key), has(eventType, key) -- a key the application
- *    chooses (a screen's name): put again under the same key, a listener replaces the one it had, so that a
- *    screen built again does not add one more.
- * Each event is told to the list, then to the map, in the order they were added; a listener failing does not
- * keep the others from being told.
+ * A socket is listened to by on(eventType, callback) -- onOpen, onMessage...: each gives back its off (listenerUtil),
+ * called the callback is no more told; a controler gives it to its section (section.track(off)), off once the
+ * section has left the page. Each event is told to the listeners in the order they were added; a listener failing
+ * does not keep the others from being told.
  *
  * A socket closed -- by close(), or by the server, the network, its opening timeout -- is over: its listeners are
  * dropped, and webSocket(url) gives a new one, from zero.
  *
  * Unless its url is to restart (autoRestart(url)): cut otherwise than by close(), the very same socket connects
- * again, unseen -- its listeners, list and map, kept; no 'close', no 'error', no second 'open' told -- after 1s,
+ * again, unseen -- its listeners kept; no 'close', no 'error', no second 'open' told -- after 1s,
  * 2s, 4s... up to 30s, at once when the network comes back or the page is shown again, never while offline or
  * hidden; send() and open() meanwhile wait for it, within their timeout. Once connected again it tells 'restart':
  * what was sent meanwhile is lost, the application reads its data again. stopAutoRestart(url) or close() stop it.
@@ -50,8 +48,7 @@ class WebSocketWrapper {
     #timeout = 5000;
     #url;                    // its ws(s) url
     #webSocket;              // the WebSocket it holds: another one after each cut, when it restarts
-    #lists = {};             // eventType -> [callback]: on(...)
-    #maps = {};              // eventType -> Map(key -> callback): put(...)
+    #listeners = {};         // eventType -> its Listeners: on(...)
     #restart = false;        // connected again after a cut (autoRestart)
     #cut = false;            // cut, connecting again
     #delay = FIRST_DELAY;    // the wait before the next try
@@ -71,8 +68,7 @@ class WebSocketWrapper {
         this.#url = url;
         this.#onEnd = onEnd;
         for (const eventType of EVENT_TYPES) {
-            this.#lists[eventType] = [];
-            this.#maps[eventType] = new Map();
+            this.#listeners[eventType] = new Listeners('websocket ' + eventType + ' ' + url);
         }
         this.#connect();
         this.restart(restart);
@@ -194,109 +190,42 @@ class WebSocketWrapper {
     }
 
     // ============================================================
-    //  THE LIST: on(...)
+    //  LISTENERS: on(...)
     // ============================================================
 
-    // eventType [ open | close | message | error | restart ]
+    /**
+     * eventType [ open | close | message | error | restart ]
+     *
+     * @return its off
+     * @throws TypeError for an event it does not tell
+     */
     on(eventType, callback) {
-        this.#lists[eventType].push(callback);
+        const listeners = this.#listeners[eventType];
+        if (!listeners) {
+            throw new TypeError('websocket: on(eventType [' + EVENT_TYPES.join(' | ') + '], callback), not '
+                                + eventType);
+        }
+        return listeners.add(callback);
     }
 
     onOpen(callback) {
-        this.on('open', callback);
+        return this.on('open', callback);
     }
 
     onMessage(callback) {
-        this.on('message', callback);
+        return this.on('message', callback);
     }
 
     onClose(callback) {
-        this.on('close', callback);
+        return this.on('close', callback);
     }
 
     onError(callback) {
-        this.on('error', callback);
+        return this.on('error', callback);
     }
 
     onRestart(callback) {
-        this.on('restart', callback);
-    }
-
-    // ============================================================
-    //  THE MAP: put / remove / has
-    // ============================================================
-
-    /** Listens under a key: put again under it, the listener replaces the one it had -- at its place. */
-    put(eventType, key, callback) {
-        this.#maps[eventType].set(key, callback);
-    }
-
-    remove(eventType, key) {
-        this.#maps[eventType].delete(key);
-    }
-
-    has(eventType, key) {
-        return this.#maps[eventType].has(key);
-    }
-
-    putOpen(key, callback) {
-        this.put('open', key, callback);
-    }
-
-    putMessage(key, callback) {
-        this.put('message', key, callback);
-    }
-
-    putClose(key, callback) {
-        this.put('close', key, callback);
-    }
-
-    putError(key, callback) {
-        this.put('error', key, callback);
-    }
-
-    putRestart(key, callback) {
-        this.put('restart', key, callback);
-    }
-
-    removeOpen(key) {
-        this.remove('open', key);
-    }
-
-    removeMessage(key) {
-        this.remove('message', key);
-    }
-
-    removeClose(key) {
-        this.remove('close', key);
-    }
-
-    removeError(key) {
-        this.remove('error', key);
-    }
-
-    removeRestart(key) {
-        this.remove('restart', key);
-    }
-
-    hasOpen(key) {
-        return this.has('open', key);
-    }
-
-    hasMessage(key) {
-        return this.has('message', key);
-    }
-
-    hasClose(key) {
-        return this.has('close', key);
-    }
-
-    hasError(key) {
-        return this.has('error', key);
-    }
-
-    hasRestart(key) {
-        return this.has('restart', key);
+        return this.on('restart', callback);
     }
 
     // ============================================================
@@ -380,14 +309,7 @@ class WebSocketWrapper {
 
     /** Tells an event to the list, then to the map; a listener failing does not keep the others from it. */
     #tell(eventType, event) {
-        for (const callback of [...this.#lists[eventType], ...this.#maps[eventType].values()]) {
-            try {
-                callback(event);
-            }
-            catch (error) {
-                console.error({message: 'a websocket listener failed on ' + eventType + ' ' + this.#url, error: error});
-            }
-        }
+        this.#listeners[eventType].run(event);
     }
 
     /** Over -- closed for good, its listeners told: they are dropped, open() refused, the service told. */
@@ -398,8 +320,7 @@ class WebSocketWrapper {
         this.#over = true;
         this.#stopRestart();
         for (const eventType of EVENT_TYPES) {
-            this.#lists[eventType] = [];
-            this.#maps[eventType].clear();
+            this.#listeners[eventType].clear();
         }
         for (const waiter of this.#waiting.splice(0)) {
             clearTimeout(waiter.timer);
@@ -429,11 +350,6 @@ class WebSocketService {
             this.#webSockets.set(url, webSocket);
         }
         return webSocket;
-    }
-
-    /** @return the socket of that url, or {@code undefined} when it has none (none opened for asking) */
-    existing(url) {
-        return this.#webSockets.get(url);
     }
 
     /**
@@ -495,58 +411,33 @@ export function close(url, code, reason) {
 
 // eventType [ open | message | close | error | restart ]
 export function on(eventType, url, callback) {
-    webSocket(url).on(eventType, callback);
+    return webSocket(url).on(eventType, callback);
 }
 
 export function onOpen(url, callback) {
-    webSocket(url).onOpen(callback);
+    return webSocket(url).onOpen(callback);
 }
 
 export function onMessage(url, callback) {
-    webSocket(url).onMessage(callback);
+    return webSocket(url).onMessage(callback);
 }
 
 export function onClose(url, callback) {
-    webSocket(url).onClose(callback);
+    return webSocket(url).onClose(callback);
 }
 
 export function onError(url, callback) {
-    webSocket(url).onError(callback);
+    return webSocket(url).onError(callback);
 }
 
 export function onRestart(url, callback) {
-    webSocket(url).onRestart(callback);
+    return webSocket(url).onRestart(callback);
 }
 
-export function put(eventType, url, key, callback) {
-    webSocket(url).put(eventType, key, callback);
-}
 
-// remove / has: on the socket the url has, none opened for it
-export function remove(eventType, url, key) {
-    webSocketService.existing(url)?.remove(eventType, key);
-}
 
-export function has(eventType, url, key) {
-    return webSocketService.existing(url)?.has(eventType, key) ?? false;
-}
 
-export function putOpen(url, key, callback) {
-    webSocket(url).putOpen(key, callback);
-}
 
-export function putMessage(url, key, callback) {
-    webSocket(url).putMessage(key, callback);
-}
 
-export function putClose(url, key, callback) {
-    webSocket(url).putClose(key, callback);
-}
 
-export function putError(url, key, callback) {
-    webSocket(url).putError(key, callback);
-}
 
-export function putRestart(url, key, callback) {
-    webSocket(url).putRestart(key, callback);
-}

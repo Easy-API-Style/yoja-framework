@@ -17,23 +17,20 @@
  */
 'use strict'
 const jsUtil = await import(yojaWeb.path('../util/javascriptUtil.js'));
+const {Listeners} = await import(yojaWeb.path('../util/listenerUtil.js'));
+
+const SCOPES = ['local', 'session'];
+const METHODS = ['get', 'set', 'has', 'remove'];
 
 class StorageService {
     
     #itemKeyPrefix = 'yojaWebItemKey__';
     #itemKeysPrefix = 'yojaWebItemKeys__';
     
-    #onLocalSet = {};
-    #onLocalGet = {};
-    #onLocalRemove = {};
-    #onLocalHas = {};
-    
-    #onSessionSet = {};
-    #onSessionGet = {};
-    #onSessionRemove = {};
-    #onSessionHas = {};
-    
-    #onEvent = [];
+    // the application's actions -- each on(...) gives back its off (listenerUtil) --: 'scope method key' -> those
+    // of an item, and those of every event
+    #onItem = new Map();
+    #onEvent = new Listeners('storageService event');
     
     constructor() {
         
@@ -86,9 +83,7 @@ class StorageService {
             storage.removeItem(this.#toYojaItemKey(itemKey));
         }
         storage.removeItem(this.#itemKeysPrefix + scope);
-        for (let i = 0; i < this.#onEvent.length; i++) {
-            this.#onEvent[i](scope, 'clear');
-        }
+        this.#onEvent.run(scope, 'clear');
     }
     
     #removeItemKey(scope, itemKey) {
@@ -148,63 +143,33 @@ class StorageService {
     /*
          EVENT
     */
+    /** @return its off */
     onEvent(action) {
-        this.#onEvent.push(action);
+        return this.#onEvent.add(action);
     }
     
+    /**
+     * @return its off
+     * @throws TypeError for a scope or a method it does not have: said, not an action never told
+     */
     on(scope, method, key, action) {
-        if (scope === 'local') {
-            if (method === 'set') {
-                if (!this.#onLocalSet[key]) {
-                    this.#onLocalSet[key] = [];
-                }
-                this.#onLocalSet[key].push(action);
-            }
-            else if (method === 'get') {
-                if (!this.#onLocalGet[key]) {
-                    this.#onLocalGet[key] = [];
-                }
-                this.#onLocalGet[key].push(action);
-            }
-            else if (method === 'has') {
-                if (!this.#onLocalHas[key]) {
-                    this.#onLocalHas[key] = [];
-                }
-                this.#onLocalHas[key].push(action);
-            }
-            else if (method === 'remove') {
-                if (!this.#onLocalRemove[key]) {
-                    this.#onLocalRemove[key] = [];
-                }
-                this.#onLocalRemove[key].push(action);
-            }
+        if (!SCOPES.includes(scope) || !METHODS.includes(method)) {
+            throw new TypeError('storageService: on(scope [local | session], method [get | set | has | remove], '
+                                + 'key, action), not ' + scope + ' ' + method);
         }
-        else if (scope === 'session') {
-            if (method === 'set') {
-                if (!this.#onSessionSet[key]) {
-                    this.#onSessionSet[key] = [];
-                }
-                this.#onSessionSet[key].push(action);
-            }
-            else if (method === 'get') {
-                if (!this.#onSessionGet[key]) {
-                    this.#onSessionGet[key] = [];
-                }
-                this.#onSessionGet[key].push(action);
-            }
-            else if (method === 'has') {
-                if (!this.#onSessionHas[key]) {
-                    this.#onSessionHas[key] = [];
-                }
-                this.#onSessionHas[key].push(action);
-            }
-            else if (method === 'remove') {
-                if (!this.#onSessionRemove[key]) {
-                    this.#onSessionRemove[key] = [];
-                }
-                this.#onSessionRemove[key].push(action);
-            }
+        const itemKey = scope + ' ' + method + ' ' + key;
+        let listeners = this.#onItem.get(itemKey);
+        if (!listeners) {
+            listeners = new Listeners('storageService ' + itemKey);
+            this.#onItem.set(itemKey, listeners);
         }
+        return listeners.add(action);
+    }
+    
+    /** Tells the item's actions, then those of every event. */
+    #tell(scope, method, event, key, value) {
+        this.#onItem.get(scope + ' ' + method + ' ' + key)?.run(value);
+        this.#onEvent.run(scope, event, key, value);
     }
     
     /*
@@ -215,61 +180,15 @@ class StorageService {
     }
 
     getLocalItem(key, event) {
-        const yojaKey = this.#toYojaItemKey(key);
-        const value = this.#parse(localStorage.getItem(yojaKey));
-        if (value !== undefined) {
-            if (event === 'get') {
-                if (this.#onLocalGet[key]) {
-                    for (let i = 0;i < this.#onLocalGet[key].length;i++) {
-                        this.#onLocalGet[key][i](value);
-                    }
-                }
-            }
-            else {
-                if (this.#onLocalHas[key]) {
-                    for (let i = 0;i < this.#onLocalHas[key].length;i++) {
-                        this.#onLocalHas[key][i](value);
-                    }
-                }
-
-            }
-            for (let i = 0;i < this.#onEvent.length;i++) {
-                this.#onEvent[i]('local', event, key, value);
-            }
-        }
-        return value;
+        return this.#getItem('local', localStorage, key, event);
     }
 
     setLocalItem(key, value) {
-        value = value === undefined ? null : value;
-        if (this.#onLocalSet[key]) {
-            for (let i = 0; i < this.#onLocalSet[key].length; i++) {
-                this.#onLocalSet[key][i](value);
-            }
-        }
-        for (let i = 0; i < this.#onEvent.length; i++) {
-            this.#onEvent[i]('local', 'set', key, value);
-        }
-        this.#addItemKey('local', key);
-        const yojaKey = this.#toYojaItemKey(key);
-        localStorage.setItem(yojaKey, this.#stringify(value));
+        this.#setItem('local', localStorage, key, value);
     }
 
     removeLocalItem(key) {
-       const yojaKey = this.#toYojaItemKey(key);
-       const value = this.#parse(localStorage.getItem(yojaKey));
-       localStorage.removeItem(yojaKey);
-       this.#removeItemKey('local', key);
-       if (value !== undefined) {
-            if (this.#onLocalRemove[key]) {
-                for (let i = 0; i < this.#onLocalRemove[key].length; i++) {
-                   this.#onLocalRemove[key][i](value);
-                }
-            }
-            for (let i = 0; i < this.#onEvent.length; i++) {
-                this.#onEvent[i]('local', 'remove', key, value);
-            }
-        }
+        this.#removeItem('local', localStorage, key);
     }
 
     clearLocal() {
@@ -284,64 +203,47 @@ class StorageService {
     }
             
     getSessionItem(key, event) {
-        const yojaKey = this.#toYojaItemKey(key);
-        const value = this.#parse(sessionStorage.getItem(yojaKey));
-        if (value !== undefined) {
-            if (event === 'get') {
-                if (this.#onSessionGet[key]) {
-                    for (let i = 0;i < this.#onSessionGet[key].length;i++) {
-                        this.#onSessionGet[key][i](value);
-                    }
-                }
-            }
-            else {
-                if (this.#onSessionHas[key]) {
-                    for (let i = 0;i < this.#onSessionHas[key].length;i++) {
-                        this.#onSessionHas[key][i](value);
-                    }
-                }
-            }
-            for (let i = 0;i < this.#onEvent.length;i++) {
-                this.#onEvent[i]('session', event, key, value);
-            }
-        }
-        return value;
+        return this.#getItem('session', sessionStorage, key, event);
     }
 
     setSessionItem(key, value) {
-        value = value === undefined ? null : value;
-        if (this.#onSessionSet[key]) {
-            for (let i = 0; i < this.#onSessionSet[key].length; i++) {
-                this.#onSessionSet[key][i](value);
-            }
-        }
-        for (let i = 0; i < this.#onEvent.length; i++) {
-           this.#onEvent[i]('session', 'set', key, value);
-        }
-        this.#addItemKey('session', key);
-        const yojaKey = this.#toYojaItemKey(key);
-        sessionStorage.setItem(yojaKey, this.#stringify(value));
+        this.#setItem('session', sessionStorage, key, value);
     }
 
     removeSessionItem(key) {
-        const yojaKey = this.#toYojaItemKey(key);
-        const value = this.#parse(sessionStorage.getItem(yojaKey));
-        sessionStorage.removeItem(yojaKey);
-        this.#removeItemKey('session', key);
-        if (value !== undefined) {
-            if (this.#onSessionRemove[key]) {
-                for (let i = 0; i < this.#onSessionRemove[key].length; i++) {
-                    this.#onSessionRemove[key][i](value);
-                }
-            }
-            for (let i = 0; i < this.#onEvent.length; i++) {
-                this.#onEvent[i]('session', 'remove', key, value);
-            }
-        }
+        this.#removeItem('session', sessionStorage, key);
     }
 
     clearSession() {
         this.#clearItems('session');
+    }
+    
+    /*
+         ITEM
+    */
+    #getItem(scope, storage, key, event) {
+        const value = this.#parse(storage.getItem(this.#toYojaItemKey(key)));
+        if (value !== undefined) {
+            this.#tell(scope, event === 'get' ? 'get' : 'has', event, key, value);
+        }
+        return value;
+    }
+
+    #setItem(scope, storage, key, value) {
+        value = value === undefined ? null : value;
+        this.#tell(scope, 'set', 'set', key, value);
+        this.#addItemKey(scope, key);
+        storage.setItem(this.#toYojaItemKey(key), this.#stringify(value));
+    }
+
+    #removeItem(scope, storage, key) {
+        const yojaKey = this.#toYojaItemKey(key);
+        const value = this.#parse(storage.getItem(yojaKey));
+        storage.removeItem(yojaKey);
+        this.#removeItemKey(scope, key);
+        if (value !== undefined) {
+            this.#tell(scope, 'remove', 'remove', key, value);
+        }
     }
     
 }

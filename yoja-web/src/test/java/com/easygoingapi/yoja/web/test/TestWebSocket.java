@@ -156,8 +156,8 @@ public class TestWebSocket {
                          .stream();
     }
     
-    /** The list and the map: the list told first, then the map in its order -- a key put again replaced at its
-     *  place, a listener failing not keeping the others from it, a key removed told no more. Closed: from zero. */
+    /** The listeners in their order -- one taken off before any message not told, one failing not keeping the others
+     *  from it, one taken off (twice) told no more. Closed: from zero. */
     @TestFactory
     public Stream<DynamicNode> testWebSocket_07() {
         final AtomicReference<String> message = new AtomicReference<>();

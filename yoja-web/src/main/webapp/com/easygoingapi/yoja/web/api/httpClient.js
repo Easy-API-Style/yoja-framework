@@ -15,165 +15,144 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-'use strict'
+'use strict';
 const urlParameterUtil = await import(yojaWeb.path('../util/urlParameterUtil.js'));
 const javascriptUtil = await import(yojaWeb.path('../util/javascriptUtil.js'));
+const {Listeners} = await import(yojaWeb.path('../util/listenerUtil.js'));
 
 const LOG = false;
 
+/**
+ * @return an Error -- its stack, its message told -- its cause the error met; {@code error} and {@code request}
+ *         kept on it, as the rejections held them
+ */
+function httpError(message, error, request) {
+    const result = new Error(message, {cause: error});
+    result.error = error;
+    result.request = request;
+    return result;
+}
+
 class HttpClient {
-    
+
     #fetchModes = ['json', 'text', 'blob', 'base64', 'arrayBuffer'];
-    
+
     #jsonContentTypes = ['application/json', 'application/array-json'];
-    #textContentTypes = ['text/plain', 'text/html', 'text/css', 
+    #textContentTypes = ['text/plain', 'text/html', 'text/css',
                          'application/xml', 'application/javascript'];
     #blobContentTypes = ['application/blob'];
     #base64ContentTypes = ['application/base64'];
-    
-    #host = window.location.hostname;
-    #port = window.location.port;
-    #protocol = window.location.protocol;
-    
-    #onRequestActions = [];
-    #onResponseActions = [];
-    #onFetchActions = [];
-    
-    #onOnlineActions = []
-    #onOfflineActions = []
-   
+
+    // the application's actions: each onXXX(action) gives back its off (listenerUtil)
+    #onRequestActions = new Listeners('httpClient request');
+    #onResponseActions = new Listeners('httpClient response');
+    #onFetchActions = new Listeners('httpClient fetch');
+
+    #onOnlineActions = new Listeners('httpClient online');
+    #onOfflineActions = new Listeners('httpClient offline');
+
     constructor() {
         this.addContentTypes(yojaWeb.config);
-        window.addEventListener('online', event => {
-            for (const action of this.#onOnlineActions) {
-                action(event);
-            }
-        });
-        window.addEventListener('offline', event => {
-            for (const action of this.#onOfflineActions) {
-                action(event);
-            }
-        });
+        window.addEventListener('online', event => this.#onOnlineActions.run(event));
+        window.addEventListener('offline', event => this.#onOfflineActions.run(event));
     }
-    
+
     addContentTypes(contentTypes) {
         if (contentTypes instanceof Object) {
-            if (contentTypes.jsonContentTypes) {
-                for (const contentType of contentTypes.jsonContentTypes) {
-                    this.#jsonContentTypes.push(contentType);
-                }
-            }
-            if (contentTypes.textContentTypes) {
-                for (const contentType of contentTypes.textContentTypes) {
-                    this.#textContentTypes.push(contentType);
-                }
-            }
-            if (contentTypes.blobContentTypes) {
-                for (const contentType of contentTypes.blobContentTypes) {
-                    this.#blobContentTypes.push(contentType);
-                }
-            }
-            if (contentTypes.base64ContentTypes) {
-                for (const contentType of contentTypes.base64ContentTypes) {
-                    this.#base64ContentTypes.push(contentType);
-                }
-            }
+            this.#jsonContentTypes.push(...(contentTypes.jsonContentTypes || []));
+            this.#textContentTypes.push(...(contentTypes.textContentTypes || []));
+            this.#blobContentTypes.push(...(contentTypes.blobContentTypes || []));
+            this.#base64ContentTypes.push(...(contentTypes.base64ContentTypes || []));
         }
     }
-        
+
     onRequest(action) {
-        this.#onRequestActions.push(action);
+        return this.#onRequestActions.add(action);
     }
-    
+
     onResponse(action) {
-        this.#onResponseActions.push(action);
+        return this.#onResponseActions.add(action);
     }
-    
+
     onFetch(action) {
-        this.#onFetchActions.push(action);
+        return this.#onFetchActions.add(action);
     }
-    
+
     isOnline() {
         return navigator.onLine;
     }
-    
+
     onOnline(action) {
-        this.#onOnlineActions.push(action);
+        return this.#onOnlineActions.add(action);
     }
-    
+
     onOffline(action) {
-        this.#onOfflineActions.push(action);
+        return this.#onOfflineActions.add(action);
     }
-    
+
     get(request, callback) {
         javascriptUtil.requireValue(request);
         const _request = this.#toObjectRequest(request);
         _request['method'] = 'GET';
-        this.#applyOnResquest(_request);
+        this.#applyOnRequest(_request);
         return this.#response(_request, callback);
     }
-    
+
     /*
+     * The body's content type, when the request gives none -- from what the body is:
      *
-     *   String, Number, Date -> text/plain
+     *   String, Number, Boolean, Date -> text/plain
      *   Array -> application/array-json
      *   Object -> application/json
-     *   Blob -> application/blob
-     *       
+     *   Blob -> application/blob (sent as base64)
+     *   none (null, undefined) -> no body
      */
     async post(request, body, callback) {
         javascriptUtil.requireValue(request);
-        javascriptUtil.requireValue(body);
         const _request = this.#toObjectRequest(request);
         _request['method'] = 'POST';
-        
-        // Content-Type
         if (_request['contentType']) {
-            const contentType = _request['contentType'];
-            this.#setHeader(_request, 'content-type', contentType);
+            this.#setHeader(_request, 'content-type', _request['contentType']);
         }
-        if (!this.#hasHeader(_request, 'content-type')) {
-           if (body instanceof Blob) {
-               _request['body'] = await javascriptUtil.blobTobase64(body);
-               this.#setHeader(_request, 'content-type', 'application/blob');
-           }
-           else {
-                _request['body'] = javascriptUtil.stringify(body);
-                let contentType = 'text/plain';
-                if (javascriptUtil.isStringArray( _request['body'])) {
-                    contentType = 'application/array-json';
-                }
-                else if (javascriptUtil.isStringJson( _request['body'])) {
-                    contentType = 'application/json';
-                }
-                this.#setHeader(_request, 'content-type', contentType);
-           }
-        }
-        else {
-            if (body instanceof Blob) {
-                _request['body'] = await javascriptUtil.blobTobase64(body);
-            }
-            else {
-                _request['body'] = javascriptUtil.stringify(body);
+        if (body !== undefined && body !== null) {
+            _request['body'] = body instanceof Blob ? await javascriptUtil.blobTobase64(body)
+                                                    : javascriptUtil.stringify(body);
+            if (!this.#hasHeader(_request, 'content-type')) {
+                this.#setHeader(_request, 'content-type', this.#contentTypeOf(body));
             }
         }
-        this.#applyOnResquest(_request);
+        this.#applyOnRequest(_request);
         return this.#response(_request, callback);
     }
-    
+
+    /** @return the content type of a body, from what it is -- not from what its text looks like */
+    #contentTypeOf(body) {
+        if (body instanceof Blob) {
+            return 'application/blob';
+        }
+        if (Array.isArray(body)) {
+            return 'application/array-json';
+        }
+        if (typeof body === 'string' || typeof body === 'number' || typeof body === 'boolean'
+              || body instanceof String || body instanceof Number || body instanceof Boolean || body instanceof Date) {
+            return 'text/plain';
+        }
+        return 'application/json';
+    }
+
     load(request, callback) {
         javascriptUtil.requireValue(request);
         const _request = this.#toObjectRequest(request);
         _request.fetchAs = 'text';
         _request['method'] = 'GET';
-        this.#applyOnResquest(_request);
+        this.#applyOnRequest(_request);
         return this.#response(_request, callback);
     }
-    
-    async fetch(request, callback) {
+
+    fetch(request, callback) {
         javascriptUtil.requireValue(request);
         const _request = this.#toObjectRequest(request);
-        this.#applyOnResquest(_request);
+        this.#applyOnRequest(_request);
         return this.#doFetch(_request)
                    .then(response => this.#log(_request, response))
                    .then(response => {
@@ -183,244 +162,200 @@ class HttpClient {
                         return response;
                     })
                     .catch(error => {
-                        this.#error(request.url, error);
-                        throw new Error('fetch url failed: ' + request.url, {cause: error});
-                    })
+                        this.#error(_request.url, error);
+                        throw httpError('fetch url failed: ' + _request.url, error, _request);
+                    });
     }
-    
-    async #doFetch(request) {
+
+    #doFetch(request) {
         const url = urlParameterUtil.toUrl(request.url, request.parameters);
         return window.fetch(url, request)
                      .then(response => this.#applyOnFetch(request, response));
     }
-    
+
+    /** @return the request as an object -- its own, the one given left as it is */
+    #toObjectRequest(request) {
+        return typeof request === 'object' ? {...request} : {url: request};
+    }
+
+    /**
+     * @return the key a header has in headers given as an object, whatever its case ('Content-Type' is
+     *         'content-type'), or null
+     */
+    #headerKey(headers, name) {
+        const lower = name.toLowerCase();
+        return Object.keys(headers).find(key => key.toLowerCase() === lower) ?? null;
+    }
+
+    /** Sets a header -- headers given as an object: the key it has, whatever its case, replaced (not one more). */
     #setHeader(request, name, value) {
-        if (request.headers) {
-            const headers = request.headers;
-            if (headers instanceof Headers) {
-                headers.set(name, value);
-            }
-            else if (typeof headers === 'object') {
-                headers[name] = value;
-            }
-        }
-        else {
+        if (!request.headers) {
             request.headers = new Headers();
-            request.headers.set(name, value);
+        }
+        const headers = request.headers;
+        if (headers instanceof Headers) {
+            headers.set(name, value);
+        }
+        else if (typeof headers === 'object') {
+            headers[this.#headerKey(headers, name) ?? name] = value;
         }
     }
-    
+
     #getHeader(request, name) {
-       let result = null;
-       if (request.headers) {
-           const headers = request.headers;
-           if (headers instanceof Headers) {
-               result = headers.get(name);
-           }
-           else if (typeof headers === 'object') {
-               if (typeof headers[name] !== 'undefined') {
-                    result = headers[name];
-               }
-           }
-       }
-       return result;
+        const headers = request.headers;
+        if (headers instanceof Headers) {
+            return headers.get(name);
+        }
+        if (headers && typeof headers === 'object') {
+            const key = this.#headerKey(headers, name);
+            return key === null ? null : headers[key];
+        }
+        return null;
     }
-    
+
     #hasHeader(request, name) {
         return this.#getHeader(request, name) != null;
     }
-    
-    #toObjectRequest(request) {
-        let result;
-        if (typeof request === 'object') {
-            result = {...request};
-        }
-        else {
-            result = {};
-            result['url'] = request;
-        }
-        return result;
-    }
-    
+
+    /**
+     * @return how the body is read: as the request asks; else from the response's content type -- the ones listed
+     *         (addContentTypes), then any json (+json), any text (text/*, +xml); else an array buffer
+     */
     #getFetchMode(request, response) {
-        let result;
         const fetchAs = request['fetchAs'];
         if (this.#fetchModes.includes(fetchAs)) {
-            result = fetchAs;
+            return fetchAs;
         }
-        else {
-            const contentType = response.headers.get('Content-Type');
-            if (this.#containsContentType(this.#jsonContentTypes, contentType)) {
-                result = 'json';
-            }
-            else if (this.#containsContentType(this.#textContentTypes, contentType)) {
-                result = 'text';
-            }
-            else if (this.#containsContentType(this.#blobContentTypes, contentType)) {
-                result = 'blob';
-            }
-            else if (this.#containsContentType(this.#base64ContentTypes, contentType)) {
-                result = 'base64';
-            }
-            else {
-                result = 'arrayBuffer';
-            }
+        const contentType = response.headers.get('Content-Type');
+        const mime = contentType ? contentType.split(';')[0].trim().toLowerCase() : '';
+        const listed = contentTypes => contentTypes.some(listedType => listedType.trim().toLowerCase() === mime);
+        if (!mime) {
+            return 'arrayBuffer';
         }
-        return result;
+        if (listed(this.#jsonContentTypes)) {
+            return 'json';
+        }
+        if (listed(this.#textContentTypes)) {
+            return 'text';
+        }
+        if (listed(this.#blobContentTypes)) {
+            return 'blob';
+        }
+        if (listed(this.#base64ContentTypes)) {
+            return 'base64';
+        }
+        if (mime.endsWith('+json')) {
+            return 'json';
+        }
+        if (mime.startsWith('text/') || mime.endsWith('+xml') || mime === 'text/xml') {
+            return 'text';
+        }
+        return 'arrayBuffer';
     }
-    
-    #containsContentType(contentTypes, contentType) {
-        let result = false;
-        if (contentType) {
-            const values = [];
-            if (contentType.includes(';')) {
-                const splitContentTypes = contentType.split(';');
-                for (const splitContentType of splitContentTypes) {
-                    values.push(splitContentType.trim().toLowerCase());
-                }
-            }
-            else {
-                values.push(contentType.trim().toLowerCase());
-            }
-            for (const value of values) {
-                for (const contentTypeValue of contentTypes) {
-                    if (contentTypeValue.trim().toLowerCase() == value) {
-                        result = true;
-                        break;
-                    }
-                }
-                if (result) {
-                    break;
-                }
-            }
-        }
-        return result;
-    }
-    
-    async #response(request, callback) {
+
+    #response(request, callback) {
         let result;
         if (request.responseWith) {
-            return this.#responseWith(request, callback)
-                       .then(response => this.#log(request, response));
+            result = this.#responseWith(request, callback);
         }
         else if (this.isOnline()) {
-            result = this.#responseOnline(request, callback)
-                         .then(response => this.#log(request, response));
+            result = this.#responseOnline(request, callback);
         }
         else {
-            result = this.#responseOffline(request, callback)
-                         .then(response => this.#log(request, response));
+            result = this.#responseOffline(request, callback);
         }
-        return result;
+        return result.then(response => this.#log(request, response));
     }
-    
-    #responseWith(request, callback) {
-        return new Promise((resolve, reject) => {
-            try {
-                const response = request.responseWith;
-                this.#applyOnResponse(request, response);
-                if (callback) {
-                    callback(response);
-                }
-                resolve(response);
-            }
-            catch(error) {
-                reject({error: error, 
-                        request: request});
-            }
-        })
-    }
-    
-    #responseOffline(request, callback) {
-        return new Promise((resolve, reject) => {
-            try {
-                const response = {};
-                response.headers = new Headers();
-                response.bodyUsed = true;
-                response.status = 470;
-                this.#applyOnResponse(request, response);
-                if (callback) {
-                    callback(response);
-                }
-                resolve(response);
-            }
-            catch(error) {
-                reject({error: error, 
-                        request: request});
-            }
-        })
-    }
-    
-    #responseOnline(request, callback) {
-        return new Promise((resolve, reject) => {
-            this.#doFetch(request)
-                .then(response => {
-                    let contentType = null;
-                    const fetchMode = this.#getFetchMode(request, response);
-                    let responseFuture;
-                    if (fetchMode == 'json') {
-                        responseFuture = response.json();
-                    }
-                    else if (fetchMode == 'text') {
-                        responseFuture = response.text();
-                    }
-                    else if (fetchMode == 'base64') {
-                        responseFuture = response.text()
-                                                 .then(v => { 
-                                                    const blob = javascriptUtil.base64ToBlob(v);
-                                                    if (blob.type) {
-                                                        contentType = blob.type;
-                                                    }
-                                                    return blob.arrayBuffer();
-                                                 }) 
-                    }
-                    else if (fetchMode == 'blob') {
-                        responseFuture = response.text()
-                                                 .then(v => javascriptUtil.base64ToBlob(v));
-                    }
-                    else if (fetchMode == 'arrayBuffer') {
-                        if (!response.headers
-                               || !response.headers.has('content-type')) {
-                            contentType = 'application/octet-stream';
-                        }
-                        responseFuture = response.arrayBuffer();
-                    }
-                    responseFuture.then(body => {
-                        const result = this.#toResult(response, body, contentType);
-                        this.#applyOnResponse(request, result);
-                        if (callback) {
-                            callback(result);
-                        }
-                        resolve(result);
-                    })
-                })
-                .catch(error => {
-                    reject({error: error, 
-                            request: request});
-                })
-        })
-    }
-    
-    #applyOnResquest(request) {
-        for (const action of this.#onRequestActions) {
-            action(request);
-        }
-    }
-    
-    #applyOnResponse(request, response) {
-        for (const action of this.#onResponseActions) {
-            action(request, response);
-        }
-        return response
-    }
-    
-    #applyOnFetch(request, response) {
-        for (const action of this.#onFetchActions) {
-            action(request, response);
+
+    /** @return a promise of the response given -- its callback failing, rejected */
+    #answer(request, response, callback) {
+        this.#applyOnResponse(request, response);
+        if (callback) {
+            callback(response);
         }
         return response;
     }
-    
+
+    #responseWith(request, callback) {
+        return Promise.resolve()
+                      .then(() => this.#answer(request, request.responseWith, callback))
+                      .catch(error => {
+                          throw httpError('http response failed: ' + request.url, error, request);
+                      });
+    }
+
+    #responseOffline(request, callback) {
+        return Promise.resolve()
+                      .then(() => {
+                          const response = {};
+                          response.headers = new Headers();
+                          response.bodyUsed = true;
+                          response.status = 470;
+                          return this.#answer(request, response, callback);
+                      })
+                      .catch(error => {
+                          throw httpError('http response failed (offline): ' + request.url, error, request);
+                      });
+    }
+
+    /**
+     * @return a promise of the response read -- rejected, not left pending, when it cannot be: a json body not one
+     *         (an empty one is null), its callback failing
+     */
+    #responseOnline(request, callback) {
+        let contentType = null;
+        return this.#doFetch(request)
+                   .then(response => {
+                       const fetchMode = this.#getFetchMode(request, response);
+                       let body;
+                       if (fetchMode === 'json') {
+                           body = response.text().then(text => text.trim() ? JSON.parse(text) : null);
+                       }
+                       else if (fetchMode === 'text') {
+                           body = response.text();
+                       }
+                       else if (fetchMode === 'base64') {
+                           body = response.text()
+                                          .then(text => {
+                                              const blob = javascriptUtil.base64ToBlob(text);
+                                              if (blob.type) {
+                                                  contentType = blob.type;
+                                              }
+                                              return blob.arrayBuffer();
+                                          });
+                       }
+                       else if (fetchMode === 'blob') {
+                           body = response.text()
+                                          .then(text => javascriptUtil.base64ToBlob(text));
+                       }
+                       else {
+                           if (!response.headers || !response.headers.has('content-type')) {
+                               contentType = 'application/octet-stream';
+                           }
+                           body = response.arrayBuffer();
+                       }
+                       return body.then(value => this.#toResult(response, value, contentType));
+                   })
+                   .then(result => this.#answer(request, result, callback))
+                   .catch(error => {
+                       throw httpError('http request failed: ' + request.method + ' ' + request.url, error, request);
+                   });
+    }
+
+    #applyOnRequest(request) {
+        this.#onRequestActions.run(request);
+    }
+
+    #applyOnResponse(request, response) {
+        this.#onResponseActions.run(request, response);
+        return response;
+    }
+
+    #applyOnFetch(request, response) {
+        this.#onFetchActions.run(request, response);
+        return response;
+    }
+
     #toResult(response, body, contentType) {
         let headers = response.headers;
         if (contentType) {
@@ -432,7 +367,7 @@ class HttpClient {
                  bodyUsed: true,
                  body: body };
     }
-        
+
     #log(request, response) {
         if (LOG) {
             let message = request.method + ' ' + request.url + ' status:' + response.status;
@@ -446,11 +381,7 @@ class HttpClient {
         }
         return response;
     }
-    
-    #fail(response) {
-        console.debug('not fetch: ', response?.url, response?.status);
-    }
-    
+
     #error(url, error) {
         console.error('error fetch: ', url, error);
     }
@@ -479,26 +410,26 @@ export function fetch(request, callback) {
    return httpClient.fetch(request, callback);
 }
 
+/** @return its off */
 export function onRequest(callback) {
-    httpClient.onRequest(callback);
+    return httpClient.onRequest(callback);
 }
 
+/** @return its off */
 export function onResponse(callback) {
-    httpClient.onResponse(callback);
+    return httpClient.onResponse(callback);
 }
-
-//export function onFetch(callback) {
-//    httpClient.onFetch(callback)
-//}
 
 export function isOffline() {
     return !httpClient.isOnline();
 }
 
+/** @return its off */
 export function onOnline(callback) {
-    httpClient.onOnline(callback);
+    return httpClient.onOnline(callback);
 }
 
+/** @return its off */
 export function onOffline(callback) {
-    httpClient.onOffline(callback);
+    return httpClient.onOffline(callback);
 }

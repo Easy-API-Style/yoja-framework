@@ -1,0 +1,21 @@
+<yw-language>
+    <yw-text key="onlyFr">
+        <fr>Seulement en français</fr>
+    </yw-text>
+    <yw-text key="emptyText">
+        <en></en>
+        <fr></fr>
+    </yw-text>
+    <yw-text key="hello">
+        <en>Hello</en>
+        <fr>Bonjour</fr>
+    </yw-text>
+    <yw-text key="helloTitle">
+        <en>Title</en>
+        <fr>Titre</fr>
+    </yw-text>
+    <yw-text key="bye">
+        <en>Bye</en>
+        <fr>Au revoir</fr>
+    </yw-text>
+</yw-language>
