@@ -13,6 +13,7 @@ export function test_01() {
 
 // a path: another origin's left as it is; the page's, its parameters and hash kept, the ones added after them
 export function test_02() {
+    ywAssert.assertEquals('1.6.0', yojaWeb.version());   // read from its file's name
     ywAssert.assertEquals('https://other.example/x.js', yojaWeb.path('https://other.example/x.js', {apiVersion: true}));
     ywAssert.assertEquals('/a.css?x=1&apiVersion=1.6.0', yojaWeb.path('/a.css?x=1', {apiVersion: true}));
     ywAssert.assertEquals('/p.js?q=1&apiVersion=1.6.0#h', yojaWeb.path(location.origin + '/p.js?q=1#h', {apiVersion: true}));
@@ -36,4 +37,19 @@ export function test_04() {
         refused = error;
     }
     ywAssert.assertEquals(true, refused instanceof TypeError);
+}
+
+// the section queries as the controler ones: ({tag, predicate}) too, no tag the document; up to the top, nothing
+// found: null, not an error
+export function test_05() {
+    const sectionService = yojaWeb.sectionService;
+    const isGood = section => section.tag.classList.contains('good');
+    ywAssert.assertEquals('good', sectionService.first({predicate: isGood}).tag.className);
+    ywAssert.assertEquals('good', sectionService.first(undefined, isGood).tag.className);
+    ywAssert.assertEquals(1, sectionService.find({tag: document, predicate: isGood}).length);
+    const good = document.querySelector('.good');
+    ywAssert.assertEquals(null, sectionService.parent(good, () => false));
+    ywAssert.assertEquals(null, sectionService.closest(good, () => false));
+    ywAssert.assertEquals(null, good.ywSection.closestControler(() => false));
+    ywAssert.assertEquals(null, good.ywSection.parentControler(() => false));
 }

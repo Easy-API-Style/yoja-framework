@@ -36,6 +36,10 @@ const first = section('first', '/ready.ctl.js');
 const second = section('second', '/ready.ctl.js');
 const prepended = await yojaWeb.prependTag(host, [first, second]);
 
+// 11. className(): there in the constructor already; a controler's own kept
+const [early, named] = [section('early', '/early.ctl.js'), section('named', '/named.ctl.js')];
+await yojaWeb.appendTag(host, [early, named]);
+
 const nextTask = () => new Promise(resolve => setTimeout(resolve));
 
 // 9. the document ready already: an action given told all the same -- after the call, not during it; off before: not
@@ -99,6 +103,13 @@ export function test_07() {
     ywAssert.assertEquals(0, lateReadyDuringCall);
     ywAssert.assertEquals(null, forgottenError);
     ywAssert.assertEquals('controlerReady,pageReady', lateReady.join(','));
+}
+
+export function test_08() {
+    ywAssert.assertEquals('EarlyControler', early.dataset.className);
+    ywAssert.assertEquals('EarlyControler', early.ywSection.controler.className());
+    ywAssert.assertEquals('its own', named.dataset.className);
+    ywAssert.assertEquals('its own', named.ywSection.controler.className());
 }
 
 export function test_05() {

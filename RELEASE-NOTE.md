@@ -9,6 +9,12 @@
 * `yojaWeb.onDocumentReady(...)` given once the document is ready -> told all the same, just after the call
 * `section.controlerReady(...)` / `pageReady(...)` given once the section is ready -> told all the same, just after the call; the section gone: never told (no more `TypeError`)
 * fix `onTagReady` documentation -> the action is given the tags added
+* `sectionService` queries take `({tag, predicate})` too, no tag: the document -> as `controlerService`
+* fix `closestControler`/`parentControler` (and `sectionService.closest`/`parent`) nothing found up to the top -> `null`, no more `TypeError`
+* the body's own `style.display` kept once the page is built (no more reset to `''`)
+* `prepend(...)` errors say `prepend`
+* `yojaWeb.version()` read from the file name (`YojaWeb-<version>.js`) -> no more version hard-coded in the script
+* controler `className()` defined on its class -> available in its constructor, a controler's own `className()` kept
 * dev build version is the next patch's snapshot (`1.6.0` -> `1.6.1-SNAPSHOT`)
 
 ## 1.6.0

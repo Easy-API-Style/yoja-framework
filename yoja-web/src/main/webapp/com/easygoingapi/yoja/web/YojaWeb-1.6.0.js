@@ -16,15 +16,20 @@
  * limitations under the License.
  */
 'use strict'
-const apiVersion = '1.6.0';
+// the framework's version: its file's name (YojaWeb-1.7.0.js) -- one place to change it
+const apiVersion = new URL(import.meta.url).pathname.match(/YojaWeb-([^/]+)\.js$/)?.[1] ?? 'unknown';
 console.info('yojaWeb apiVersion: ', apiVersion);
+if (apiVersion === 'unknown') {
+    console.warn('yojaWeb: its version read from its file name, YojaWeb-<version>.js, not ' + import.meta.url);
+}
 const scriptTags = [...document.querySelectorAll('script[type="module"]')];
 let scriptTag = scriptTags.find(s => s.src && new URL(s.src).href === import.meta.url);
 if (!scriptTag) {
     scriptTag = scriptTags.find(s => s?.getAttribute('yw-config-path'));
 }
 
-const sectionDescriptions = [];
+// id -> the description of the section built (load, then flatSections)
+const sectionDescriptions = {};
 
 // error: the actions given while the config loads -- {action, off}, off once they are listeners (errorActions)
 const earlyErrorActions = [];
@@ -56,8 +61,8 @@ const sectionDirectiveName = 'yw-section';
 const includeDirectiveName = 'yw-include';
 const directiveAttributeId = 'yw-section-id';
 
-// path
-let version = null;
+// path: the application's version (config.version) -- not the framework's (apiVersion)
+let appVersion = null;
 
 /**
  * A path of the application, its version added: an url of another origin is left as it is; one of the page's
@@ -77,8 +82,8 @@ function formatPath(path, options) {
         return path;   // another origin's: not the application's to version
     }
     const url = new URL(path, window.location.href);
-    if (addVersion && version && !url.searchParams.has('version')) {
-        url.searchParams.append('version', version);
+    if (addVersion && appVersion && !url.searchParams.has('version')) {
+        url.searchParams.append('version', appVersion);
     }
     if (addApiVersion) {
         url.searchParams.append('apiVersion', apiVersion);
@@ -126,7 +131,7 @@ if (configPath) {
 
 console.info('yojaWeb config: ', config);
 if (config.version) {
-    version = config.version;
+    appVersion = config.version;
 }
 
 /**
@@ -252,6 +257,24 @@ function logCss(section, tab = 1) {
     console.info('</' + sectionDirectiveName + '>');
 }
 
+/**
+ * The parameters of a section or controler query: (tag, predicate) or ({tag, predicate}) -- no tag: the document.
+ */
+function manageParameters(parameter_1, parameter_2) {
+    let tag = null;
+    let predicate = null;
+    if (parameter_1 instanceof Object
+          && (parameter_1.tag || parameter_1.predicate)) {
+        tag = parameter_1.tag;
+        predicate = parameter_1.predicate;
+    }
+    else {
+        tag = parameter_1;
+        predicate = parameter_2;
+    }
+    return {tag: tag ? tag : document, predicate: predicate};
+}
+
 // class
 class ControlerService {
     
@@ -261,23 +284,8 @@ class ControlerService {
         this.#sectionService = sectionService;
     }
     
-    #manageParameters(parameter_1, parameter_2) {
-        let tag = null;
-        let predicate = null;
-        if (parameter_1 instanceof Object
-              && (parameter_1.tag || parameter_1.predicate)) {
-            tag = parameter_1.tag;
-            predicate = parameter_1.predicate;
-        }
-        else {
-            tag = parameter_1;
-            predicate = parameter_2;
-        }
-        return {tag: tag ? tag : document, predicate: predicate};
-    }
-    
     first(tag, predicate) {
-        const parameters = this.#manageParameters(tag, predicate);
+        const parameters = manageParameters(tag, predicate);
         
         let result = null;
         const consumer = controler => {
@@ -291,7 +299,7 @@ class ControlerService {
     }
     
     find(tag, predicate) {
-        const parameters = this.#manageParameters(tag, predicate);
+        const parameters = manageParameters(tag, predicate);
         
         const result = [];
         const consumer = controler => {
@@ -304,7 +312,7 @@ class ControlerService {
     }
     
     children(tag, predicate) {
-        const parameters = this.#manageParameters(tag, predicate)
+        const parameters = manageParameters(tag, predicate)
         
         const children = domUtil.childrenSection(parameters.tag)
         const result = []
@@ -318,7 +326,7 @@ class ControlerService {
     }
     
     closest(tag, predicate) {
-        const parameters = this.#manageParameters(tag, predicate);
+        const parameters = manageParameters(tag, predicate);
         
         let result = null;
         let previousTag = parameters.tag;
@@ -341,7 +349,7 @@ class ControlerService {
     }
     
     parent(tag, predicate) {
-        const parameters = this.#manageParameters(tag, predicate);
+        const parameters = manageParameters(tag, predicate);
         
         let result = null;
         let previousTag = parameters.tag;
@@ -364,7 +372,7 @@ class ControlerService {
     }
         
     parents(tag, predicate) {
-        const parameters = this.#manageParameters(tag, predicate);
+        const parameters = manageParameters(tag, predicate);
         
         const parents = this.#sectionService.parents(parameters.tag);
         const result = [];
@@ -400,6 +408,7 @@ class ControlerService {
 class SectionService {
     
     first(tag, predicate) {
+        ({tag, predicate} = manageParameters(tag, predicate));
         let result = null;
         const consumer = section => {
             if (test(predicate, section)) {
@@ -412,6 +421,7 @@ class SectionService {
     }
     
     find(tag, predicate) {
+        ({tag, predicate} = manageParameters(tag, predicate));
         const result = [];
         const consumer = section => {
             if (test(predicate, section)) {
@@ -423,6 +433,7 @@ class SectionService {
     }
     
     children(tag, predicate) {
+        ({tag, predicate} = manageParameters(tag, predicate));
         const children = domUtil.childrenSection(tag);
         const result = [];
         for (const child of children) {
@@ -434,9 +445,11 @@ class SectionService {
     }
     
     closest(tag, predicate) {
+        ({tag, predicate} = manageParameters(tag, predicate));
         let result = null;
         let previousTag = tag;
-        while (true) {
+        // up to the top: the document has no section above it
+        while (previousTag && previousTag !== document) {
             const section = domUtil.closestSection(previousTag);
             if (section
                   && test(predicate, section)) {
@@ -454,9 +467,11 @@ class SectionService {
     }
     
     parent(tag, predicate) {
+        ({tag, predicate} = manageParameters(tag, predicate));
         let result = null;
         let previousTag = tag;
-        while (true) {
+        // up to the top: the document has no section above it
+        while (previousTag && previousTag !== document) {
             const section = domUtil.parentSection(previousTag);
             if (section 
                   && test(predicate, section)) {
@@ -474,6 +489,7 @@ class SectionService {
     }
     
     parents(tag, predicate) {
+        ({tag, predicate} = manageParameters(tag, predicate));
         const parents = domUtil.parentSections(tag);
         const result = [];
         for (const parent of parents) {
@@ -494,7 +510,7 @@ class SectionService {
     }
     
     walk(tag, consumer) {
-        return domUtil.walkSection(tag, consumer);
+        return domUtil.walkSection(tag ? tag : document, consumer);
     }
     
 }
@@ -564,10 +580,17 @@ class Section {
         const controlerClass = section?.controler?.service;
         if (controlerClass) {
             try {
-                this.#controler = new controlerClass(this);
-                this.#controler.className = function() {
-                    return this.constructor.name;
+                // className() given to the class -- there already in its constructor; its own, if it has one, kept
+                if (!('className' in controlerClass.prototype)) {
+                    Object.defineProperty(controlerClass.prototype, 'className', {
+                        value: function() {
+                            return this.constructor.name;
+                        },
+                        writable: true,
+                        configurable: true
+                    });
                 }
+                this.#controler = new controlerClass(this);
             }
             catch (error) {
                 // the other sections built all the same: this one without its controler, said
@@ -859,16 +882,16 @@ class YojaWeb {
     #sectionService;
     #controlerService;
     #config;
-    #version;
+    #apiVersion;
     
     constructor(sectionService, 
                 controlerService, 
                 config,
-                version) {
+                apiVersion) {
         this.#sectionService = sectionService;
         this.#controlerService = controlerService;
         this.#config = config;
-        this.#version = version;
+        this.#apiVersion = apiVersion;
     }
     
     get sectionService() {
@@ -917,8 +940,9 @@ class YojaWeb {
         return formatPath(path, option);
     }
     
+    /** @return the framework's version -- the application's: config.version */
     version() {
-        return this.#version;
+        return this.#apiVersion;
     }
     
     appendTag(fromTag, tags) {
@@ -1034,13 +1058,13 @@ class YojaWeb {
                     this.#addOnlyTag(mode, fromTag, children, path, resolve, reject);
                 }
                 else {
-                    reject(yojaError('http request for append tag failed', { 
+                    reject(yojaError('http request for ' + mode + ' tag failed', { 
                             path: path,
                             httpStatus: response.status,
                             httpBody: response.body}));
                 }
             })
-            .catch(error => reject(yojaError('append tag failed', { 
+            .catch(error => reject(yojaError(mode + ' tag failed', { 
                                     error: error})));
         });
     }    
@@ -1250,7 +1274,8 @@ async function load(fromPath, fromTag, ancestors = new Set()) {
     const inclusionPath = new Set(ancestors).add(fromPath);
     const allPromises = [];
     for (const [index, sectionTag] of domUtil.findSection(fromTag).entries()) {
-        const sectionPromises = [];
+        // its resources by name -- one not used: undefined
+        const resources = {include: undefined, slot: undefined, css: undefined, controler: undefined};
         let languagePath = undefined;
         // include
         if (domUtil.isInclude(sectionTag)) {
@@ -1281,13 +1306,9 @@ async function load(fromPath, fromTag, ancestors = new Set()) {
                     resolve();
                 }
             })    
-            sectionPromises.push(withoutFailing(includePromise));
-            sectionPromises.push(Promise.resolve());
-            sectionPromises.push(Promise.resolve());
-            sectionPromises.push(Promise.resolve());
+            resources.include = withoutFailing(includePromise);
         }
         else {
-            sectionPromises.push(Promise.resolve());
             // slot
             const slotPromise = new Promise((resolve, reject) => {
                 const slotPath = formatPathFrom(sectionTag.getAttribute('yw-slot'), fromPath);
@@ -1315,13 +1336,13 @@ async function load(fromPath, fromTag, ancestors = new Set()) {
                     resolve();
                 }
             })    
-            sectionPromises.push(withoutFailing(slotPromise));
+            resources.slot = withoutFailing(slotPromise);
             // css
             const cssPath = formatPathFrom(sectionTag.getAttribute('yw-css'), fromPath, {version: false});
             const cssPromise = cssPath 
                                  ? cssLoader.load(cssPath) 
                                  : Promise.resolve();
-            sectionPromises.push(withoutFailing(cssPromise));
+            resources.css = withoutFailing(cssPromise);
             // controler
             const controlerPromise = new Promise((resolve, reject) => {
                  const controlerPath = formatPathFrom(sectionTag.getAttribute('yw-controler'), fromPath);
@@ -1342,23 +1363,21 @@ async function load(fromPath, fromTag, ancestors = new Set()) {
                     resolve();
                  }
             })  
-            sectionPromises.push(withoutFailing(controlerPromise));
+            resources.controler = withoutFailing(controlerPromise);
             // language
             languagePath = formatPathFrom(sectionTag.getAttribute('yw-language'), fromPath);
         }
         // all futures
         const includeTagPromises = new Promise((resolve, reject) => {
-           Promise.all(sectionPromises)
-                  .then(promises => {
+           const names = Object.keys(resources);
+           Promise.all(names.map(name => resources[name]))
+                  .then(loaded => {
                      const section = {};
                      section.index = index;
                      section.fromPath = fromPath;
                      section.languagePath = languagePath;
                      section.tagName = sectionTag.localName;
-                     section.include = promises[0];
-                     section.slot = promises[1];
-                     section.css = promises[2];
-                     section.controler = promises[3];
+                     names.forEach((name, i) => section[name] = loaded[i]);
                      
                      if (section.slot) {
                          fileGraph.addLink(fromPath, section.slot.path);
@@ -1650,14 +1669,13 @@ function append(tag, loadedSections) {
     READY
 
  */
-/** Runs an action of the application: it failing, said -- the others run all the same. */
+/** Runs an action of the application: it failing, said -- YojaWeb's error actions told (listenerUtil). */
 function runAction(action, name) {
     try {
         action();
     }
     catch (error) {
-        console.error('YojaWeb ' + name + ' action failed', error);
-        errorActions.run(error);
+        listenerUtil.reportFailure('YojaWeb ' + name, error);
     }
 }
 
@@ -1689,18 +1707,14 @@ function sectionReady(sections) {
 
 function tagReady(sections, tags) {
     console.debug('YojaWeb tagReady');
-    for (const action of tagReadyActions.actions()) {
-        runAction(() => action(tags), 'tagReady');
-    }
+    tagReadyActions.run(tags);
 }
    
 function documentReady(sections) {
     console.debug('YojaWeb documentReady');
     // from now on, one given is told at once: even given by an action told here
     documentReadyTold = true;
-    for (const action of documentReadyActions.actions()) {
-        runAction(action, 'documentReady');
-    }
+    documentReadyActions.run();
     // told once: not kept
     documentReadyActions.clear();
     yojaWebReady = true;
@@ -1727,8 +1741,12 @@ async function applyYojaWebOnTag(path, tag) {
     return load(path, tag).then(sectionDescriptions => append(tag, sectionDescriptions));
 }
 
+// the body's own display: hidden while the page is built, then given back as it was
+let bodyDisplay = '';
+
 async function applyYojaWebOnDocument() {
     const path = window.location.pathname;
+    bodyDisplay = document.body.style.display;
     document.body.style.display = 'none';
     return load(path, document)
              .then(sectionDescriptions => append(document, sectionDescriptions))
@@ -1743,35 +1761,25 @@ async function applyYojaWebOnDocument() {
                 return translated;
               })
              .then(() => {
-                document.body.style.display = '';
+                document.body.style.display = bodyDisplay;
               });
 }
     
 /** The page failed: shown all the same -- what could be built, not a blank page --, the error said. */
 function failed(error) {
-    document.body.style.display = '';
+    document.body.style.display = bodyDisplay;
     console.error('YojaWeb failed: ' + error?.message, error);
     errorActions.run(error);
 }
 
 function ready() {
-    document.removeEventListener('DOMContentLoaded', ready);
-    window.removeEventListener('load', ready);
-    try {
-        applyYojaWebOnDocument().catch(failed);
-    }
-    catch (error) {
-        failed(error);
-    }
+    applyYojaWebOnDocument().catch(failed);
 }
 
-if (document.readyState === 'complete'
-       || (document.readyState !== 'loading' 
-              && !document.documentElement.doScroll)) {
-    window.setTimeout(ready);
-} 
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', ready, {once: true});
+}
 else {
-    document.addEventListener('DOMContentLoaded', ready);
-    window.addEventListener('load', ready);
+    window.setTimeout(ready);
 }
 

@@ -280,7 +280,7 @@
         <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
         <tbody>
           <tr><td><code>path(path [, options])</code></td><td class="ret"><code>string</code></td><td class="desc">Normalizes path and appends <code>?version=…</code>; <code>options.force=true</code> also adds <code>&amp;date=…</code></td></tr>
-          <tr><td><code>version()</code></td><td class="ret"><code>string</code></td><td class="desc">Runtime version string</td></tr>
+          <tr><td><code>version()</code></td><td class="ret"><code>string</code></td><td class="desc">The yoja-web version, read from the file name (<code>YojaWeb-&lt;version&gt;.js</code>) — not the application's <code>config.version</code></td></tr>
           <tr><td><code>append(tag, path)</code></td><td class="ret"><code>Promise&lt;HTMLElement[]&gt;</code></td><td class="desc">Fetches HTML at <code>path</code>, appends all children to <code>tag</code> (or its shadow root)</td></tr>
           <tr><td><code>prepend(tag, path)</code></td><td class="ret"><code>Promise&lt;HTMLElement[]&gt;</code></td><td class="desc">Same as <code>append</code>, but prepended</td></tr>
         </tbody>

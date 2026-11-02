@@ -343,6 +343,7 @@ classDiagram
 ```js
 // Wait for the framework to finish loading
 window.yojaWeb.onDocumentReady(() => {
+    // the framework's version, read from its file name (YojaWeb-<version>.js) -- the application's: config.version
     console.log('framework ready, version: ' + window.yojaWeb.version());
 });
 ```
