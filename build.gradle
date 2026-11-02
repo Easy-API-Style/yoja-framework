@@ -277,8 +277,9 @@ def newProjectInfo() {
         lastTag = "0.0.0"
     }
     def status = !tag || tag.contains(hashCommit) ? "dev" : "releases"
-    // def version = !tag || tag.contains(hashCommit) ? lastTag + "-dev." + hashCommit : tag
-    def version = !tag || tag.contains(hashCommit) ? lastTag + "-SNAPSHOT" : tag
+    // dev: the next patch's snapshot (1.6.0 -> 1.6.1-SNAPSHOT) -- a snapshot comes before its release, not after
+    def nextPatch = lastTag.replaceFirst(/(\d+)$/) { all, patch -> (patch.toInteger() + 1).toString() }
+    def version = !tag || tag.contains(hashCommit) ? nextPatch + "-SNAPSHOT" : tag
     println("Build tag: ${tag}")
     println("Build status: ${status}")
     println("Build version: ${version}")
