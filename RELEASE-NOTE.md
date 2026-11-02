@@ -1,3 +1,16 @@
+## 1.7.0
+* every yoja-web `onXXX(action)` returns its `off()` -> called, the action is no more told (no `removeXXX`): `yojaWeb`, `httpClient`, `languageService`, `urlParameterService`, `storageService`, `webSocketService`, `responsiveService`, `eventService.on(...)`
+* add `section.track(off)` -> the `off` runs once the section has left the page: the action of a section gone is never told
+* every listener isolated -> an action throwing is logged and told to `yojaWeb.onError(...)`, the others told all the same; one removed while an event is told is not told
+* `responsiveService.onMedia(...)` / `onResize(...)` use the common listeners -> return their `off`
+* `eventService.trigger(...)` no longer throws an action's error -> told to `yojaWeb.onError(...)`; `eventService.remove(...)` removes the events' actions too
+* remove `webSocketService` keyed listeners (`put...`, `has...`, `remove(eventType, url, key)`) -> use the `off` of `on...(...)` and `section.track(off)`
+* a section's resource failing to load (controler, `yw-css`, `yw-slot`, `yw-include`) -> the section built without it, the others with theirs, the error told to `yojaWeb.onError(...)`; `append`/`prepend`/`appendTag`/`prependTag` no longer rejected for it
+* `yojaWeb.onDocumentReady(...)` given once the document is ready -> told all the same, just after the call
+* `section.controlerReady(...)` / `pageReady(...)` given once the section is ready -> told all the same, just after the call; the section gone: never told (no more `TypeError`)
+* fix `onTagReady` documentation -> the action is given the tags added
+* dev build version is the next patch's snapshot (`1.6.0` -> `1.6.1-SNAPSHOT`)
+
 ## 1.6.0
 * reverse proxy streams the traffic with Vert.x `HttpProxy` (HTTP and WebSocket, any body size) -> replaces `ReverseProxySwitcherWebClient`
 * reverse proxy verifies the upstreams' certificates (no more trust-all) -> `sslProxyTrust(Path)` for a self-signed upstream; TLS chosen per rule, `sslProxy(true)` forces it for all

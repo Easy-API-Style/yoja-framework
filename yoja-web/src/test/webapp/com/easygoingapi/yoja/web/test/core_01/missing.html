@@ -8,7 +8,8 @@
             yw-config-path="/YojaWeb.conf.js"></script>
 </head>
 <body>
-    <!-- a controler that does not exist: the page fails, shown all the same -->
+    <!-- a controler that does not exist: its section built without it, the one after with its own; the page ready -->
     <yw-section class="absent" yw-controler="./absent.ctl.js"><span>still shown</span></yw-section>
+    <yw-section class="good" yw-controler="./good.ctl.js"><span>good</span></yw-section>
 </body>
 </html>

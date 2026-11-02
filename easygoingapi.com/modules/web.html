@@ -248,8 +248,8 @@
       <table class="api-table">
         <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td><code>onDocumentReady(fn)</code></td><td class="ret"><code>off</code></td><td class="desc">Registers <code>fn</code>; fires once after the full document bootstrap</td></tr>
-          <tr><td><code>onTagReady(fn)</code></td><td class="ret"><code>off</code></td><td class="desc">Registers <code>fn</code>; fires each time a <code>yw-*</code> element is initialized</td></tr>
+          <tr><td><code>onDocumentReady(fn)</code></td><td class="ret"><code>off</code></td><td class="desc">Registers <code>fn</code>; fires once after the full document bootstrap — given later, told all the same, just after the call</td></tr>
+          <tr><td><code>onTagReady(fn)</code></td><td class="ret"><code>off</code></td><td class="desc">Registers <code>fn</code>; fires each time tags are added (<code>append</code>, <code>prepend</code>, <code>appendTag</code>, <code>prependTag</code>) and their sections ready: <code>fn(tags)</code>, the tags added</td></tr>
           <tr><td><code>isReady()</code></td><td class="ret"><code>boolean</code></td><td class="desc"><code>true</code> once the runtime bootstrap is complete</td></tr>
           <tr><td><code>onError(fn)</code></td><td class="ret"><code>off</code></td><td class="desc">Registers a global error handler; also told when a listener of any service throws</td></tr>
         </tbody>
@@ -324,7 +324,7 @@
 
     <div class="api-class">
       <h3><code>Section</code> <span class="kind">class (injected, not exported)</span></h3>
-      <p>Handle injected into every controller constructor. One <code>Section</code> per DOM element carrying a <code>yw-*</code> directive.</p>
+      <p>Handle injected into every controller constructor. One <code>Section</code> per DOM element carrying a <code>yw-*</code> directive. A resource of a section failing to load — its controller, <code>yw-css</code>, <code>yw-slot</code>, <code>yw-include</code> — or its controller throwing in its constructor: logged, told to <code>yojaWeb.onError</code>, the section built without it, the others with theirs.</p>
 
       <span class="api-table-group">Properties</span>
       <table class="api-table">
@@ -389,8 +389,8 @@
       <table class="api-table">
         <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td><code>controlerReady(action)</code></td><td class="ret"><code>void</code></td><td class="desc">Registers <code>action</code>; fires once the controller is initialized</td></tr>
-          <tr><td><code>pageReady(action)</code></td><td class="ret"><code>void</code></td><td class="desc">Registers <code>action</code>; fires once the full page bootstrap is complete</td></tr>
+          <tr><td><code>controlerReady(action)</code></td><td class="ret"><code>void</code></td><td class="desc">Registers <code>action</code>; fires once the controller is initialized — given later, told all the same, just after the call; the section gone, never</td></tr>
+          <tr><td><code>pageReady(action)</code></td><td class="ret"><code>void</code></td><td class="desc">Registers <code>action</code>; fires once the full page bootstrap is complete — given later, told all the same, just after the call; the section gone, never</td></tr>
           <tr><td><code>track(off)</code></td><td class="ret"><code>off</code></td><td class="desc">Runs the <code>off</code> of a subscription once the section has left the page (gone already: at once); returns the same <code>off</code>. Not a function: <code>TypeError</code>. See <a href="#listeners">Listeners</a></td></tr>
         </tbody>
       </table>

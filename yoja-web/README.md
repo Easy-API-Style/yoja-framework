@@ -463,14 +463,14 @@ If the target has a shadow root, both `append` and `prepend` insert into that sh
 ### Lifecycle & errors
 
 ```js
-// Run after all sections on the page are ready
+// Run after all sections on the page are ready -- given once they are, told all the same, just after the call
 window.yojaWeb.onDocumentReady(() => {
     console.log('all sections ready');
 });
 
-// Run each time a section tag becomes ready
-window.yojaWeb.onTagReady(section => {
-    console.log('section ready:', section.tag.localName);
+// Run each time tags are added (append, prepend, appendTag, prependTag) and their sections ready: told the tags added
+window.yojaWeb.onTagReady(tags => {
+    console.log('tags ready:', tags.map(tag => tag.localName));
 });
 
 // Check readiness synchronously
@@ -685,7 +685,12 @@ export default class MyControler {
 ```
 
 `controlerReady` and `pageReady` are steps of the section's own life: they return nothing and are dropped with the
-section. A subscription to a service is handed to `section.track(off)` -- see
+section. Given once its ready actions have run -- in a `then`, a listener --, an action is told all the same, just
+after the call; the section gone from the page, it is never told.
+
+A resource of a section failing to load -- its controler, `yw-css`, `yw-slot` or `yw-include` (a 404, a syntax
+error) -- is logged and told to `yojaWeb.onError(...)`: the section is built without it, the other sections with
+theirs. A controler throwing in its constructor is handled the same way: its section is built without a controler. A subscription to a service is handed to `section.track(off)` -- see
 [Listeners](#listeners-onxxx-and-sectiontrackoff).
 
 ### Section Properties

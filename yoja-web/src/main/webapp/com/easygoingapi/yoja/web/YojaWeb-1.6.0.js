@@ -39,6 +39,8 @@ function yojaError(message, details = {}) {
     return error;
 }
 let yojaWebReady = false;
+// the document ready actions told: one given from then on is told at once (after the call giving it)
+let documentReadyTold = false;
 window.yojaWeb = {};
 window.yojaWeb.onError = action => {
     const early = {action: action, off: null};
@@ -580,11 +582,33 @@ class Section {
      * ACTION
      */
     controlerReady(action) {
-        controlerReadyActions[this.#id].push(action);
+        this.#ready(controlerReadyActions, action, 'controlerReady');
     }
     
     pageReady(action) {
-        pageReadyActions[this.#id].push(action);
+        this.#ready(pageReadyActions, action, 'pageReady');
+    }
+
+    /**
+     * Its ready actions not told yet: kept for then; told already: told at once -- just after this call, not during
+     * it; the section gone from the page: never told.
+     */
+    #ready(actionsById, action, name) {
+        if (typeof action !== 'function') {
+            throw new TypeError('YojaWeb ' + name + ': an action is a function, not ' + typeof action + ': ' + action);
+        }
+        const actions = actionsById[this.#id];
+        if (actions) {
+            actions.push(action);
+        }
+        else if (actions === null) {
+            queueMicrotask(() => {
+                if (this.#sectionTag.isConnected) {
+                    runAction(action, name);
+                }
+            });
+        }
+        // undefined: the section forgotten, gone from the page
     }
 
     /**
@@ -1026,9 +1050,27 @@ class YojaWeb {
         return tagReadyActions.add(action);
     }
     
-    /** @return its off */
+    /**
+     * The document ready already: told all the same -- just after this call, not during it.
+     *
+     * @return its off
+     */
     onDocumentReady(action) {
-        return documentReadyActions.add(action);
+        if (!documentReadyTold) {
+            return documentReadyActions.add(action);
+        }
+        if (typeof action !== 'function') {
+            throw new TypeError('YojaWeb documentReady: an action is a function, not ' + typeof action + ': ' + action);
+        }
+        let off = false;
+        queueMicrotask(() => {
+            if (!off) {
+                runAction(action, 'documentReady');
+            }
+        });
+        return () => {
+            off = true;
+        };
     }
     
     isReady() {
@@ -1182,6 +1224,20 @@ function getIncludeMode(sectionTag) {
 }
 
 /**
+ * A resource of a section failing -- its include, slot, css, controler --: said, YojaWeb's error actions told, the
+ * section built without it; the others built all the same.
+ *
+ * @return the promise giving the resource -- or undefined, it failing
+ */
+function withoutFailing(promise) {
+    return promise.catch(error => {
+        console.error('YojaWeb: ' + error?.message + ' -- its section built without it', error);
+        errorActions.run(error);
+        return undefined;
+    });
+}
+
+/**
  * Loads the sections of a tag -- their includes and slots with their own sections, each time they are used: a
  * file used again (another slot, a screen built again) is loaded again; only one that comes back on its own
  * inclusion path is not (a file including itself).
@@ -1225,7 +1281,7 @@ async function load(fromPath, fromTag, ancestors = new Set()) {
                     resolve();
                 }
             })    
-            sectionPromises.push(includePromise);
+            sectionPromises.push(withoutFailing(includePromise));
             sectionPromises.push(Promise.resolve());
             sectionPromises.push(Promise.resolve());
             sectionPromises.push(Promise.resolve());
@@ -1259,13 +1315,13 @@ async function load(fromPath, fromTag, ancestors = new Set()) {
                     resolve();
                 }
             })    
-            sectionPromises.push(slotPromise);
+            sectionPromises.push(withoutFailing(slotPromise));
             // css
             const cssPath = formatPathFrom(sectionTag.getAttribute('yw-css'), fromPath, {version: false});
             const cssPromise = cssPath 
                                  ? cssLoader.load(cssPath) 
                                  : Promise.resolve();
-            sectionPromises.push(cssPromise);
+            sectionPromises.push(withoutFailing(cssPromise));
             // controler
             const controlerPromise = new Promise((resolve, reject) => {
                  const controlerPath = formatPathFrom(sectionTag.getAttribute('yw-controler'), fromPath);
@@ -1286,7 +1342,7 @@ async function load(fromPath, fromTag, ancestors = new Set()) {
                     resolve();
                  }
             })  
-            sectionPromises.push(controlerPromise);
+            sectionPromises.push(withoutFailing(controlerPromise));
             // language
             languagePath = formatPathFrom(sectionTag.getAttribute('yw-language'), fromPath);
         }
@@ -1611,6 +1667,9 @@ function sectionReady(sections) {
     for (const section of sections) {
         controlerActions.push(...(controlerReadyActions[section.id] || []));
         pageActions.push(...(pageReadyActions[section.id] || []));
+        // told: one given from now on is told at once (Section #ready)
+        controlerReadyActions[section.id] = null;
+        pageReadyActions[section.id] = null;
     }
     console.debug('YojaWeb controlerReady')
     for (const action of controlerActions) {
@@ -1637,9 +1696,13 @@ function tagReady(sections, tags) {
    
 function documentReady(sections) {
     console.debug('YojaWeb documentReady');
+    // from now on, one given is told at once: even given by an action told here
+    documentReadyTold = true;
     for (const action of documentReadyActions.actions()) {
         runAction(action, 'documentReady');
     }
+    // told once: not kept
+    documentReadyActions.clear();
     yojaWebReady = true;
 }
                              

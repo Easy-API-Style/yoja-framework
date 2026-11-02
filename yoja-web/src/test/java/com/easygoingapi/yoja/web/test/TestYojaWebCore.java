@@ -25,7 +25,6 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.DynamicNode;
 import org.junit.jupiter.api.TestFactory;
-import org.openqa.selenium.TimeoutException;
 
 import com.easygoingapi.yoja.web.test.util.TestConfig;
 
@@ -55,18 +54,18 @@ public class TestYojaWebCore {
     public Stream<DynamicNode> testYojaWebCore_02() {
         return TestConfig.initialize()
                          .webResource("com.easygoingapi.yoja.web.test.core_01")
-                         .test("load page", c -> {
-                             try {
-                                 c.getHttpPage(Duration.ofSeconds(2), c.httpUrlBuilder().path("/missing.html").build());
-                             }
-                             catch (final TimeoutException neverReady) {
-                                 // failing, the page never gets ready: what is looked at is that it is shown
-                             }
-                         })
-                         .test("the page failing is shown all the same", c -> assertEquals("still shown",
+                         .test("load page", c -> c.getHttpPage(Duration.ofSeconds(5),
+                                                               c.httpUrlBuilder().path("/missing.html").build()))
+                         .test("a controler missing: its section built without it, the others with theirs",
+                               c -> assertEquals("still shown|no controler|yes|shown",
                                  c.seleniumService().repeatScript(Duration.ofSeconds(10), """
-                                     return document.body.style.display === '' && document.querySelector('.absent')
-                                            ? document.querySelector('.absent').textContent.trim() : null;
+                                     const absent = document.querySelector('.absent');
+                                     return absent?.ywSection
+                                            ? [absent.shadowRoot.textContent.trim(),
+                                               absent.ywSection.controler === undefined ? 'no controler' : 'controler',
+                                               document.querySelector('.good').dataset.built,
+                                               document.body.style.display === '' ? 'shown' : 'hidden'].join('|')
+                                            : null;
                                  """)))
                          .stream();
     }
@@ -100,7 +99,9 @@ public class TestYojaWebCore {
                                              "test_02",
                                              "test_03",
                                              "test_04",
-                                             "test_05"))
+                                             "test_05",
+                                             "test_06",
+                                             "test_07"))
                          .stream();
     }
 
