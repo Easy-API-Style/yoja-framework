@@ -99,6 +99,7 @@
       <li><a href="#directives">HTML directives</a></li>
       <li><a href="#yojaweb">yojaWeb global</a></li>
       <li><a href="#section">Section</a></li>
+      <li><a href="#listeners">Listeners &amp; <code>off</code></a></li>
       <li>
         <a href="#services">YojaWebApi</a>
         <ul class="nav-sub">
@@ -247,10 +248,10 @@
       <table class="api-table">
         <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td><code>onDocumentReady(fn)</code></td><td class="ret"><code>void</code></td><td class="desc">Registers <code>fn</code>; fires once after the full document bootstrap</td></tr>
-          <tr><td><code>onTagReady(fn)</code></td><td class="ret"><code>void</code></td><td class="desc">Registers <code>fn</code>; fires each time a <code>yw-*</code> element is initialized</td></tr>
+          <tr><td><code>onDocumentReady(fn)</code></td><td class="ret"><code>off</code></td><td class="desc">Registers <code>fn</code>; fires once after the full document bootstrap</td></tr>
+          <tr><td><code>onTagReady(fn)</code></td><td class="ret"><code>off</code></td><td class="desc">Registers <code>fn</code>; fires each time a <code>yw-*</code> element is initialized</td></tr>
           <tr><td><code>isReady()</code></td><td class="ret"><code>boolean</code></td><td class="desc"><code>true</code> once the runtime bootstrap is complete</td></tr>
-          <tr><td><code>onError(fn)</code></td><td class="ret"><code>void</code></td><td class="desc">Registers a global error handler</td></tr>
+          <tr><td><code>onError(fn)</code></td><td class="ret"><code>off</code></td><td class="desc">Registers a global error handler; also told when a listener of any service throws</td></tr>
         </tbody>
       </table>
 
@@ -390,6 +391,7 @@
         <tbody>
           <tr><td><code>controlerReady(action)</code></td><td class="ret"><code>void</code></td><td class="desc">Registers <code>action</code>; fires once the controller is initialized</td></tr>
           <tr><td><code>pageReady(action)</code></td><td class="ret"><code>void</code></td><td class="desc">Registers <code>action</code>; fires once the full page bootstrap is complete</td></tr>
+          <tr><td><code>track(off)</code></td><td class="ret"><code>off</code></td><td class="desc">Runs the <code>off</code> of a subscription once the section has left the page (gone already: at once); returns the same <code>off</code>. Not a function: <code>TypeError</code>. See <a href="#listeners">Listeners</a></td></tr>
         </tbody>
       </table>
 
@@ -402,6 +404,42 @@
         </tbody>
       </table>
     </div>
+
+    <h2 id="listeners">Listeners: <code>onXXX(...)</code> and <code>section.track(off)</code></h2>
+
+    <p>
+      Every subscription of the framework — <code>yojaWeb.onXXX</code>, and the <code>on…</code> of every service
+      below — <strong>returns its <code>off</code></strong>: a function that, called, stops the action from being
+      told (called again: nothing). There is no <code>removeXXX(action)</code>: no function reference to keep, an
+      arrow function is fine.
+    </p>
+    <p>
+      The services live as long as the page; a section may not. A controller hands the <code>off</code> to its
+      section with <code>section.track(off)</code>: it runs once the section has left the page. No
+      <code>MutationObserver</code> is involved — <strong>before each event is told</strong>, the framework forgets
+      the sections no more in the page and runs their tracked <code>off</code>s, so the action of a section gone is
+      never told.
+    </p>
+<pre><code><span class="k">export default class</span> ChatControler {
+    <span class="k">constructor</span>(section) {
+        <span class="k">const</span> {webSocketService, languageService, responsiveService} = yojaWebApi;
+
+        section.track(webSocketService.onMessage(<span class="s">'/ws/chat'</span>, message =&gt; <span class="k">this</span>.show(message.data)));
+        section.track(languageService.onLanguageChange(() =&gt; <span class="k">this</span>.refresh()));
+        section.track(responsiveService.onMedia(event =&gt; { section.tag.dataset.media = event.media.name; }));
+
+        <span class="k">const</span> off = yojaWebApi.httpClient.onOffline(() =&gt; showBanner());
+        off();   <span class="c">// by hand: no more told</span>
+    }
+}</code></pre>
+    <p>What every listener can count on:</p>
+    <ul>
+      <li><strong>Order</strong> — told in the order added (<code>eventService</code>: in their position).</li>
+      <li><strong>Isolation</strong> — an action throwing is logged and told to <code>yojaWeb.onError(...)</code>; the others are told all the same, and the code raising the event does not get the error.</li>
+      <li><strong>Changes meanwhile</strong> — added while an event is told: told from the next one; removed meanwhile (its <code>off</code>, <code>removeAction</code>, <code>remove</code>): not told, if not yet.</li>
+      <li><strong>Checked at once</strong> — an action that is not a function is a <code>TypeError</code> when subscribing.</li>
+    </ul>
+    <p><code>section.controlerReady</code> / <code>pageReady</code> are steps of the section's own life, not subscriptions: they return nothing.</p>
 
     <h2 id="services">YojaWebApi</h2>
 
@@ -424,9 +462,9 @@
       <table class="api-table">
         <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td><code>onRequest(callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Called before every outgoing request</td></tr>
-          <tr><td><code>onResponse(callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Called after every response is received</td></tr>
-          <tr><td><code>onFetch(callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Called for each Fetch-mode request</td></tr>
+          <tr><td><code>onRequest(callback)</code></td><td class="ret"><code>off</code></td><td class="desc">Called before every outgoing request</td></tr>
+          <tr><td><code>onResponse(callback)</code></td><td class="ret"><code>off</code></td><td class="desc">Called after every response is received</td></tr>
+          <tr><td><code>onFetch(callback)</code></td><td class="ret"><code>off</code></td><td class="desc">Called for each Fetch-mode request</td></tr>
           <tr><td><code>addContentTypes(config)</code></td><td class="ret"><code>void</code></td><td class="desc">Register custom MIME → parse-mode mappings (<code>jsonContentTypes</code>, <code>textContentTypes</code>, <code>blobContentTypes</code>, <code>base64ContentTypes</code>)</td></tr>
         </tbody>
       </table>
@@ -436,8 +474,8 @@
         <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
         <tbody>
           <tr><td><code>isOffline()</code></td><td class="ret"><code>boolean</code></td><td class="desc"><code>true</code> when the browser has no network connection</td></tr>
-          <tr><td><code>onOnline(callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires when the network connection is restored</td></tr>
-          <tr><td><code>onOffline(callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires when the network connection is lost</td></tr>
+          <tr><td><code>onOnline(callback)</code></td><td class="ret"><code>off</code></td><td class="desc">Fires when the network connection is restored</td></tr>
+          <tr><td><code>onOffline(callback)</code></td><td class="ret"><code>off</code></td><td class="desc">Fires when the network connection is lost</td></tr>
         </tbody>
       </table>
     </div>
@@ -487,8 +525,8 @@
       <table class="api-table">
         <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td><code>on(scope, method, key, callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Per-key listener. <code>scope</code>: <code>'local'|'session'</code>; <code>method</code>: <code>'get'|'set'|'has'|'remove'</code>. <code>callback(value)</code> receives the value only.</td></tr>
-          <tr><td><code>onEvent(callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Global listener. <code>callback(scope, method, key, value)</code> — positional args; <code>method</code> also includes <code>'clear'</code> (fired as <code>(scope, 'clear')</code>, no key/value).</td></tr>
+          <tr><td><code>on(scope, method, key, callback)</code></td><td class="ret"><code>off</code></td><td class="desc">Per-key listener. <code>scope</code>: <code>'local'|'session'</code>; <code>method</code>: <code>'get'|'set'|'has'|'remove'</code>. <code>callback(value)</code> receives the value only.</td></tr>
+          <tr><td><code>onEvent(callback)</code></td><td class="ret"><code>off</code></td><td class="desc">Global listener. <code>callback(scope, method, key, value)</code> — positional args; <code>method</code> also includes <code>'clear'</code> (fired as <code>(scope, 'clear')</code>, no key/value).</td></tr>
         </tbody>
       </table>
     </div>
@@ -501,9 +539,9 @@
       <table class="api-table">
         <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td><code>on(eventId, action)</code></td><td class="ret"><code>void</code></td><td class="desc">Subscribe <code>action</code> to <code>eventId</code></td></tr>
-          <tr><td><code>trigger(query, parameter)</code></td><td class="ret"><code>void</code></td><td class="desc">Publish to all events matching <code>query</code>, passing <code>parameter</code></td></tr>
-          <tr><td><code>remove(query)</code></td><td class="ret"><code>void</code></td><td class="desc">Unsubscribe all actions from matching events</td></tr>
+          <tr><td><code>on(eventId, action)</code></td><td class="ret"><code>off</code></td><td class="desc">Subscribe <code>action</code> to <code>eventId</code> — a string, not a query; <code>action</code>: a function, or <code>{label, position, action}</code></td></tr>
+          <tr><td><code>trigger(query, parameter)</code></td><td class="ret"><code>void</code></td><td class="desc">Publish to all events matching <code>query</code>, passing <code>parameter</code>; an action throwing goes to <code>yojaWeb.onError</code>, the others still told</td></tr>
+          <tr><td><code>remove(query)</code></td><td class="ret"><code>void</code></td><td class="desc">Remove matching events, their actions with them — one being told meanwhile tells no more of them</td></tr>
         </tbody>
       </table>
 
@@ -532,7 +570,7 @@
 
     <div class="api-class">
       <h3 id="websocketservice"><code>webSocketService</code> <span class="kind">service</span></h3>
-      <p>WebSocket client: one socket per URL of the application, on its own host and port, the URL as is. A socket closed -- by <code>close()</code>, by the server, the network, its opening timeout -- is over: its listeners are dropped, <code>webSocket(url)</code> gives a new one. Each event is told to the list (<code>on…</code>), then to the map (<code>put…</code>), in their order; a listener throwing does not keep the others from it.</p>
+      <p>WebSocket client: one socket per URL of the application, on its own host and port, the URL as is. A socket closed -- by <code>close()</code>, by the server, the network, its opening timeout -- is over: its listeners are dropped, <code>webSocket(url)</code> gives a new one. Each <code>on…</code> returns its <code>off</code>; each event is told to the listeners in their order; a listener throwing does not keep the others from it.</p>
 
       <span class="api-table-group">Connection</span>
       <table class="api-table">
@@ -546,27 +584,16 @@
         </tbody>
       </table>
 
-      <span class="api-table-group">Handlers -- the list (only added to)</span>
+      <span class="api-table-group">Handlers</span>
       <table class="api-table">
         <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td><code>onOpen(url, callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires when the socket is opened</td></tr>
-          <tr><td><code>onMessage(url, callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires on each incoming message</td></tr>
-          <tr><td><code>onClose(url, callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires when the socket is closed</td></tr>
-          <tr><td><code>onError(url, callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires on socket error</td></tr>
-          <tr><td><code>onRestart(url, callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires when the socket is connected again after a cut (<code>autoRestart</code>)</td></tr>
-          <tr><td><code>on(eventType, url, callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Any of <code>open</code>, <code>message</code>, <code>close</code>, <code>error</code>, <code>restart</code></td></tr>
-        </tbody>
-      </table>
-
-      <span class="api-table-group">Handlers -- the map (under a key)</span>
-      <table class="api-table">
-        <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
-        <tbody>
-          <tr><td><code>put(eventType, url, key, callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Listen under a key: put again, it replaces the one it had, at its place</td></tr>
-          <tr><td><code>putOpen / putMessage / putClose / putError / putRestart(url, key, callback)</code></td><td class="ret"><code>void</code></td><td class="desc">The same, for that event</td></tr>
-          <tr><td><code>remove(eventType, url, key)</code></td><td class="ret"><code>void</code></td><td class="desc">Listen no more under that key</td></tr>
-          <tr><td><code>has(eventType, url, key)</code></td><td class="ret"><code>boolean</code></td><td class="desc">Whether a listener is put under that key</td></tr>
+          <tr><td><code>onOpen(url, callback)</code></td><td class="ret"><code>off</code></td><td class="desc">Fires when the socket is opened</td></tr>
+          <tr><td><code>onMessage(url, callback)</code></td><td class="ret"><code>off</code></td><td class="desc">Fires on each incoming message</td></tr>
+          <tr><td><code>onClose(url, callback)</code></td><td class="ret"><code>off</code></td><td class="desc">Fires when the socket is closed</td></tr>
+          <tr><td><code>onError(url, callback)</code></td><td class="ret"><code>off</code></td><td class="desc">Fires on socket error</td></tr>
+          <tr><td><code>onRestart(url, callback)</code></td><td class="ret"><code>off</code></td><td class="desc">Fires when the socket is connected again after a cut (<code>autoRestart</code>)</td></tr>
+          <tr><td><code>on(eventType, url, callback)</code></td><td class="ret"><code>off</code></td><td class="desc">Any of <code>open</code>, <code>message</code>, <code>close</code>, <code>error</code>, <code>restart</code></td></tr>
         </tbody>
       </table>
     </div>
@@ -637,7 +664,7 @@
           <tr><td><code>back()</code></td><td class="ret"><code>void</code></td><td class="desc">Native history back</td></tr>
           <tr><td><code>forward()</code></td><td class="ret"><code>void</code></td><td class="desc">Native history forward</td></tr>
           <tr><td><code>go(delta)</code></td><td class="ret"><code>void</code></td><td class="desc">Native history go — integer <code>delta</code> only</td></tr>
-          <tr><td><code>onChange(callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires with an event object on every change; return <code>false</code> from a <code>before-*</code> event to cancel it</td></tr>
+          <tr><td><code>onChange(callback)</code></td><td class="ret"><code>off</code></td><td class="desc">Fires with an event object on every change; return <code>false</code> from a <code>before-*</code> event to cancel it</td></tr>
         </tbody>
       </table>
     </div>
@@ -705,10 +732,10 @@
         <tbody>
           <tr><td><code>setLanguage(language)</code></td><td class="ret"><code>void</code></td><td class="desc">Set the active language code (e.g. <code>'en'</code>, <code>'fr'</code>)</td></tr>
           <tr><td><code>getLanguage()</code></td><td class="ret"><code>string</code></td><td class="desc">Active language code</td></tr>
-          <tr><td><code>onLanguageChange(action)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires when the language is changed</td></tr>
+          <tr><td><code>onLanguageChange(action)</code></td><td class="ret"><code>off</code></td><td class="desc">Fires when the language is changed</td></tr>
           <tr><td><code>refresh([language])</code></td><td class="ret"><code>Promise</code></td><td class="desc">Re-translate the whole page; defaults to current language</td></tr>
           <tr><td><code>refreshFrom(tags [, language])</code></td><td class="ret"><code>Promise</code></td><td class="desc">Re-translate a specific set of elements</td></tr>
-          <tr><td><code>onLanguageTranslate(action)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires after each translation pass</td></tr>
+          <tr><td><code>onLanguageTranslate(action)</code></td><td class="ret"><code>off</code></td><td class="desc">Fires after each translation pass</td></tr>
           <tr><td><code>loadTranslator(path)</code></td><td class="ret"><code>void</code></td><td class="desc">Load an XML translation file at <code>path</code></td></tr>
           <tr><td><code>log(path)</code></td><td class="ret"><code>void</code></td><td class="desc">Log all translation keys defined in the file at <code>path</code></td></tr>
         </tbody>
@@ -723,11 +750,11 @@
       <table class="api-table">
         <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td><code>getMedia()</code></td><td class="ret"><code>string</code></td><td class="desc">Name of the currently active breakpoint</td></tr>
-          <tr><td><code>getListOfMedia()</code></td><td class="ret"><code>string[]</code></td><td class="desc">Names of all defined breakpoints</td></tr>
+          <tr><td><code>getMedia()</code></td><td class="ret"><code>MediaDescription | null</code></td><td class="desc">The currently active breakpoint, <code>{name, maxWidth}</code></td></tr>
+          <tr><td><code>getListOfMedia()</code></td><td class="ret"><code>MediaDescription[]</code></td><td class="desc">All defined breakpoints, smallest first</td></tr>
           <tr><td><code>findMedia(mediaName)</code></td><td class="ret"><code>MediaDescription</code></td><td class="desc">Descriptor for the named breakpoint</td></tr>
-          <tr><td><code>onMedia(callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires with the new breakpoint name on every viewport change</td></tr>
-          <tr><td><code>onResize(callback)</code></td><td class="ret"><code>void</code></td><td class="desc">Fires on every window resize event</td></tr>
+          <tr><td><code>onMedia(callback)</code></td><td class="ret"><code>off</code></td><td class="desc">Fires on every breakpoint change with <code>{event: 'media', previousMedia, media, width, height}</code></td></tr>
+          <tr><td><code>onResize(callback)</code></td><td class="ret"><code>off</code></td><td class="desc">Fires on every window resize with <code>{event: 'resize', media, width, height}</code></td></tr>
           <tr><td><code>initialize(mediaDescriptions)</code></td><td class="ret"><code>void</code></td><td class="desc">Configure breakpoints — typically called once from <code>YojaWeb.conf.js</code></td></tr>
         </tbody>
       </table>

@@ -83,9 +83,20 @@ class YojaEvent {
         return this.#yojaActions.length
     }
     
+    /**
+     * Tells every action, in their order -- each one isolated: one failing is said, YojaWeb's error actions told, the
+     * others told all the same; one removed meanwhile: not told, if not yet.
+     */
     trigger(parameter) {
         for (const yojaAction of [...this.#yojaActions]) {
-            yojaAction.action(parameter);
+            if (this.#yojaActions.includes(yojaAction)) {
+                try {
+                    yojaAction.action(parameter);
+                }
+                catch (error) {
+                    listenerUtil.reportFailure('eventService ' + this.#id, error);
+                }
+            }
         }
     }
 
@@ -302,10 +313,12 @@ class YojaEventService {
         return this.#find(query).length;
     }
     
+    /** Removes the events -- their actions with them: one being told meanwhile tells no more of them. */
     remove(query) {
         const yojaEvents = this.#find(query);
         for (const yojaEvent of yojaEvents) {
             yojaEvent.active(false);
+            yojaEvent.clearAction();
             delete this.#yojaEvents[yojaEvent.id];
         }
     }

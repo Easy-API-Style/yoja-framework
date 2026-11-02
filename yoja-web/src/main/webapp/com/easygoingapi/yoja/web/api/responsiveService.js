@@ -17,11 +17,13 @@
  */
 'use strict'
 const config = yojaWeb.config
+const {Listeners} = await import(yojaWeb.path('../util/listenerUtil.js'));
 
 class ResponsiveService {
     
-    #mediaActions = [];
-    #resizeActions = [];
+    // the application's actions: each onXXX(action) gives back its off (listenerUtil)
+    #mediaActions = new Listeners('responsiveService media');
+    #resizeActions = new Listeners('responsiveService resize');
     
     #listOfMedia = [];
     #media = null;
@@ -96,21 +98,21 @@ class ResponsiveService {
         return this.#media;
     }
     
+    /** @return its off */
     onMedia(action) {
-        this.#mediaActions.push(action);
+        return this.#mediaActions.add(action);
     }
     
+    /** @return its off */
     onResize(action) {
-        this.#resizeActions.push(action);
+        return this.#resizeActions.add(action);
     }
     
     #applyResizeActions() {
-        for (const resizeAction of this.#resizeActions) {
-            resizeAction({event: 'resize', 
-                          media: this.getMedia(),
-                          width: window.innerWidth,
-                          height: window.innerHeight});
-        }
+        this.#resizeActions.run({event: 'resize', 
+                                 media: this.getMedia(),
+                                 width: window.innerWidth,
+                                 height: window.innerHeight});
     }
     
     #resizeListener() {
@@ -138,13 +140,9 @@ class ResponsiveService {
                                      width: width,
                                      height: window.innerHeight};
                     this.#media = mediaToShow;
-                    for (const mediaAction of this.#mediaActions) {
-                        mediaAction(handler);
-                    }
+                    this.#mediaActions.run(handler);
                     handler.event = 'resize';
-                    for (const resizeAction of this.#resizeActions) {
-                        resizeAction(handler);
-                    }
+                    this.#resizeActions.run(handler);
                 }
                 else {
                     this.#applyResizeActions();
@@ -181,10 +179,10 @@ export function findMedia(mediaName) {
 }
 
 export function onMedia(callback) {
-    responsiveService.onMedia(callback);
+    return responsiveService.onMedia(callback);
 }
 
 export function onResize(callback) {
-    responsiveService.onResize(callback);
+    return responsiveService.onResize(callback);
 }
 

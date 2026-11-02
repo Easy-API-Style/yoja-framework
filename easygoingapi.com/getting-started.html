@@ -793,14 +793,14 @@ dependencies {
         <span class="c">// Logout button — hidden until login event fires</span>
         <span class="k">const</span> btnLogout = section.firstTag(<span class="s">'.btn-logout'</span>);
         btnLogout.style.display = <span class="s">'none'</span>;
-        events.on(<span class="s">'user:logged-in'</span>,  () =&gt; { btnLogout.style.display = <span class="s">'inline-block'</span>; });
-        events.on(<span class="s">'user:logged-out'</span>, () =&gt; { btnLogout.style.display = <span class="s">'none'</span>; });
+        section.track(events.on(<span class="s">'user:logged-in'</span>,  () =&gt; { btnLogout.style.display = <span class="s">'inline-block'</span>; }));
+        section.track(events.on(<span class="s">'user:logged-out'</span>, () =&gt; { btnLogout.style.display = <span class="s">'none'</span>; }));
         btnLogout.addEventListener(<span class="s">'click'</span>, () =&gt; {
             http.get({ url: <span class="s">'/api/logout'</span> }).then(() =&gt; events.trigger(<span class="s">'user:logged-out'</span>));
         });
 
         <span class="c">// Responsive marker on the root element</span>
-        responsive.onMedia(media =&gt; { section.tag.dataset.media = media; });
+        section.track(responsive.onMedia(event =&gt; { section.tag.dataset.media = event.media.name; }));
     }
 }</code></pre>
 

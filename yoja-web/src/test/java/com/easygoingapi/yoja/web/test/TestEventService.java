@@ -185,4 +185,58 @@ public class TestEventService {
                          .stream();
     }
 
+    @TestFactory
+    public Stream<DynamicNode> testEventService_04() {
+        return TestConfig.initialize()
+                         .startYojaWeb(ScriptOption.apply().loadYwAssert())
+                         .webResource("com.easygoingapi.yoja.web.test.event")
+                         .test("trigger an action failing", c -> {
+                            final List<String> expected = List.of("action_01",
+                                                                  "error failing",
+                                                                  "action_03");
+                            final List<String> actual = c.seleniumService().executeAsyncScript("""
+                                 callBack = arguments[arguments.length - 1]
+                                 const result = []
+                                 const eventService = yojaWebApi.eventService
+                                 const offError = yojaWeb.onError(error => result.push('error ' + error.message))
+                                 eventService.on('failing', () => result.push('action_01'))
+                                 eventService.on('failing', () => { throw new Error('failing') })
+                                 eventService.on('failing', () => result.push('action_03'))
+                                 eventService.trigger('failing')
+                                 offError()
+                                 callBack(result)
+                            """);
+                            assertEquals(expected, actual);
+                         })
+                         .test("trigger an action removed meanwhile", c -> {
+                            final List<String> expected = List.of("action_01");
+                            final List<String> actual = c.seleniumService().executeAsyncScript("""
+                                 callBack = arguments[arguments.length - 1]
+                                 const result = []
+                                 const eventService = yojaWebApi.eventService
+                                 let off02 = null
+                                 eventService.on('removing', () => { result.push('action_01'); off02() })
+                                 off02 = eventService.on('removing', () => result.push('action_02'))
+                                 eventService.trigger('removing')
+                                 callBack(result)
+                            """);
+                            assertEquals(expected, actual);
+                         })
+                         .test("trigger its event removed meanwhile", c -> {
+                            final List<String> expected = List.of("action_01", "false");
+                            final List<String> actual = c.seleniumService().executeAsyncScript("""
+                                 callBack = arguments[arguments.length - 1]
+                                 const result = []
+                                 const eventService = yojaWebApi.eventService
+                                 eventService.on('removed', () => { result.push('action_01'); eventService.remove('removed') })
+                                 eventService.on('removed', () => result.push('action_02'))
+                                 eventService.trigger('removed')
+                                 result.push(String(eventService.has('removed')))
+                                 callBack(result)
+                            """);
+                            assertEquals(expected, actual);
+                         })
+                         .stream();
+    }
+
 }

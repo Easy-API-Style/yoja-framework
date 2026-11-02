@@ -118,6 +118,10 @@ Include the framework script in your HTML. Point `yw-config-path` at a config fi
   - [Controller Navigation](#controller-navigation)
   - [Lifecycle Hooks](#lifecycle-hooks)
   - [Logging](#logging)
+- [Listeners: `onXXX(...)` and `section.track(off)`](#listeners-onxxx-and-sectiontrackoff)
+  - [`off`: unsubscribing](#off-unsubscribing)
+  - [`section.track(off)`: unsubscribed when the section leaves the page](#sectiontrackoff-unsubscribed-when-the-section-leaves-the-page)
+  - [What every listener can count on](#what-every-listener-can-count-on)
 - [yojaWebApi — Services Aggregator](#yojawebapi-services-aggregator)
   - [navigationService](#navigationservice)
   - [eventService](#eventservice)
@@ -305,9 +309,9 @@ classDiagram
         +walkSectionTag(consumer, fromTag) void
         +append(tag, path) Promise
         +prepend(tag, path) Promise
-        +onTagReady(action) void
-        +onDocumentReady(action) void
-        +onError(action) void
+        +onTagReady(action) off
+        +onDocumentReady(action) off
+        +onError(action) off
         +isReady() Boolean
     }
     class SectionService {
@@ -474,11 +478,13 @@ if (window.yojaWeb.isReady()) {
     // framework is fully loaded
 }
 
-// Global error handler
+// Global error handler -- also told when a listener of any service throws
 window.yojaWeb.onError(error => {
     console.error('yoja error', error);
 });
 ```
+
+Each `onXXX(...)` returns its `off` -- see [Listeners](#listeners-onxxx-and-sectiontrackoff).
 
 ---
 
@@ -671,9 +677,16 @@ export default class MyControler {
         section.pageReady(() => {
             console.log('full page ready');
         });
+
+        // Unsubscribed once this section has left the page
+        section.track(yojaWebApi.languageService.onLanguageChange(() => this.refresh()));
     }
 }
 ```
+
+`controlerReady` and `pageReady` are steps of the section's own life: they return nothing and are dropped with the
+section. A subscription to a service is handed to `section.track(off)` -- see
+[Listeners](#listeners-onxxx-and-sectiontrackoff).
 
 ### Section Properties
 
@@ -696,6 +709,72 @@ section.log();
 // Print CSS cascade info for this section
 section.logCss();
 ```
+
+---
+
+## Listeners: `onXXX(...)` and `section.track(off)`
+
+Every subscription of the framework follows one model: **it returns its `off`**, a function that, called, stops
+the action from being told. There is no `removeXXX(action)` -- no function reference to keep, an arrow function
+is fine.
+
+| Where | Subscriptions returning their `off` |
+|---|---|
+| `yojaWeb` | `onTagReady`, `onDocumentReady`, `onError` |
+| `httpClient` | `onRequest`, `onResponse`, `onFetch`, `onOnline`, `onOffline` |
+| `languageService` | `onLanguageChange`, `onLanguageTranslate` |
+| `urlParameterService` | `onChange` |
+| `storageService` | `on(scope, method, key, action)`, `onEvent` |
+| `webSocketService` | `on(eventType, url, callback)`, `onOpen`, `onMessage`, `onClose`, `onError`, `onRestart` |
+| `responsiveService` | `onMedia`, `onResize` |
+| `eventService` | `on(eventId, action)` |
+
+### `off`: unsubscribing
+
+```js
+const off = yojaWebApi.httpClient.onOffline(() => showBanner());
+
+off();   // no more told
+off();   // called again: nothing
+```
+
+### `section.track(off)`: unsubscribed when the section leaves the page
+
+The services live as long as the page; a section may not -- a screen rebuilt, a list item removed. A controller
+subscribing to a service hands the `off` to its section: it runs once the section has left the page, so the
+action of a section gone is never told, and the page does not hold on to every section it ever built.
+
+```js
+export default class ChatControler {
+    constructor(section) {
+        const {webSocketService, languageService, responsiveService} = yojaWebApi;
+
+        section.track(webSocketService.onMessage('/ws/chat', message => this.show(message.data)));
+        section.track(languageService.onLanguageChange(() => this.refresh()));
+        section.track(responsiveService.onMedia(event => {
+            section.tag.dataset.media = event.media.name;
+        }));
+    }
+}
+```
+
+- `track(off)` returns the very same `off`: it can still be called by hand, earlier.
+- The section gone already: `off` runs at once.
+- Not a function -- e.g. the result of `controlerReady(...)` -- : a `TypeError`.
+
+No `MutationObserver` is involved: **before each event is told**, the framework forgets the sections no more in the
+page and runs their tracked `off`s. An action of a section removed is never told -- even when nothing else
+happened since its removal. A section still loading is not touched.
+
+### What every listener can count on
+
+- **Order** -- the actions are told in the order they were added (`eventService`: in their position).
+- **Isolation** -- an action throwing is logged and told to `yojaWeb.onError(...)`; the others are told all the
+  same, and the code that raised the event does not get the error. (An `onError` action throwing is only logged.)
+- **Changes meanwhile** -- an action added while an event is told is told from the next one; one removed meanwhile
+  -- by its `off`, `eventService.removeAction(...)` or `eventService.remove(...)` -- is not told, if not yet.
+- **Checked at once** -- an action that is not a function is a `TypeError` when subscribing, not when the event
+  comes.
 
 ---
 
@@ -763,29 +842,34 @@ const events = window.yojaWebApi.eventService;
 
 #### Subscribe
 
+An action listens to one event, by its id -- a string. It returns its `off`.
+
 ```js
-// Listen for an exact event name
-events.on('user:login', data => {
+// Listen for an event
+const off = events.on('user:login', data => {
     console.log('logged in:', data);
 });
 
-// Listen with a regex
-events.on(/^user:/, data => {
-    console.log('any user event:', data);
-});
+// Labelled, at a position (1-based) among the event's actions
+events.on('user:login', { label: 'audit', position: 1, action: data => audit(data) });
 
-// Listen with a query object
-events.on({ startsWith: 'cart:' }, data => {
-    console.log('cart event:', data);
-});
-// Query operators: startsWith, endsWith, contains, equals, matches (RegExp)
+// In a controller: unsubscribed once the section has left the page
+section.track(events.on('cart:updated', cart => this.render(cart)));
 ```
 
 #### Publish
 
+A trigger targets the events matching a query.
+
 ```js
-events.trigger('user:login', { userId: 42 });
+events.trigger('user:login', { userId: 42 });   // one event, by its id
+events.trigger(/^user:/, data);                  // a regex
+events.trigger({ startsWith: 'cart:' }, data);   // a query object
+// Query operators: startsWith, endsWith, contains, equals, matches (RegExp)
 ```
+
+The actions are told in their position; one throwing does not keep the others from being told -- its error goes to
+`yojaWeb.onError(...)`, not to the caller of `trigger`.
 
 #### Manage listeners
 
@@ -796,7 +880,7 @@ events.pause('user:login');
 // Re-activate
 events.activate('user:login');
 
-// Remove all listeners for an event
+// Remove events, their actions with them (one being told meanwhile tells no more of them)
 events.remove('user:login');
 
 // Check if any listener exists
@@ -943,6 +1027,8 @@ const response = await http.fetch('/api/data');
 
 #### Interceptors
 
+Each `onXXX(...)` returns its `off`.
+
 ```js
 // Modify every outgoing request
 http.onRequest(request => {
@@ -1057,7 +1143,7 @@ storage.hasSessionItem('token');
 
 #### Change events
 
-Two subscription styles. `on(...)` targets one `scope` + `method` + `key`; the callback receives **only the value**. The recognised methods are `get`, `set`, `has`, `remove`.
+Two subscription styles, each returning its `off`. `on(...)` targets one `scope` + `method` + `key`; the callback receives **only the value**. The recognised methods are `get`, `set`, `has`, `remove` -- another one, or another scope, is a `TypeError`.
 
 ```js
 // scope: 'local' | 'session' ; method: 'get' | 'set' | 'has' | 'remove'
@@ -1099,26 +1185,23 @@ const socket = ws.webSocket('/ws/chat');
 // Send (a promise: settled once sent, rejected when it cannot open within its timeout, 5s by default)
 ws.send('/ws/chat', JSON.stringify({type: 'chat', text: 'Hello'}));
 
-// Listen -- the list: only added to, for the listeners set once (a module, a service)
-ws.onMessage('/ws/chat', message => console.log('received:', JSON.parse(message.data)));
+// Listen -- each returns its off
+const off = ws.onMessage('/ws/chat', message => console.log('received:', JSON.parse(message.data)));
 ws.onOpen('/ws/chat', event => console.log('connected'));
 ws.onClose('/ws/chat', event => console.log('closed, code:', event.code));
 ws.onError('/ws/chat', event => console.error('ws error', event));
 ws.on('message', '/ws/chat', handler);   // generic: open | message | close | error | restart
+off();                                   // listen no more
 
-// Listen -- the map: under a key the application chooses (a screen's name). Put again under the same key, a
-// listener replaces the one it had -- at its place: a screen built again does not add one more
-ws.putMessage('/ws/chat', 'chatScreen', message => render(message.data));
-ws.has('message', '/ws/chat', 'chatScreen');      // -> true
-ws.remove('message', '/ws/chat', 'chatScreen');
-ws.put('message', '/ws/chat', 'chatScreen', handler);   // generic
+// In a controller: a screen built again does not add one more listener -- the one of the screen gone is off
+section.track(ws.onMessage('/ws/chat', message => this.render(message.data)));
 
 // Close -- for good: its listeners are dropped, webSocket(url) then gives a new one, from zero
 ws.close('/ws/chat', 1000, 'bye');
 ```
 
-Each event is told to the list, then to the map, in the order they were added; a listener throwing does not keep
-the others from being told.
+Each event is told to the listeners in the order they were added; a listener throwing does not keep the others from
+being told.
 
 A socket closed -- by `close()`, by the server, the network, its opening timeout -- is over: `send()` on it is
 refused, and `webSocket(url)` gives a new one, with no listener.
@@ -1127,12 +1210,12 @@ refused, and `webSocket(url)` gives a new one, with no listener.
 
 ```js
 ws.autoRestart('/ws/chat');                       // before or after its socket is opened
-ws.putRestart('/ws/chat', 'chatScreen', () => reloadMessages());
+section.track(ws.onRestart('/ws/chat', () => this.reloadMessages()));
 ws.stopAutoRestart('/ws/chat');                   // no more
 ```
 
 Cut otherwise than by `close()` (the server, the network, its opening timeout), the very same socket connects again,
-unseen: its listeners -- list and map -- are kept, and neither `close`, `error` nor a second `open` is told. It tries
+unseen: its listeners are kept, and neither `close`, `error` nor a second `open` is told. It tries
 after 1s, 2s, 4s... up to 30s (a part of it at random), at once when the network comes back or the page is shown
 again, never while offline or hidden; `send()` and `open()` meanwhile wait for it, within their timeout. Once
 connected again it tells `restart`: what was sent meanwhile is lost, the application reads its data again.
@@ -1160,14 +1243,16 @@ console.log(descriptor.maxWidth); // → 1023
 // List all registered media names
 const list = responsive.getListOfMedia(); // → ["mobile", "tablet", "desktop"]
 
-// React to media changes
-responsive.onMedia(media => {
-    console.log('media changed to:', media); // → "mobile"
+// React to media changes -- returns its off
+const off = responsive.onMedia(event => {
+    // {event: 'media', previousMedia, media, width, height} -- media: {name, maxWidth}
+    console.log('media changed to:', event.media.name); // → "mobile"
 });
 
-// React to any resize event
+// React to any resize event -- returns its off
 responsive.onResize(event => {
-    console.log('resized:', window.innerWidth);
+    // {event: 'resize', media, width, height}
+    console.log('resized:', event.width, event.height);
 });
 ```
 
@@ -1178,9 +1263,10 @@ export default class AppControler {
     constructor(section) {
         const responsive = yojaWebApi.responsiveService;
 
-        responsive.onMedia(media => {
-            section.tag.dataset.media = media; // → "mobile" | "tablet" | "desktop"
-        });
+        section.tag.dataset.media = responsive.getMedia()?.name;
+        section.track(responsive.onMedia(event => {
+            section.tag.dataset.media = event.media.name; // → "mobile" | "tablet" | "desktop"
+        }));
     }
 }
 ```
@@ -1233,7 +1319,7 @@ lang.setLanguage('fr');
 // Get the current language code
 lang.getLanguage(); // → "en"
 
-// React to language changes
+// React to language changes -- returns its off (section.track(off) in a controller)
 lang.onLanguageChange(code => {
     console.log('language is now:', code);
 });
@@ -1319,7 +1405,7 @@ params.go(-2);                   // integer delta only; non-integers are ignored
 #### Change events
 
 `onChange` fires with an **event object** describing what happened. Returning
-`false` from a `before-*` event **cancels** the operation (navigation guard).
+`false` from a `before-*` event **cancels** the operation (navigation guard). It returns its `off`.
 
 ```js
 params.onChange(event => {

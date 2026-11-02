@@ -46,6 +46,12 @@ export function sweepGone() {
     sweep?.();
 }
 
+/** Says an action failed -- YojaWeb's error actions told --: for an api telling its actions on its own (eventService). */
+export function reportFailure(name, error) {
+    console.error(name + ': an action failed', error);
+    report?.(error);
+}
+
 export class Listeners {
 
     #name;
