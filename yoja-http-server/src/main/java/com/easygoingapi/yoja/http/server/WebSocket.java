@@ -49,8 +49,10 @@ import io.vertx.core.http.ServerWebSocketHandshake;
  * </ul>
  * Acceptance of a new connection is controlled by the optional {@code accept}
  * predicate supplied at construction time: it receives the parsed query
- * parameters and returns {@code true} to accept the handshake, {@code false}
- * to reject it.
+ * parameters -- with the headers and cookies of the upgrade request -- and
+ * returns {@code true} to accept the handshake, {@code false} to reject it.
+ * An acceptance needing an asynchronous answer (a session looked up from its
+ * cookie) is given to {@link #asyncAccept(String, Function)}.
  * <p>
  * Natural ordering is by path; equality is also based on the path, so the
  * same path cannot be registered twice in a {@link WebSocketService}.
@@ -120,8 +122,8 @@ public class WebSocket implements Comparable<WebSocket> {
 
     /** Path the endpoint is mounted at. */
     private final String path;
-    /** Optional handshake-time acceptance predicate. */
-    private final Function<WebSocketParameter, Boolean> accept;
+    /** Optional handshake-time acceptance, answering asynchronously; {@code null}: every connection accepted. */
+    private final Function<WebSocketParameter, Future<Boolean>> accept;
 
     /**
      * Builds an endpoint that accepts every connection.
@@ -142,12 +144,41 @@ public class WebSocket implements Comparable<WebSocket> {
      */
     public WebSocket(final String path,
                      final Function<WebSocketParameter, Boolean> accept) {
+        this(accept != null ? parameter -> Future.succeededFuture(accept.apply(parameter)) : null, path);
+    }
+
+    /**
+     * Constructs an endpoint at the given path with an acceptance answering asynchronously.
+     *
+     * @param accept optional acceptance; {@code null} accepts every connection
+     * @param path   path the endpoint is mounted at (must begin with {@code /})
+     * @throws HttpServerException when {@code path} is null or does not start with {@code /}
+     */
+    private WebSocket(final Function<WebSocketParameter, Future<Boolean>> accept,
+                      final String path) {
         super();
         if (path == null || !HttpRouter.formatPath(path).startsWith("/")) {
             throw new HttpServerException("WebSocket path must begin with '/'");
         }
         this.path = path;
         this.accept = accept;
+    }
+
+    /**
+     * Builds an endpoint whose acceptance answers asynchronously -- e.g. the
+     * session of the connecting browser looked up from its cookie
+     * ({@link WebSocketParameter#cookie(String)}, {@link HttpSessionStore#get(String)}).
+     * The handshake is accepted when the future succeeds with {@code true};
+     * rejected when it succeeds with anything else, fails, or the acceptance throws.
+     *
+     * @param path   path the endpoint is mounted at (must begin with {@code /})
+     * @param accept the acceptance: a future of {@code true} to accept the handshake
+     * @return the endpoint
+     * @throws HttpServerException when {@code path} is null or does not start with {@code /}
+     */
+    public static WebSocket asyncAccept(final String path,
+                                        final Function<WebSocketParameter, Future<Boolean>> accept) {
+        return new WebSocket(Objects.requireNonNull(accept, "accept"), path);
     }
 
     /**
@@ -341,20 +372,31 @@ public class WebSocket implements Comparable<WebSocket> {
      * @param serverWebSocketHandshake the incoming handshake request
      */
     protected void shakeHand(final ServerWebSocketHandshake serverWebSocketHandshake) {
-        boolean doAccept = false;
         if (accept == null) {
-            doAccept = true;
-        }
-        else {
-            final WebSocketParameter webSocketParameter = WebSocketParameter.newInstance(serverWebSocketHandshake.query());
-            doAccept = accept.apply(webSocketParameter);
-        }
-        if (doAccept) {
             serverWebSocketHandshake.accept();
+            return;
         }
-        else {
-            serverWebSocketHandshake.reject();
+        final WebSocketParameter webSocketParameter = WebSocketParameter.newInstance(serverWebSocketHandshake.query(),
+                                                                                     serverWebSocketHandshake.headers());
+        Future<Boolean> accepted;
+        try {
+            accepted = accept.apply(webSocketParameter);
         }
+        catch (final RuntimeException e) {
+            accepted = Future.failedFuture(e);
+        }
+        if (accepted == null) {
+            accepted = Future.succeededFuture(Boolean.FALSE);
+        }
+        // the handshake answered once the acceptance has: accepted on true only -- false, a failure: rejected
+        accepted.onComplete(result -> {
+            if (result.succeeded() && Boolean.TRUE.equals(result.result())) {
+                serverWebSocketHandshake.accept();
+            }
+            else {
+                serverWebSocketHandshake.reject();
+            }
+        });
     }
 
     /**

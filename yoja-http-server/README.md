@@ -674,7 +674,17 @@ WebSocket secure = new WebSocket("/ws/feed", params -> {
     String token = params.firstValue("token");
     return isValidToken(token);
 });
+
+// Accept answering asynchronously: the browser's session, looked up from its cookie
+HttpSessionStore sessionStore = new HttpSessionStore("session.myapp", Duration.ofDays(1));
+WebSocket signedIn = WebSocket.asyncAccept("/ws/notifications", params ->
+    sessionStore.get(params.cookie(sessionStore.cookieName()))      // no cookie: a null session
+                .map(session -> session != null && isSignedIn(session)));
 ```
+
+The handshake is accepted when the acceptance answers `true`; rejected when it answers anything else, fails or
+throws. The same `HttpSessionStore` is given to the router (`HttpRouter.builder().session(sessionStore)`), so the
+web socket sees the sessions the web services open.
 
 ### Register with the server via WebSocketService
 
@@ -743,6 +753,10 @@ chat.onOpen(event -> {
 
     List<String> all = params.values("tag"); // multi-value
     Set<String>  names = params.names();
+
+    // the headers and cookies of the upgrade request
+    String origin  = params.header("Origin");           // case-insensitive
+    String session = params.cookie("session.myapp");
 });
 ```
 

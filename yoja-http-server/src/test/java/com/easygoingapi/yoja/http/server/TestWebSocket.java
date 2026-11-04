@@ -34,11 +34,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.easygoingapi.yoja.http.client.WebSocketClient;
+import com.easygoingapi.yoja.http.server.util.TestUtil;
 import com.easygoingapi.yoja.http.server.HttpServer.State;
 import com.easygoingapi.yoja.http.server.WebSocket.On;
 import com.easygoingapi.yoja.http.server.WebSocketService.Status;
 
 import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
+import io.vertx.core.http.WebSocketClientOptions;
+import io.vertx.core.http.WebSocketConnectOptions;
 
 public class TestWebSocket {
     
@@ -485,4 +491,75 @@ public class TestWebSocket {
         }
     }
     
+    /**
+     * The headers and cookies of the upgrade request given to the acceptance, which may answer asynchronously:
+     * accepted on true only -- false, a failure, an acceptance throwing: rejected.
+     */
+    @Test
+    public void test_asyncAccept() {
+        final HttpRouter httpRouter = HttpRouter.builder().build();
+        final AtomicReference<String> openCookie = new AtomicReference<>();
+        final WebSocket webSocket = WebSocket.asyncAccept("/websocket/test", p -> {
+            if ("throw".equals(p.firstValue("mode"))) {
+                throw new IllegalStateException("acceptance failing");
+            }
+            if ("fail".equals(p.firstValue("mode"))) {
+                return Future.failedFuture("acceptance failing");
+            }
+            // answered later: a session looked up, say
+            final Promise<Boolean> promise = Promise.promise();
+            Vertx.currentContext().owner().setTimer(50, timer -> promise.complete("abc".equals(p.cookie("session"))
+                                                                                  && "yoja".equals(p.header("X-Client"))
+                                                                                  && "yoja".equals(p.header("x-client"))
+                                                                                  && p.cookieNames().contains("other")));
+            return promise.future();
+        });
+        webSocket.onOpen(v -> openCookie.set(v.webSocketParameter().cookie("session")));
+        final WebSocketService webSocketService = new WebSocketService();
+        webSocketService.add(webSocket);
+        final HttpServer httpServer = newHttpServer(httpRouter, webSocketService);
+        final Vertx vertx = Vertx.vertx();
+        try {
+            final io.vertx.core.http.WebSocketClient client =
+                vertx.createWebSocketClient(new WebSocketClientOptions().setSsl(TestUtil.ssl)
+                                                                        .setTrustAll(true)
+                                                                        .setVerifyHost(false));
+            final java.util.function.BiFunction<String, String, Future<io.vertx.core.http.WebSocket>> connect =
+                (uri, cookie) -> {
+                    final WebSocketConnectOptions options = new WebSocketConnectOptions().setHost(TestUtil.host)
+                                                                                        .setPort(TestUtil.port)
+                                                                                        .setURI(uri)
+                                                                                        .addHeader("X-Client", "yoja");
+                    if (cookie != null) {
+                        options.addHeader("Cookie", cookie);
+                    }
+                    return client.connect(options);
+                };
+            final Future<io.vertx.core.http.WebSocket> accepted = connect.apply("/websocket/test", "session=abc; other=1");
+            awaitQuietly(accepted);
+            assertTrue(accepted.succeeded());
+            assertEquals("abc", openCookie.get());
+            await(accepted.result().close());
+
+            for (final String[] refused : new String[][] {{"/websocket/test", "session=wrong; other=1"},
+                                                          {"/websocket/test", null},
+                                                          {"/websocket/test?mode=fail", "session=abc; other=1"},
+                                                          {"/websocket/test?mode=throw", "session=abc; other=1"}}) {
+                final Future<io.vertx.core.http.WebSocket> rejected = connect.apply(refused[0], refused[1]);
+                awaitQuietly(rejected);
+                assertTrue(rejected.failed(), refused[0] + " " + refused[1]);
+            }
+        }
+        finally {
+            await(vertx.close());
+            await(httpServer.stop());
+            assertTrue(httpServer.is(State.stopped));
+        }
+    }
+
+    /** Waits for a future, whether it succeeds or fails. */
+    private static void awaitQuietly(final Future<?> future) {
+        await(future.otherwiseEmpty());
+    }
+
 }

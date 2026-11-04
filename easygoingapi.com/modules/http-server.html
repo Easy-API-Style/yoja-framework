@@ -582,7 +582,7 @@
 
     <div class="api-class">
       <h3><code>WebSocket</code> <span class="kind">class</span></h3>
-      <p>One logical endpoint at a single path. Fans events out to all connected clients. An optional <code>accept</code> function can reject handshakes based on query parameters.</p>
+      <p>One logical endpoint at a single path. Fans events out to all connected clients. An optional <code>accept</code> function can reject handshakes based on query parameters, headers and cookies — answering at once, or asynchronously (a session looked up from its cookie).</p>
 
       <span class="api-table-group">Constructor</span>
       <table class="api-table">
@@ -590,6 +590,7 @@
         <tbody>
           <tr><td><code>WebSocket(String path)</code></td><td class="ret"></td><td class="desc">Accept all connections</td></tr>
           <tr><td><code>WebSocket(String path, Function&lt;WebSocketParameter, Boolean&gt; accept)</code></td><td class="ret"></td><td class="desc">Accept only when <code>accept</code> returns <code>true</code></td></tr>
+          <tr><td><code>WebSocket.asyncAccept(String path, Function&lt;WebSocketParameter, Future&lt;Boolean&gt;&gt; accept)</code></td><td class="ret"><code>WebSocket</code></td><td class="desc">Accept only when the future succeeds with <code>true</code>; a failure, or <code>accept</code> throwing: rejected</td></tr>
         </tbody>
       </table>
 
@@ -624,7 +625,7 @@
         <thead><tr><th>Class</th><th>Key API</th><th>Description</th></tr></thead>
         <tbody>
           <tr><td><code>WebSocketServer</code></td><td class="ret"><code>isOpened()</code> · <code>host()</code> · <code>path()</code> · <code>close(...)</code></td><td class="desc">Per-client handle injected into <code>OpenEvent</code></td></tr>
-          <tr><td><code>WebSocketParameter</code></td><td class="ret"><code>entries()</code> · <code>values(name)</code> · <code>firstValue(name)</code> · <code>names()</code> · <code>hasName(name)</code></td><td class="desc">Parsed handshake query string, used by the <code>accept</code> function</td></tr>
+          <tr><td><code>WebSocketParameter</code></td><td class="ret"><code>entries()</code> · <code>values(name)</code> · <code>firstValue(name)</code> · <code>names()</code> · <code>hasName(name)</code> · <code>header(name)</code> · <code>headers(name)</code> · <code>cookie(name)</code> · <code>cookieNames()</code></td><td class="desc">Parsed handshake query string, with the headers and cookies of the upgrade request, used by the <code>accept</code> function</td></tr>
         </tbody>
       </table>
     </div>

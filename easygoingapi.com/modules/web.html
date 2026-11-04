@@ -199,8 +199,8 @@
 <span class="c">// HeaderControler.js</span>
 <span class="k">export default class</span> HeaderControler {
     <span class="k">constructor</span>(section) {
-        section.controlerReady(() =&gt; { <span class="c">/* controller instantiated */</span> });
-        section.pageReady(() =&gt; { <span class="c">/* whole page loaded */</span> });
+        section.controlerReady(() =&gt; { <span class="c">/* every controller of the batch constructed: initialize this one */</span> });
+        section.pageReady(() =&gt; { <span class="c">/* every controlerReady run: talk to the other sections */</span> });
     }
 }</code></pre>
     </div>
@@ -389,8 +389,9 @@
       <table class="api-table">
         <thead><tr><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td><code>controlerReady(action)</code></td><td class="ret"><code>void</code></td><td class="desc">Registers <code>action</code>; fires once the controller is initialized — given later, told all the same, just after the call; the section gone, never</td></tr>
-          <tr><td><code>pageReady(action)</code></td><td class="ret"><code>void</code></td><td class="desc">Registers <code>action</code>; fires once the full page bootstrap is complete — given later, told all the same, just after the call; the section gone, never</td></tr>
+          <tr><td><code>controlerReady(action)</code></td><td class="ret"><code>void</code></td><td class="desc">Registers <code>action</code>; fires once every section of its batch (the page, or an addition) has its controller constructed — given later, told all the same, just after the call; the section gone, never</td></tr>
+          <tr><td><code>pageReady(action)</code></td><td class="ret"><code>void</code></td><td class="desc">Registers <code>action</code>; fires once every <code>controlerReady</code> of its batch has run, so the other sections can be talked to — before the translation; given later, told all the same, just after the call; the section gone, never</td></tr>
+          <tr><td colspan="3" class="desc"><strong>Ready order</strong> — sections are built by batches: the page at load time, then each <code>append</code>, <code>prepend</code>, <code>appendTag</code>, <code>prependTag</code>. Once a batch is built: every <code>controlerReady</code>, then every <code>pageReady</code>, then <code>yojaWeb.onTagReady(tags)</code> (an addition) or <code>yojaWeb.onDocumentReady</code> (the page); then the batch is translated and shown. Each step is a <code>console.debug</code> line: <code>applyYojaWebOnTags</code>, <code>YojaWeb controlerReady</code>, <code>YojaWeb pageReady</code>, <code>YojaWeb tagReady</code> / <code>YojaWeb documentReady</code>.</td></tr>
           <tr><td><code>track(off)</code></td><td class="ret"><code>off</code></td><td class="desc">Runs the <code>off</code> of a subscription once the section has left the page (gone already: at once); returns the same <code>off</code>. Not a function: <code>TypeError</code>. See <a href="#listeners">Listeners</a></td></tr>
         </tbody>
       </table>

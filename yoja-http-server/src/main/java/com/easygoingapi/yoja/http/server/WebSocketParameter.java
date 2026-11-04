@@ -18,18 +18,28 @@
 package com.easygoingapi.yoja.http.server;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.easygoingapi.yoja.core.http.HttpEncoding;
 
+import io.netty.handler.codec.http.cookie.Cookie;
+import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
+import io.vertx.core.MultiMap;
+
 /**
- * Parsed query string accompanying a WebSocket handshake.
+ * Parsed query string accompanying a WebSocket handshake, with the headers and
+ * cookies of its upgrade request.
  * <p>
- * Built by {@link #newInstance(String)} from the raw query (the part after
- * {@code ?} in the upgrade URL), this class preserves the original order of
- * entries and allows duplicate names. Values are URL-decoded.
+ * Built by {@link #newInstance(String, MultiMap)} from the raw query (the part
+ * after {@code ?} in the upgrade URL), this class preserves the original order
+ * of entries and allows duplicate names. Values are URL-decoded.
+ * <p>
+ * The headers and cookies let an acceptance predicate know who connects -- a
+ * session cookie, an {@code Origin} -- see {@link WebSocket#asyncAccept}.
  */
 public class WebSocketParameter {
 
@@ -45,14 +55,74 @@ public class WebSocketParameter {
     /** Parsed entries in document order. */
     private final List<Entry> entries;
 
+    /** Headers of the upgrade request (case-insensitive names); empty when unknown. */
+    private final MultiMap headers;
+
+    /** Cookies of the upgrade request, by name (the first one of a name kept). */
+    private final Map<String, String> cookies;
+
     /**
      * Constructs a parameter set from pre-parsed entries (ownership transferred).
      *
      * @param entries parsed entries
      */
     protected WebSocketParameter(final List<Entry> entries) {
+        this(entries, null);
+    }
+
+    /**
+     * Constructs a parameter set from pre-parsed entries (ownership transferred)
+     * and the headers of the upgrade request.
+     *
+     * @param entries parsed entries
+     * @param headers headers of the upgrade request, or {@code null}
+     */
+    protected WebSocketParameter(final List<Entry> entries,
+                                 final MultiMap headers) {
         super();
         this.entries = entries;
+        this.headers = headers != null ? headers : MultiMap.caseInsensitiveMultiMap();
+        this.cookies = parseCookies(this.headers.getAll("Cookie"));
+    }
+
+    /**
+     * Returns the first value of a header of the upgrade request.
+     *
+     * @param name header name, case-insensitive (may be {@code null})
+     * @return its first value, or {@code null} when missing
+     */
+    public String header(final String name) {
+        return name != null ? headers.get(name) : null;
+    }
+
+    /**
+     * Returns every value of a header of the upgrade request.
+     *
+     * @param name header name, case-insensitive (may be {@code null})
+     * @return its values; empty when none
+     */
+    public List<String> headers(final String name) {
+        return name != null ? List.copyOf(headers.getAll(name)) : List.of();
+    }
+
+    /**
+     * Returns the value of a cookie sent with the upgrade request -- a session
+     * cookie, to know who connects.
+     *
+     * @param name cookie name (may be {@code null})
+     * @return its value, or {@code null} when not sent
+     */
+    public String cookie(final String name) {
+        return name != null ? cookies.get(name) : null;
+    }
+
+    /**
+     * Returns the names of the cookies sent with the upgrade request.
+     *
+     * @return the names of the cookies sent with the upgrade request
+     */
+    public Set<String> cookieNames() {
+        return Set.copyOf(cookies.keySet());
     }
 
     /**
@@ -164,6 +234,19 @@ public class WebSocketParameter {
      * @return a new parameter view (possibly empty)
      */
     protected static WebSocketParameter newInstance(final String httpQuery) {
+        return newInstance(httpQuery, null);
+    }
+
+    /**
+     * Parses an HTTP-style query string into a {@link WebSocketParameter},
+     * with the headers -- and so the cookies -- of the upgrade request.
+     *
+     * @param httpQuery raw query (may be {@code null})
+     * @param headers   headers of the upgrade request (may be {@code null})
+     * @return a new parameter view (possibly empty)
+     */
+    protected static WebSocketParameter newInstance(final String httpQuery,
+                                                    final MultiMap headers) {
         final List<Entry> entries = new ArrayList<>();
         if (httpQuery != null) {
             final String[] splitQuery = httpQuery.split("&");
@@ -180,7 +263,21 @@ public class WebSocketParameter {
                 }
             }
         }
-        return new WebSocketParameter(entries);
+        return new WebSocketParameter(entries, headers);
+    }
+
+    /**
+     * @param cookieHeaders the {@code Cookie} headers of a request
+     * @return its cookies by name -- a malformed one left out, the first of a name kept
+     */
+    private static Map<String, String> parseCookies(final List<String> cookieHeaders) {
+        final Map<String, String> result = new LinkedHashMap<>();
+        for (final String cookieHeader : cookieHeaders) {
+            for (final Cookie cookie : ServerCookieDecoder.LAX.decodeAll(cookieHeader)) {
+                result.putIfAbsent(cookie.name(), cookie.value());
+            }
+        }
+        return result;
     }
 
 }

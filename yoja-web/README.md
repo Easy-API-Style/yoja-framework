@@ -201,12 +201,12 @@ export default class MyControler {
         this.section = section;
 
         section.controlerReady(() => {
-            // called after the controller is instantiated
+            // every controller built with this one is constructed: initialize this one
             console.log('controller ready');
         });
 
         section.pageReady(() => {
-            // called after the entire page is loaded
+            // every controlerReady has run: the other sections can be talked to
             console.log('page ready');
         });
     }
@@ -513,7 +513,7 @@ The class is defined in [`YojaWeb-1.6.0.js`](src/main/webapp/com/easygoingapi/yo
 A `Section` is the runtime façade of a component:
 
 - **Identity** — it wraps the section's host tag (`section.tag`) and its shadow root if any (`section.shadowTag`), plus the resolved paths the framework loaded for it (`section.path`, `section.languagePath`, `section.cssPath`, `section.slotPath`).
-- **Lifecycle** — `section.controlerReady(action)` runs once the controller of *this* section is constructed; `section.pageReady(action)` runs once *all* sections on the page are ready. This is the canonical place to register listeners, inject content, or read i18n strings.
+- **Lifecycle** — `section.controlerReady(action)` runs once every section built with this one has its controller constructed; `section.pageReady(action)` runs once every `controlerReady` of them has run. This is the canonical place to register listeners, inject content, or read i18n strings. See [Ready order](#ready-order).
 - **Scoped DOM access** — `firstTag` / `findTags` / `walkTag` (shallow, stop at nested section boundaries) and their `deepXxx` counterparts (cross shadow roots) keep your DOM queries inside the boundary so a parent section never accidentally reaches into a child's internals.
 - **Tree navigation** — `firstSection` / `findSections` / `parentSection` / `rootSection` / `walkSection` / … and the `xxxControler` mirrors give you a tree-walk API over the section graph and the controller graph respectively. Internally these delegate to the framework's `SectionService` and `ControlerService` (visible in the [YojaWeb class diagram above](#yojaweb-global-api)).
 - **Diagnostics** — `section.log()` prints the section subtree (paths, ids, css inheritance) and `section.logCss()` prints the resolved CSS chain.
@@ -669,14 +669,14 @@ header.setTitle('Welcome');
 ```js
 export default class MyControler {
     constructor(section) {
-        // Runs right after this controller is constructed
+        // Runs once every section built with this one has its controller -- to initialize this one
         section.controlerReady(() => {
-            console.log('controller ready — other sections may still be loading');
+            console.log('controller ready');
         });
 
-        // Runs after every section on the page has loaded
+        // Runs once every controlerReady of them has run -- to talk to the other sections
         section.pageReady(() => {
-            console.log('full page ready');
+            console.log('page ready');
         });
 
         // Unsubscribed once this section has left the page
@@ -688,6 +688,26 @@ export default class MyControler {
 `controlerReady` and `pageReady` are steps of the section's own life: they return nothing and are dropped with the
 section. Given once its ready actions have run -- in a `then`, a listener --, an action is told all the same, just
 after the call; the section gone from the page, it is never told.
+
+### Ready order
+
+Sections are built by batches: the page at load time, then each `append`, `prepend`, `appendTag` or `prependTag`
+(all the sections of the tags it adds, nested ones included). Once every section of a batch is built -- its HTML,
+CSS and controller constructed --, the ready actions run, in this order (each step is a `console.debug` line):
+
+| Step (debug line) | What runs | For |
+|---|---|---|
+| `applyYojaWebOnTags` (an addition only) | -- | the batch is built |
+| `YojaWeb controlerReady` | every `section.controlerReady(...)` of the batch | a controller initializing itself |
+| `YojaWeb pageReady` | then every `section.pageReady(...)` of the batch | a controller talking to the others (`closestControler(...)`...): all are initialized |
+| `YojaWeb tagReady` (an addition) | every `yojaWeb.onTagReady(tags => ...)`, given the tags added | code following every addition |
+| `YojaWeb documentReady` (the page) | every `yojaWeb.onDocumentReady(...)` | code waiting for the page |
+
+The batch is shown once translated (`yw-i18n`): the page's `<body>`, or the tags added -- the promise of
+`append(...)`/`appendTag(...)` is resolved at that point. So `pageReady`, `tagReady` and `documentReady` run before
+the translation is done: a label read there may still be its key.
+
+`pageReady` is about the batch, not the whole page: for an addition, the sections it adds.
 
 A resource of a section failing to load -- its controler, `yw-css`, `yw-slot` or `yw-include` (a 404, a syntax
 error) -- is logged and told to `yojaWeb.onError(...)`: the section is built without it, the other sections with

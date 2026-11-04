@@ -44,7 +44,7 @@ public class WebSocketServer {
     protected WebSocketServer(final ServerWebSocket serverWebSocket) {
         super();
         this.serverWebSocket = serverWebSocket;
-        this.webSocketParameter = WebSocketParameter.newInstance(serverWebSocket.query());
+        this.webSocketParameter = WebSocketParameter.newInstance(serverWebSocket.query(), serverWebSocket.headers());
     }
 
     /**
@@ -84,9 +84,9 @@ public class WebSocketServer {
     }
 
     /**
-     * Returns the parsed query parameters from the handshake.
+     * Returns the parsed query parameters from the handshake, with its headers and cookies.
      *
-     * @return the parsed query parameters from the handshake
+     * @return the parsed query parameters from the handshake, with its headers and cookies
      */
     public WebSocketParameter parameterQuery() {
         return webSocketParameter;

@@ -15,6 +15,9 @@
 * `prepend(...)` errors say `prepend`
 * `yojaWeb.version()` read from the file name (`YojaWeb-<version>.js`) -> no more version hard-coded in the script
 * controler `className()` defined on its class -> available in its constructor, a controler's own `className()` kept
+* add `WebSocket.asyncAccept(path, accept)` -> a handshake accepted asynchronously (a session looked up from its cookie)
+* `WebSocketParameter` gives the headers and cookies of the upgrade request -> `header(name)`, `headers(name)`, `cookie(name)`, `cookieNames()`
+* `HttpSessionStore.get(null)` -> a `null` session (no session cookie), no more error
 * dev build version is the next patch's snapshot (`1.6.0` -> `1.6.1-SNAPSHOT`)
 
 ## 1.6.0

@@ -210,11 +210,15 @@ public class HttpSessionStore {
     /**
      * Looks up a session by id.
      *
-     * @param sessionId the session id to look up
+     * @param sessionId the session id to look up -- the value of the session
+     *                  cookie (may be {@code null})
      * @return a future resolving to the matching wrapper, or {@code null} when
-     *         the session has expired or never existed
+     *         the session has expired, never existed, or no id is given
      */
     public Future<HttpSession> get(final String sessionId) {
+        if (sessionId == null) {
+            return Future.succeededFuture();   // no session cookie: no session
+        }
         return localSessionStore.get(sessionId)
                                 .map(v -> {
                                     final HttpSession result;
